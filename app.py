@@ -13,8 +13,8 @@ st.write("ระบบทำนายแนวโน้มลูกค้าว�
 def load_model_objects():
     try:
         # โหลดไฟล์โมเดลและชื่อฟีเจอร์
-        model = joblib.load('olist_churn_rf_model.pkl')
-        features = joblib.load('model_features.pkl')
+        model = joblib.load('olist_churn_rf_model')
+        features = joblib.load('model_features')
         return model, features
     except FileNotFoundError as e:
         return None, None
@@ -92,4 +92,5 @@ else:
 
         except Exception as e:
             st.error(f"เกิดข้อผิดพลาดในการทำนาย: {e}")
+
             st.info("คำแนะนำ: ลองเช็คว่าไฟล์ model_features.pkl ตรงกับเวอร์ชันล่าสุดที่เทรนมาหรือไม่")

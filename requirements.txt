@@ -6,4 +6,5 @@ plotly
 scikit-learn
 gspread
 gspread-dataframe
+matplotlib
 oauth2client

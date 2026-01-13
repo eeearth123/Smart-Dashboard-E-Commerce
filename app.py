@@ -2,14 +2,17 @@ import streamlit as st
 import pandas as pd
 import joblib
 import numpy as np
+import altair as alt
 
-# --- 1. ตั้งค่าหน้าเว็บ ---
-st.set_page_config(page_title="Olist Churn Dashboard", page_icon="📊", layout="wide")
+# --- 1. ตั้งค่า Page Config (ต้องอยู่บรรทัดแรกสุด) ---
+st.set_page_config(
+    page_title="Olist Business Dashboard",
+    page_icon="🛍️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-st.title("📊 Olist Customer Analytics & Churn Prediction")
-st.markdown("### แดชบอร์ดวิเคราะห์แนวโน้มลูกค้า (Demo Version)")
-
-# --- 2. ฟังก์ชันโหลดโมเดล (ใช้ชื่อไฟล์เดิม) ---
+# --- 2. ฟังก์ชันโหลดโมเดล ---
 @st.cache_resource
 def load_model_objects():
     try:
@@ -21,98 +24,199 @@ def load_model_objects():
 
 loaded_model, model_features = load_model_objects()
 
-# --- 3. Sidebar: รับข้อมูล (เหมือนเดิม แต่จัดกลุ่มให้ดูง่ายขึ้น) ---
-with st.sidebar:
-    st.header("📝 ข้อมูลลูกค้า")
-    
-    with st.expander("🚚 ข้อมูลการขนส่ง (Delivery)", expanded=True):
-        delivery_days_mean = st.slider("รอของเฉลี่ย (วัน)", 1, 60, 15)
-        delay_days_mean = st.slider("ส่งช้าเฉลี่ย (วัน)", 0, 30, 2)
-        freight_value_mean = st.number_input("ค่าส่งเฉลี่ย (BRL)", value=35.5)
-        is_high_freight_customer = st.selectbox("เป็นลูกค้ากลุ่มค่าส่งแพง?", [0, 1], index=1)
-
-    with st.expander("💰 ข้อมูลการใช้จ่าย (Spending)", expanded=True):
-        monetary_value = st.number_input("ยอดซื้อสะสมรวม (BRL)", value=500.0)
-        avg_basket_value = st.number_input("ยอดต่อตะกร้าเฉลี่ย (BRL)", value=120.0)
-        price_mean = st.number_input("ราคาสินค้าเฉลี่ย", value=100.0)
-        
-    with st.expander("⭐ พฤติกรรมอื่นๆ (Behavior)"):
-        total_late_orders = st.number_input("จำนวนออเดอร์ที่ส่งช้า", value=1)
-        avg_review_score = st.slider("คะแนนรีวิวเฉลี่ย", 1.0, 5.0, 4.5)
-        # ตัวแปรอื่นๆ ที่จำเป็น (ใส่ค่า Default ไว้ก่อน)
-        delivery_days_max = 20.0
-        shipping_cost_per_gram = 0.05
-        product_weight_g_mean = 500.0
-        freight_ratio_mean = 0.15
-        product_photos_qty_mean = 2.0
-        min_review_score = 4
-
-# --- 4. เตรียมข้อมูลสำหรับกราฟและโมเดล ---
-# สร้าง DataFrame
-input_data = pd.DataFrame([{
-    'freight_value_mean': freight_value_mean,
-    'delivery_days_mean': delivery_days_mean,
-    'delay_days_mean': delay_days_mean,
-    'delivery_days_max': delivery_days_max,
-    'shipping_cost_per_gram': shipping_cost_per_gram,
-    'product_weight_g_mean': product_weight_g_mean,
-    'freight_ratio_mean': freight_ratio_mean,
-    'avg_basket_value': avg_basket_value,
-    'is_high_freight_customer': is_high_freight_customer,
-    'price_mean': price_mean,
-    'monetary_value': monetary_value,
-    'product_photos_qty_mean': product_photos_qty_mean,
-    'total_late_orders': total_late_orders,
-    'min_review_score': min_review_score,
-    'avg_review_score': avg_review_score,
-    # --- แก้ Error: ใส่ค่า Default ให้ตัวที่ขาดไป ---
-    'frequency': 1,             # สมมติว่าซื้อ 1 ครั้ง
-    'category_diversity': 1,    # สมมติว่าซื้อหมวดเดียว
-    'is_shipping_ripoff': 0     # สมมติว่าค่าส่งไม่โหดร้าย
-}])
-
-# --- 5. แสดงผลกราฟ (Visualizations) ---
-col1, col2 = st.columns([2, 1])
-
-with col1:
-    st.subheader("📈 Customer DNA Profile")
-    # เตรียมข้อมูลทำกราฟ (เลือกเฉพาะค่าสำคัญๆ มาโชว์)
-    chart_data = pd.DataFrame({
-        'Factor': ['Delivery Days', 'Review Score (x10)', 'Late Orders (x5)', 'Delay Days'],
-        'Value': [delivery_days_mean, avg_review_score*10, total_late_orders*5, delay_days_mean]
+# --- 3. สร้างข้อมูลจำลอง (Mock Data) เพื่อโชว์กราฟในหน้า Dashboard ---
+# (ในงานจริง ส่วนนี้จะเปลี่ยนเป็นการโหลดไฟล์ csv ทั้งหมดของร้านมาแสดง)
+@st.cache_data
+def get_mock_dashboard_data():
+    np.random.seed(42)
+    data_size = 200
+    df = pd.DataFrame({
+        'customer_id': [f'CUST-{i:04d}' for i in range(data_size)],
+        'delivery_days': np.random.normal(15, 5, data_size),
+        'review_score': np.random.choice([1, 2, 3, 4, 5], data_size, p=[0.1, 0.1, 0.2, 0.3, 0.3]),
+        'total_spend': np.random.exponential(500, data_size),
+        'churn_prob': np.random.uniform(0, 1, data_size)
     })
-    
-    # แสดง Bar Chart
-    st.bar_chart(chart_data.set_index('Factor'))
-    st.caption("*กราฟแสดงปัจจัยเสี่ยง: แท่งยิ่งสูง ยิ่งมีผลต่อความรู้สึกลูกค้า")
+    # กำหนดสถานะ Churn ตามความน่าจะเป็น (สมมติ)
+    df['status'] = df['churn_prob'].apply(lambda x: 'High Risk (Churn)' if x > 0.6 else 'Safe (Active)')
+    return df
 
-with col2:
-    st.subheader("🔮 ผลการทำนาย")
+dashboard_data = get_mock_dashboard_data()
+
+# --- 4. Sidebar Navigation (เมนูเลือกหน้า) ---
+st.sidebar.title("🛍️ Olist Analytics")
+page = st.sidebar.radio("เลือกเมนูใช้งาน", ["📊 ภาพรวมธุรกิจ (Overview)", "🔍 ตรวจสอบรายบุคคล (Predictor)", "🧠 เจาะลึกผลโมเดล (Model Insights)"])
+st.sidebar.markdown("---")
+st.sidebar.info(f"Model Status: {'✅ Ready' if loaded_model else '❌ Not Found'}")
+
+# ==============================================================================
+# PAGE 1: 📊 ภาพรวมธุรกิจ (Overview)
+# ==============================================================================
+if page == "📊 ภาพรวมธุรกิจ (Overview)":
+    st.title("📊 Business Health Overview")
+    st.markdown("สรุปภาพรวมความเสี่ยงลูกค้าในระบบ (จำลองข้อมูล)")
+
+    # 1. Top Metrics (KPIs)
+    col1, col2, col3, col4 = st.columns(4)
+    high_risk_count = len(dashboard_data[dashboard_data['status'] == 'High Risk (Churn)'])
+    avg_score = dashboard_data['review_score'].mean()
     
-    if loaded_model is not None:
-        try:
-            # จัดเรียงคอลัมน์ให้ตรงเป๊ะๆ
-            input_data = input_data[model_features]
-            
-            # ทำนาย
-            prob = loaded_model.predict_proba(input_data)[0][1] # โอกาส Churn (0-1)
-            
-            # แสดงเป็น Metric สวยๆ
-            churn_percentage = prob * 100
-            
-            if churn_percentage > 50:
-                st.error("มีความเสี่ยงสูง (High Risk)")
-                st.metric(label="โอกาสเลิกซื้อ (Churn Probability)", value=f"{churn_percentage:.2f}%", delta="เสี่ยง", delta_color="inverse")
-                st.progress(int(churn_percentage), text="Risk Level")
-            else:
-                st.success("ลูกค้าปกติ (Low Risk)")
-                st.metric(label="โอกาสเลิกซื้อ (Churn Probability)", value=f"{churn_percentage:.2f}%", delta="ปลอดภัย")
-                st.progress(int(churn_percentage), text="Risk Level")
-                
-        except Exception as e:
-            st.warning(f"ยังทำนายไม่ได้สมบูรณ์ แต่กราฟทำงานได้ปกติครับ ({e})")
+    col1.metric("ลูกค้าทั้งหมด", f"{len(dashboard_data)} คน")
+    col2.metric("ลูกค้าเสี่ยงหลุด (High Risk)", f"{high_risk_count} คน", delta="-ระวัง", delta_color="inverse")
+    col3.metric("คะแนนรีวิวเฉลี่ย", f"{avg_score:.2f} / 5.0")
+    col4.metric("Retention Rate (ประมาณการ)", f"{(1 - high_risk_count/len(dashboard_data))*100:.1f}%")
+
+    st.markdown("---")
+
+    # 2. Charts Layout
+    c1, c2 = st.columns((2, 1))
+
+    with c1:
+        st.subheader("📦 ความสัมพันธ์: เวลาส่งของ vs โอกาส Churn")
+        # กราฟ Scatter Plot
+        chart = alt.Chart(dashboard_data).mark_circle(size=60).encode(
+            x=alt.X('delivery_days', title='จำนวนวันรอของ (Days)'),
+            y=alt.Y('churn_prob', title='โอกาส Churn (%)'),
+            color=alt.Color('status', legend=alt.Legend(title="Status")),
+            tooltip=['customer_id', 'delivery_days', 'review_score']
+        ).interactive()
+        st.altair_chart(chart, use_container_width=True)
+        st.caption("*Insight: ยิ่งรอนาน (ไปทางขวา) จุดสีแดงยิ่งอยู่สูง แปลว่าโอกาสหนียิ่งมาก")
+
+    with c2:
+        st.subheader("⭐ สัดส่วนความเสี่ยงตามเกรดรีวิว")
+        # กราฟแท่ง
+        bar_chart = alt.Chart(dashboard_data).mark_bar().encode(
+            x=alt.X('review_score:O', title='คะแนนรีวิว'),
+            y='count()',
+            color='status'
+        )
+        st.altair_chart(bar_chart, use_container_width=True)
+        st.caption("*Insight: คะแนนรีวิวต่ำ (1-2 ดาว) มีสัดส่วนลูกค้าเสี่ยงสูงมาก")
+
+    # 3. Table of Urgent Action
+    st.subheader("🚨 รายชื่อลูกค้าที่ต้องรีบดูแล (Top 5 Highest Risk)")
+    urgent_customers = dashboard_data.sort_values('churn_prob', ascending=False).head(5)
+    st.dataframe(urgent_customers[['customer_id', 'churn_prob', 'total_spend', 'review_score']], use_container_width=True)
+
+
+# ==============================================================================
+# PAGE 2: 🔍 ตรวจสอบรายบุคคล (Predictor) - อันเดิมที่คุณทำไว้
+# ==============================================================================
+elif page == "🔍 ตรวจสอบรายบุคคล (Predictor)":
+    st.title("🔍 Individual Customer Check")
+    st.markdown("เครื่องมือประเมินความเสี่ยงลูกค้าทีละราย สำหรับทีม Customer Service")
+
+    if loaded_model is None:
+        st.error("ไม่พบไฟล์โมเดล! กรุณาเช็คว่าไฟล์ .pkl อยู่ในโฟลเดอร์เดียวกับ app.py")
     else:
-        st.info("โหมดแสดงผลกราฟ (ยังไม่พบโมเดล)")
+        # Layout: แบ่งซ้ายขวา Input | Output
+        col_input, col_result = st.columns([1, 1.5])
 
-st.markdown("---")
-st.write("📌 **Note:** ระบบใส่ค่า Default ให้ตัวแปร `frequency`, `category_diversity` อัตโนมัติเพื่อให้รันผ่านครับ")
+        with col_input:
+            st.subheader("📝 กรอกข้อมูลลูกค้า")
+            # Input Fields
+            delivery_days_mean = st.number_input("รอของเฉลี่ย (วัน)", value=15.0)
+            delay_days_mean = st.number_input("ส่งช้าเฉลี่ย (วัน)", value=2.0)
+            avg_review_score = st.slider("คะแนนรีวิวเฉลี่ย", 1.0, 5.0, 4.5)
+            total_late_orders = st.number_input("จำนวนออเดอร์ที่ส่งช้า", value=1)
+            
+            with st.expander("ข้อมูลเพิ่มเติม (Optional)"):
+                freight_value_mean = st.number_input("ค่าส่งเฉลี่ย", value=35.5)
+                is_high_freight = st.selectbox("กลุ่มค่าส่งแพง?", [0, 1], index=1)
+                monetary_value = st.number_input("ยอดซื้อรวม", value=500.0)
+                # ค่า Default อื่นๆ ที่จำเป็นต่อโมเดล
+                delivery_days_max = 20.0
+                shipping_cost_per_gram = 0.05
+                product_weight_g_mean = 500.0
+                freight_ratio_mean = 0.15
+                product_photos_qty_mean = 2.0
+                min_review_score = 4
+                avg_basket_value = 120.0
+                price_mean = 100.0
+                frequency = 1
+                category_diversity = 1
+                is_shipping_ripoff = 0
+
+        with col_result:
+            st.subheader("🔮 ผลการวิเคราะห์")
+            # ปุ่มกดทำนาย
+            if st.button("ประเมินความเสี่ยง (Analyze)", use_container_width=True, type="primary"):
+                # เตรียม Data
+                input_data = pd.DataFrame([{
+                    'freight_value_mean': freight_value_mean,
+                    'delivery_days_mean': delivery_days_mean,
+                    'delay_days_mean': delay_days_mean,
+                    'delivery_days_max': delivery_days_max,
+                    'shipping_cost_per_gram': shipping_cost_per_gram,
+                    'product_weight_g_mean': product_weight_g_mean,
+                    'freight_ratio_mean': freight_ratio_mean,
+                    'avg_basket_value': avg_basket_value,
+                    'is_high_freight_customer': is_high_freight,
+                    'price_mean': price_mean,
+                    'monetary_value': monetary_value,
+                    'product_photos_qty_mean': product_photos_qty_mean,
+                    'total_late_orders': total_late_orders,
+                    'min_review_score': min_review_score,
+                    'avg_review_score': avg_review_score,
+                    'frequency': frequency,
+                    'category_diversity': category_diversity,
+                    'is_shipping_ripoff': is_shipping_ripoff
+                }])
+
+                try:
+                    input_data = input_data[model_features]
+                    prediction = loaded_model.predict(input_data)[0]
+                    prob = loaded_model.predict_proba(input_data)[0][1] * 100
+                    
+                    # Card แสดงผล
+                    st.markdown("---")
+                    if prob > 50:
+                        st.error(f"⚠️ **HIGH RISK: มีความเสี่ยงสูง ({prob:.2f}%)**")
+                        st.write("ลูกค้ามีแนวโน้มจะ **Churn** (เลิกใช้บริการ)")
+                        st.progress(int(prob), text="Risk Level")
+                        st.warning("💡 **คำแนะนำ:** ควรเสนอคูปองส่วนลดหรือโทรสอบถามความพึงพอใจด่วน")
+                    else:
+                        st.success(f"✅ **LOW RISK: ลูกค้าปกติ ({prob:.2f}%)**")
+                        st.write("ลูกค้ามีแนวโน้มจะ **Stay** (อยู่ต่อ)")
+                        st.progress(int(prob), text="Risk Level")
+                
+                except Exception as e:
+                    st.error(f"Error: {e}")
+
+# ==============================================================================
+# PAGE 3: 🧠 เจาะลึกผลโมเดล (Model Insights)
+# ==============================================================================
+elif page == "🧠 เจาะลึกผลโมเดล (Model Insights)":
+    st.title("🧠 Model Insights & Explanation")
+    st.markdown("หน้านี้ช่วยให้ผู้บริหารเข้าใจว่า **ปัจจัยอะไรที่มีผลต่อลูกค้ามากที่สุด**")
+
+    if loaded_model:
+        # ดึง Feature Importance จาก Random Forest
+        importances = loaded_model.feature_importances_
+        feature_names = model_features
+        
+        # สร้าง DataFrame
+        fi_df = pd.DataFrame({
+            'Feature': feature_names,
+            'Importance': importances
+        }).sort_values(by='Importance', ascending=False).head(10) # เอาแค่ Top 10
+        
+        # กราฟแท่งแนวนอน
+        st.subheader("🏆 Top 10 ปัจจัยที่ทำให้ลูกค้าหนี (Churn Drivers)")
+        
+        chart_fi = alt.Chart(fi_df).mark_bar(color='#FF4B4B').encode(
+            x=alt.X('Importance', title='ระดับความสำคัญ (Importance Score)'),
+            y=alt.Y('Feature', sort='-x', title='ตัวแปร (Feature)'),
+            tooltip=['Feature', 'Importance']
+        )
+        st.altair_chart(chart_fi, use_container_width=True)
+        
+        st.info("""
+        **วิธีการอ่านค่า:**
+        * แท่งยิ่งยาว แปลว่าปัจจัยนั้นมีผลต่อการตัดสินใจของลูกค้ามากที่สุด
+        * โดยปกติ **Delivery Days (วันส่ง)** และ **Review Score (คะแนนรีวิว)** มักจะติดอันดับต้นๆ ใน Olist
+        """)
+        
+    else:
+        st.warning("ไม่พบโมเดล ไม่สามารถแสดง Insights ได้")

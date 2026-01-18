@@ -2,245 +2,241 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import altair as alt
-import time
+import joblib
 
 # ==========================================
 # 1. SETUP & CONFIGURATION
 # ==========================================
 st.set_page_config(
-    page_title="Olist AI Dashboard",
+    page_title="Olist Real AI Dashboard",
     page_icon="🇧🇷",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ==========================================
-# 2. MOCK DATA GENERATOR (จำลองข้อมูล)
+# 2. LOAD DATA & MODEL (ของจริง!)
 # ==========================================
-@st.cache_data
-def get_mock_data():
-    # สร้างข้อมูลจำลอง 500 แถว
-    np.random.seed(42)
-    n = 500
-    df = pd.DataFrame({
-        'customer_id': [f'CUST-{i:04d}' for i in range(n)],
-        'delivery_days': np.random.normal(12, 4, n), # เฉลี่ยส่ง 12 วัน
-        'review_score': np.random.choice([1, 2, 3, 4, 5], n, p=[0.1, 0.1, 0.15, 0.25, 0.4]),
-        'monetary': np.random.exponential(150, n),
-        'churn_prob': np.random.uniform(0, 1, n),
-        # พิกัดจำลอง (แถวๆ บราซิล)
-        'lat': np.random.uniform(-23.5, -20.0, n),
-        'lon': np.random.uniform(-46.6, -43.0, n),
-        'segment': np.random.choice(['Loyal', 'Champion', 'Hibernating', 'At Risk'], n)
-    })
-    # สร้าง Status จาก churn_prob
-    df['status'] = df['churn_prob'].apply(lambda x: 'High Risk' if x > 0.6 else 'Active')
-    return df
+@st.cache_resource
+def load_assets():
+    # 1. โหลดโมเดลและฟีเจอร์
+    try:
+        model = joblib.load('olist_churn_model_best.pkl') # หรือชื่อไฟล์ที่คุณตั้ง
+        features = joblib.load('model_features_best.pkl')
+    except:
+        st.error("⚠️ หาไฟล์โมเดลไม่เจอ! กรุณาเช็คชื่อไฟล์ .pkl")
+        return None, None, None, None, None
 
-df_mock = get_mock_data()
+    # 2. โหลดข้อมูลลูกค้า (Dashboard Input)
+    try:
+        df = pd.read_csv('olist_dashboard_input.csv')
+        # แปลงวันที่
+        if 'order_purchase_timestamp' in df.columns:
+            df['order_purchase_timestamp'] = pd.to_datetime(df['order_purchase_timestamp'])
+    except:
+        st.error("⚠️ หาไฟล์ olist_dashboard_input.csv ไม่เจอ")
+        return None, None, None, None, None
+
+    # 3. โหลดข้อมูลเสริม
+    try:
+        risk_map = pd.read_csv('category_churn_risk.csv')
+        cycle_map = pd.read_csv('category_cycle_benchmark.csv')
+    except:
+        risk_map = pd.DataFrame() # กัน error
+        cycle_map = pd.DataFrame()
+
+    return model, features, df, risk_map, cycle_map
+
+model, feature_names, df, risk_map, cycle_map = load_assets()
+
+# --- PREDICTION ENGINE ---
+if model is not None and df is not None:
+    # เตรียมข้อมูลสำหรับทำนาย (เลือกเฉพาะคอลัมน์ที่โมเดลต้องใช้)
+    # เติมคอลัมน์ที่ขาดด้วย 0 (เผื่อมีอะไรตกหล่น)
+    X_pred = df.reindex(columns=feature_names, fill_value=0)
+    
+    # ทำนายผล!
+    # 0 = Stay, 1 = Churn
+    # แต่เราอยากได้ Probability ของการ Churn (คอลัมน์ 1)
+    try:
+        probs = model.predict_proba(X_pred)[:, 1] 
+        df['churn_probability'] = probs
+    except:
+        # กรณีโมเดลบางตัวไม่มี predict_proba
+        preds = model.predict(X_pred)
+        df['churn_probability'] = preds.astype(float)
+
+    # --- FINAL LOGIC: ผสม AI + Lateness Score ---
+    # ถ้า AI บอกเสี่ยงสูง (Prob > 0.7) OR หายไปนานเกิน (Lateness > 2.0)
+    def define_status(row):
+        prob = row['churn_probability']
+        late = row.get('lateness_score', 0)
+        
+        if prob > 0.8: return 'High Risk (AI)'
+        elif late > 3.0: return 'Lost (Late)'
+        elif late > 1.5: return 'Warning (Late)'
+        elif prob > 0.5: return 'Medium Risk'
+        else: return 'Active'
+
+    df['status'] = df.apply(define_status, axis=1)
 
 # ==========================================
 # 3. SIDEBAR NAVIGATION
 # ==========================================
-st.sidebar.title("🛍️ Olist Analytics")
+st.sidebar.title("🛍️ Olist AI Analytics")
+st.sidebar.caption(f"Total Customers: {len(df):,}")
 st.sidebar.markdown("---")
-page = st.sidebar.radio("เลือกเมนู (Menu)", [
-    "1. 📊 Executive Summary",
-    "2. 🔍 Customer Risk Predictor",
-    "3. 👥 Segmentation & Persona",
-    "4. 🚚 Logistics & Operations",
-    "5. 📦 Product & Category",
-    "6. 🎯 Action & Simulation"
+page = st.sidebar.radio("เมนูหลัก", [
+    "1. 📊 ภาพรวมธุรกิจ (Overview)",
+    "2. 🔍 เจาะลึกรายคน (Customer Risk)",
+    "3. 📦 สินค้าเสี่ยง (Product Insight)",
+    "4. 🎯 แผนกู้คืนลูกค้า (Action Plan)"
 ])
-st.sidebar.markdown("---")
-st.sidebar.info("💡 **Demo Mode:** ข้อมูลทั้งหมดถูกจำลองขึ้นเพื่อแสดงผลลัพธ์")
+
+if df is None:
+    st.warning("กรุณาอัปโหลดไฟล์ข้อมูลก่อนใช้งาน")
+    st.stop()
 
 # ==========================================
 # PAGE 1: 📊 Executive Summary
 # ==========================================
-if page == "1. 📊 Executive Summary":
-    st.title("📊 Executive Summary")
-    st.markdown("ภาพรวมสถานการณ์ธุรกิจและแนวโน้มในอนาคต")
-
-    # --- KPI Cards ---
-    col1, col2, col3, col4 = st.columns(4)
-    avg_churn = df_mock['churn_prob'].mean() * 100
-    risk_count = len(df_mock[df_mock['status'] == 'High Risk'])
-    revenue_risk = df_mock[df_mock['status'] == 'High Risk']['monetary'].sum()
+if page == "1. 📊 ภาพรวมธุรกิจ (Overview)":
+    st.title("📊 Business Health Check")
     
-    col1.metric("Overall Churn Rate", f"{avg_churn:.2f}%", "-1.2%")
-    col2.metric("Revenue at Risk", f"R$ {revenue_risk:,.0f}", "High", delta_color="inverse")
-    col3.metric("High Risk Customers", f"{risk_count} คน", f"{(risk_count/500)*100:.1f}% ของลูกค้าทั้งหมด")
-    col4.metric("Active Customers", f"{500 - risk_count} คน", "+12 คน")
+    # KPI
+    col1, col2, col3, col4 = st.columns(4)
+    
+    total_customers = len(df)
+    high_risk = len(df[df['status'].str.contains('High|Lost')])
+    churn_rate = (high_risk / total_customers) * 100
+    avg_lateness = df['lateness_score'].mean()
+    
+    col1.metric("ลูกค้าทั้งหมด", f"{total_customers:,}")
+    col2.metric("กลุ่มเสี่ยงสูง (High Risk)", f"{high_risk:,}", f"{churn_rate:.1f}% ของทั้งหมด", delta_color="inverse")
+    col3.metric("คะแนนความล่าช้าเฉลี่ย", f"{avg_lateness:.2f}x", "ยิ่งน้อยยิ่งดี", delta_color="inverse")
+    
+    # Revenue at Risk (ถ้ามี col payment_value)
+    if 'payment_value' in df.columns:
+        risk_money = df[df['status'].str.contains('High|Lost')]['payment_value'].sum()
+        col4.metric("รายได้ที่เสี่ยงสูญเสีย", f"R$ {risk_money:,.0f}", "Money at Risk")
 
     st.markdown("---")
 
-    # --- Trend & Forecast Chart (Highlight) ---
-    st.subheader("📈 Churn Rate Trend & Forecast (AI Prediction)")
+    # Chart 1: Distribution of Risk
+    st.subheader("🚦 สัดส่วนสถานะลูกค้า (Customer Status)")
+    status_counts = df['status'].value_counts().reset_index()
+    status_counts.columns = ['Status', 'Count']
     
-    # จำลองข้อมูลกราฟ
-    dates_past = pd.date_range(start='2018-01-01', periods=6, freq='M')
-    churn_past = [12.5, 13.0, 12.8, 13.5, 14.2, 14.5]
-    dates_future = pd.date_range(start='2018-07-01', periods=3, freq='M')
-    churn_future = [14.8, 15.2, 15.5] # แนวโน้มขึ้น
-    
-    df_trend = pd.concat([
-        pd.DataFrame({'Date': dates_past, 'Rate': churn_past, 'Type': 'Actual'}),
-        pd.DataFrame({'Date': dates_future, 'Rate': churn_future, 'Type': 'Forecast'})
-    ])
-    
-    chart_forecast = alt.Chart(df_trend).mark_line(point=True).encode(
-        x=alt.X('Date', axis=alt.Axis(format='%b %Y')),
-        y=alt.Y('Rate', title='Churn Rate (%)', scale=alt.Scale(domain=[10, 18])),
-        color=alt.Color('Type', scale=alt.Scale(domain=['Actual', 'Forecast'], range=['#2ecc71', '#e74c3c'])),
-        strokeDash=alt.condition(alt.datum.Type == 'Forecast', alt.value([5, 5]), alt.value([0])),
-        tooltip=['Date', 'Rate', 'Type']
-    ).properties(height=350)
-    
-    st.altair_chart(chart_forecast, use_container_width=True)
-    st.warning("⚠️ **Alert:** โมเดลพยากรณ์ว่า Churn Rate มีแนวโน้ม **สูงขึ้น** ในอีก 3 เดือนข้างหน้า")
+    chart_status = alt.Chart(status_counts).mark_arc(innerRadius=50).encode(
+        theta=alt.Theta(field="Count", type="quantitative"),
+        color=alt.Color(field="Status", type="nominal", 
+                        scale=alt.Scale(domain=['Active', 'Medium Risk', 'Warning (Late)', 'High Risk (AI)', 'Lost (Late)'],
+                                        range=['#2ecc71', '#f1c40f', '#e67e22', '#e74c3c', '#34495e'])),
+        tooltip=['Status', 'Count']
+    )
+    st.altair_chart(chart_status, use_container_width=True)
 
 # ==========================================
 # PAGE 2: 🔍 Customer Risk Predictor
 # ==========================================
-elif page == "2. 🔍 Customer Risk Predictor":
-    st.title("🔍 Customer Risk Predictor")
-    st.markdown("เครื่องมือประเมินความเสี่ยงรายบุคคล (สำหรับทีม CS)")
-
-    col_input, col_res = st.columns([1, 1.5])
+elif page == "2. 🔍 เจาะลึกรายคน (Customer Risk)":
+    st.title("🔍 ค้นหาลูกค้า & ประเมินความเสี่ยง")
     
-    with col_input:
-        st.subheader("📝 กรอกข้อมูลลูกค้า")
-        st.text_input("Customer ID", "CUST-9999")
-        days = st.slider("ระยะเวลาจัดส่ง (วัน)", 1, 60, 25)
-        score = st.slider("คะแนนรีวิวล่าสุด", 1, 5, 2)
-        late = st.number_input("จำนวนครั้งที่ส่งช้า", 0, 10, 2)
-        
-        predict_btn = st.button("🔮 ประเมินความเสี่ยง", use_container_width=True, type="primary")
-
-    with col_res:
-        st.subheader("ผลการประเมิน")
-        if predict_btn:
-            # Mock Result Logic
-            risk_score = 0.85 if (days > 20 or score < 3) else 0.20
-            
-            if risk_score > 0.5:
-                st.error(f"🔴 **HIGH RISK** (โอกาสหนี {risk_score*100:.0f}%)")
-                st.progress(risk_score, text="Risk Level")
-                st.info("💡 **Action Item:** ลูกค้ารอนานเกินไปและรีวิวแย่ -> **ควรส่งคูปองขอโทษทันที**")
-            else:
-                st.success(f"🟢 **LOW RISK** (โอกาสหนี {risk_score*100:.0f}%)")
-                st.progress(risk_score, text="Risk Level")
-        else:
-            st.info("👈 กดปุ่มเพื่อทำนายผล")
+    # Search Box
+    search_id = st.text_input("ค้นหา Customer ID (หรือปล่อยว่างเพื่อดูทั้งหมด)", "")
+    
+    # Filter
+    filter_status = st.multiselect("กรองสถานะ:", df['status'].unique(), default=['High Risk (AI)', 'Warning (Late)'])
+    
+    # Apply Filter
+    filtered_df = df[df['status'].isin(filter_status)]
+    if search_id:
+        filtered_df = filtered_df[filtered_df['customer_unique_id'].str.contains(search_id)]
+    
+    # Show Table
+    st.write(f"พบลูกค้าจำนวน: {len(filtered_df):,} คน")
+    
+    # เลือกคอลัมน์ที่จะโชว์
+    show_cols = ['customer_unique_id', 'status', 'churn_probability', 'lateness_score', 'payment_value', 'product_category_name']
+    # กรองเอาเฉพาะที่มีอยู่จริง
+    final_cols = [c for c in show_cols if c in df.columns]
+    
+    st.dataframe(
+        filtered_df[final_cols].sort_values(by='churn_probability', ascending=False).style.format({
+            'churn_probability': '{:.2%}',
+            'lateness_score': '{:.2f}',
+            'payment_value': '{:,.2f}'
+        })
+    )
 
 # ==========================================
-# PAGE 3: 👥 Segmentation & Persona
+# PAGE 3: 📦 Product Insight
 # ==========================================
-elif page == "3. 👥 Segmentation & Persona":
-    st.title("👥 Customer Segmentation")
+elif page == "3. 📦 สินค้าเสี่ยง (Product Insight)":
+    st.title("📦 สินค้าไหนเสี่ยง Churn สูงสุด?")
     
-    col1, col2 = st.columns(2)
+    # Group by Category
+    cat_risk = df.groupby('product_category_name').agg({
+        'churn_probability': 'mean',
+        'customer_unique_id': 'count',
+        'lateness_score': 'mean'
+    }).reset_index()
+    
+    # Filter only significant categories (> 50 orders)
+    cat_risk = cat_risk[cat_risk['customer_unique_id'] > 50].sort_values('churn_probability', ascending=False)
+    
+    col1, col2 = st.columns([2, 1])
     
     with col1:
-        st.subheader("กลุ่มลูกค้าแบ่งตามพฤติกรรม (RFM)")
-        # Bar Chart
-        seg_counts = df_mock['segment'].value_counts().reset_index()
-        seg_counts.columns = ['Segment', 'Count']
-        
-        chart_seg = alt.Chart(seg_counts).mark_bar().encode(
-            x='Count',
-            y=alt.Y('Segment', sort='-x'),
-            color='Segment'
+        st.subheader("Top 10 หมวดสินค้าที่ลูกค้าหนีเยอะสุด")
+        chart_cat = alt.Chart(cat_risk.head(10)).mark_bar().encode(
+            x=alt.X('churn_probability', title='Avg Churn Prob'),
+            y=alt.Y('product_category_name', sort='-x', title='Category'),
+            color=alt.condition(
+                alt.datum.churn_probability > 0.8,
+                alt.value('red'),
+                alt.value('steelblue')
+            ),
+            tooltip=['product_category_name', 'churn_probability', 'lateness_score']
         )
-        st.altair_chart(chart_seg, use_container_width=True)
+        st.altair_chart(chart_cat, use_container_width=True)
         
     with col2:
-        st.subheader("❌ อัตราการ Churn ของแต่ละกลุ่ม")
-        # Mock churn rate per segment
-        churn_by_seg = pd.DataFrame({
-            'Segment': ['At Risk', 'Hibernating', 'Loyal', 'Champion'],
-            'Churn Rate': [85, 60, 15, 5]
-        })
-        chart_rate = alt.Chart(churn_by_seg).mark_bar(color='#ff7f50').encode(
-            x='Segment',
-            y='Churn Rate'
-        )
-        st.altair_chart(chart_rate, use_container_width=True)
+        st.info("💡 **Insight:** สินค้าที่กราฟแดงยาวๆ คือสินค้ากลุ่ม One-time purchase (ซื้อแล้วจบ) หรือสินค้าที่มีปัญหาคุณภาพ")
 
 # ==========================================
-# PAGE 4: 🚚 Logistics & Operations
+# PAGE 4: 🎯 Action Plan
 # ==========================================
-elif page == "4. 🚚 Logistics & Operations":
-    st.title("🚚 Logistics Impact Analysis")
+elif page == "4. 🎯 แผนกู้คืนลูกค้า (Action Plan)":
+    st.title("🎯 ใครคือเป้าหมายที่เราต้องช่วย? (The Rescue List)")
     
-    # 1. Correlation
-    st.subheader("ยิ่งส่งช้า... ยิ่งหนีจริงไหม?")
-    chart_corr = alt.Chart(df_mock).mark_circle(size=60).encode(
-        x=alt.X('delivery_days', title='วันรอของ'),
-        y=alt.Y('churn_prob', title='โอกาส Churn'),
-        color=alt.Color('status', title='สถานะ'),
-        tooltip=['delivery_days', 'churn_prob']
-    ).interactive()
-    st.altair_chart(chart_corr, use_container_width=True)
+    st.markdown("""
+    เราคัดเลือก **"Golden Segment"** มาให้แล้ว:
+    1. **ไม่ใช่คนที่จะหนีแน่นอน (Lost)** -> Lateness Score < 3.0
+    2. **แต่เริ่มมีอาการ (Warning)** -> Lateness Score > 1.5
+    3. **เป็นลูกค้าชั้นดี (High Value)** -> ยอดซื้อสูงกว่าค่าเฉลี่ย
+    """)
     
-    # 2. Map
-    st.subheader("📍 พื้นที่ที่มีปัญหา (High Churn Areas)")
-    st.markdown("จุดสีแดงแสดงลูกค้าที่มีความเสี่ยงสูง")
+    # Logic Filter
+    avg_spend = df['payment_value'].mean() if 'payment_value' in df.columns else 100
     
-    # Filter only high risk for map
-    map_data = df_mock[df_mock['status'] == 'High Risk'][['lat', 'lon']]
-    st.map(map_data, zoom=4)
-
-# ==========================================
-# PAGE 5: 📦 Product & Category
-# ==========================================
-elif page == "5. 📦 Product & Category":
-    st.title("📦 Product Insights")
+    rescue_list = df[
+        (df['lateness_score'] > 1.5) & 
+        (df['lateness_score'] < 3.0) &
+        (df['payment_value'] > avg_spend)
+    ]
     
-    st.subheader("🏆 หมวดหมู่สินค้าที่คนหนีเยอะที่สุด (Top Churn Categories)")
+    st.success(f"💎 พบลูกค้า VIP ที่กำลังจะหนีจำนวน: **{len(rescue_list):,} คน** (มูลค่ารวม R$ {rescue_list['payment_value'].sum():,.0f})")
     
-    cat_data = pd.DataFrame({
-        'Category': ['Office Furniture', 'Fashion', 'Electronics', 'Toys', 'Books'],
-        'Churn Rate (%)': [65, 45, 30, 25, 10]
-    })
+    st.write("📋 **รายชื่อสำหรับส่ง SMS/Email Marketing:**")
+    st.dataframe(rescue_list[['customer_unique_id', 'product_category_name', 'lateness_score', 'payment_value']])
     
-    chart_cat = alt.Chart(cat_data).mark_bar().encode(
-        x='Category',
-        y='Churn Rate (%)',
-        color=alt.condition(
-            alt.datum['Churn Rate (%)'] > 50,
-            alt.value('red'),  # The positive color
-            alt.value('steelblue')  # The negative color
-        )
+    # ปุ่มดาวน์โหลด
+    csv = rescue_list.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        "📥 Download Rescue List (.csv)",
+        csv,
+        "olist_rescue_mission.csv",
+        "text/csv",
+        key='download-csv'
     )
-    st.altair_chart(chart_cat, use_container_width=True)
-    st.caption("*สินค้ากลุ่มเฟอร์นิเจอร์มีปัญหา Churn สูงสุด อาจเกิดจากการขนส่งเสียหายหรือส่งช้า")
-
-# ==========================================
-# PAGE 6: 🎯 Action & Simulation
-# ==========================================
-elif page == "6. 🎯 Action & Simulation":
-    st.title("🎯 Action Plan & Simulation")
-    st.markdown("### What-if Analysis: ลองปรับแก้แล้วดูผลลัพธ์")
-    
-    # Simulation Logic
-    st.write("ถ้าเราสามารถลดเวลาจัดส่งเฉลี่ยลงได้...")
-    days_reduced = st.slider("ลดเวลาส่งลง (วัน)", 0, 10, 2)
-    
-    current_churn = 14.5
-    predicted_churn = current_churn - (days_reduced * 0.8) # สมมติสูตรคำนวณ
-    
-    col1, col2 = st.columns(2)
-    col1.metric("Current Churn Rate", f"{current_churn}%")
-    col2.metric("Predicted Churn Rate", f"{predicted_churn:.2f}%", f"-{current_churn - predicted_churn:.2f}%", delta_color="normal")
-    
-    st.markdown("---")
-    
-    st.subheader("📋 Target List for Campaign")
-    st.write("รายชื่อลูกค้า Top 50 ที่ควรแจกคูปองเพื่อดึงกลับมา (Export ได้)")
-    
-    target_list = df_mock[df_mock['status'] == 'High Risk'].sort_values('monetary', ascending=False).head(50)
-    st.dataframe(target_list[['customer_id', 'segment', 'monetary', 'churn_prob']])
-    
-    st.button("📥 Download Excel (Mock)")

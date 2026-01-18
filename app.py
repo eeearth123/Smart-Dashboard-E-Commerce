@@ -29,7 +29,7 @@ def load_assets():
 
     # 2. โหลดข้อมูลลูกค้า (Dashboard Input)
     try:
-        df = pd.read_csv('olist_dashboard_input.csv')
+        df = pd.read_csv('olist_dashboard_lite.csv')
         # แปลงวันที่
         if 'order_purchase_timestamp' in df.columns:
             df['order_purchase_timestamp'] = pd.to_datetime(df['order_purchase_timestamp'])
@@ -240,3 +240,4 @@ elif page == "4. 🎯 แผนกู้คืนลูกค้า (Action Plan
         "text/csv",
         key='download-csv'
     )
+

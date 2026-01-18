@@ -1,10 +1,9 @@
 streamlit
 pandas
 numpy
+altair
 joblib
-plotly
 scikit-learn
-gspread
-gspread-dataframe
-matplotlib
-oauth2client
+flaml
+xgboost
+lightgbm

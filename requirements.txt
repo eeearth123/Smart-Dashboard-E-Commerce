@@ -3,7 +3,7 @@ pandas
 numpy
 altair
 joblib
-scikit-learn
 flaml
 xgboost
 lightgbm
+scikit-learn==1.2.2

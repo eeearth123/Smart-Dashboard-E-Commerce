@@ -29,14 +29,14 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. LOAD ASSETS (พร้อมระบบสร้างข้อมูลจำลอง)
+# 2. LOAD ASSETS (with Dummy Data Fallback)
 # ==========================================
 @st.cache_resource
 def load_data_and_model():
     data_dict = {}
     errors = []
     
-    # 1. หาตำแหน่งไฟล์
+    # 1. หาตำแหน่งไฟล์ (Path Fix)
     current_dir = os.path.dirname(os.path.abspath(__file__))
     model_path = os.path.join(current_dir, 'olist_churn_model_best.pkl')
     features_path = os.path.join(current_dir, 'model_features_best.pkl')
@@ -47,23 +47,23 @@ def load_data_and_model():
         data_dict['model'] = joblib.load(model_path)
         data_dict['features'] = joblib.load(features_path)
     except Exception as e:
-        errors.append(f"Model Warning: {e} (ใช้ระบบ Fallback แทน)")
+        errors.append(f"Model Warning: {e}")
 
-    # 3. โหลด Data (หรือสร้างใหม่ถ้าพัง)
+    # 3. โหลด Data (ถ้าพังจะสร้างข้อมูลจำลอง)
     try:
-        # ลองโหลดไฟล์จริงก่อน
+        # เช็คว่ามีไฟล์และไฟล์ไม่ว่างเปล่า
         if os.path.exists(lite_data_path) and os.path.getsize(lite_data_path) > 0:
             df = pd.read_csv(lite_data_path)
             if 'order_purchase_timestamp' in df.columns:
                 df['order_purchase_timestamp'] = pd.to_datetime(df['order_purchase_timestamp'])
         else:
-            raise ValueError("File is empty or missing")
+            raise ValueError("File missing or empty")
             
     except Exception as e:
-        # ⚠️ ถ้าไฟล์พัง ให้สร้างข้อมูลจำลอง (Dummy Data) ขึ้นมาแทนทันที
-        errors.append(f"Notice: สร้างข้อมูลจำลองเนื่องจาก ({e})")
+        # ⚠️ FALLBACK SYSTEM: สร้างข้อมูลจำลองทันที (กันเว็บล่ม)
+        errors.append(f"Notice: ใช้ข้อมูลจำลอง (Dummy Data) เนื่องจาก: {e}")
         
-        # สร้าง DataFrame จำลอง 100 แถว
+        # สร้าง Dummy Data 100 แถว
         dates = pd.date_range(start='2018-01-01', periods=100)
         df = pd.DataFrame({
             'customer_unique_id': [f'CUST_{i:03d}' for i in range(100)],
@@ -71,9 +71,9 @@ def load_data_and_model():
             'payment_value': np.random.uniform(50, 500, 100),
             'status': np.random.choice(['Active', 'High Risk', 'Warning (Late > 1.5x)'], 100),
             'churn_probability': np.random.uniform(0.1, 0.9, 100),
-            'product_category_name': np.random.choice(['bed_bath_table', 'health_beauty', 'sports_leisure'], 100),
+            'product_category_name': np.random.choice(['bed_bath_table', 'health_beauty', 'sports_leisure', 'furniture_decor'], 100),
             'customer_state': np.random.choice(['SP', 'RJ', 'MG', 'RS'], 100),
-            'customer_city': np.random.choice(['sao paulo', 'rio de janeiro', 'belo horizonte'], 100),
+            'customer_city': np.random.choice(['sao paulo', 'rio de janeiro', 'belo horizonte', 'curitiba'], 100),
             'seller_id': np.random.choice([f'SELLER_{i:02d}' for i in range(10)], 100),
             'delivery_days': np.random.uniform(2, 15, 100),
             'delay_days': np.random.uniform(0, 5, 100),
@@ -84,42 +84,51 @@ def load_data_and_model():
         
     data_dict['df'] = df
     return data_dict, errors
+
+# --- ส่วนสำคัญที่ห้ามหาย! (Calling the function) ---
+assets, load_errors = load_data_and_model()
+
+# แสดงแจ้งเตือน (แต่ไม่หยุดทำงาน ถ้ามี Dummy Data)
+if load_errors:
+    for err in load_errors:
+        st.warning(f"⚠️ {err}")
+
+# ถ้าไม่มีข้อมูลเลยจริงๆ (เคสแย่สุด) ถึงจะหยุด
+if 'df' not in assets:
+    st.error("Critical Error: ไม่สามารถโหลดข้อมูลได้เลย")
+    st.stop()
+
 # ==========================================
-# 3. PREPARE DATA (Prediction & Logic)
+# 3. PREPARE DATA
 # ==========================================
 df = assets['df']
-model = assets['model']
-feature_names = assets['features']
+model = assets.get('model')  # ใช้ .get เพื่อกัน Error ถ้าโมเดลไม่มา
+feature_names = assets.get('features', [])
 
-# 3.1 Predict Churn Probability (ถ้ายังไม่มีในไฟล์)
-if 'churn_probability' not in df.columns:
+# 3.1 Predict Logic (ถ้ามีโมเดลจริง)
+if 'churn_probability' not in df.columns and model is not None:
     X_pred = pd.DataFrame(index=df.index)
     for col in feature_names:
-        if col in df.columns:
-            X_pred[col] = df[col]
-        else:
-            X_pred[col] = 0
-            
+        X_pred[col] = df[col] if col in df.columns else 0
     try:
         if hasattr(model, "predict_proba"):
             df['churn_probability'] = model.predict_proba(X_pred)[:, 1]
         else:
             df['churn_probability'] = model.predict(X_pred)
     except:
-        df['churn_probability'] = 0.5 # Fallback
+        df['churn_probability'] = np.random.uniform(0.1, 0.9, len(df)) # Fallback
 
-# 3.2 Define Status Logic
-def get_status(row):
-    prob = row.get('churn_probability', 0)
-    late = row.get('lateness_score', 0)
-    
-    if late > 3.0: return 'Lost (Late > 3x)'
-    if prob > 0.75: return 'High Risk'
-    if late > 1.5: return 'Warning (Late > 1.5x)'
-    if prob > 0.5: return 'Medium Risk'
-    return 'Active'
-
-df['status'] = df.apply(get_status, axis=1)
+# 3.2 Define Status Logic (ถ้ายังไม่มี column status)
+if 'status' not in df.columns:
+    def get_status(row):
+        prob = row.get('churn_probability', 0)
+        late = row.get('lateness_score', 0)
+        if late > 3.0: return 'Lost (Late > 3x)'
+        if prob > 0.75: return 'High Risk'
+        if late > 1.5: return 'Warning (Late > 1.5x)'
+        if prob > 0.5: return 'Medium Risk'
+        return 'Active'
+    df['status'] = df.apply(get_status, axis=1)
 
 # ==========================================
 # 4. NAVIGATION & LAYOUT
@@ -141,18 +150,17 @@ st.sidebar.info("Select a page to analyze different aspects of your business.")
 # ==========================================
 if page == "1. 📊 Executive Summary":
     st.title("📊 Executive Summary (Business Health)")
-    st.markdown("ภาพรวมสุขภาพของธุรกิจและแนวโน้มความเสี่ยงลูกค้า (Real-time AI Analysis)")
+    st.markdown("ภาพรวมสุขภาพของธุรกิจและแนวโน้มความเสี่ยงลูกค้า")
     st.markdown("---")
 
     # KPI Calculation
     total_customers = len(df)
     risk_df = df[df['status'].isin(['High Risk', 'Warning (Late > 1.5x)'])]
     risk_count = len(risk_df)
-    churn_rate = (risk_count / total_customers) * 100
+    churn_rate = (risk_count / total_customers) * 100 if total_customers > 0 else 0
     rev_at_risk = risk_df['payment_value'].sum() if 'payment_value' in df.columns else 0
     active_count = len(df[df['status'] == 'Active'])
 
-    # KPI Cards
     k1, k2, k3, k4 = st.columns(4)
     with k1: st.metric("🚨 Current Churn Rate", f"{churn_rate:.1f}%", delta="-Target 5%", delta_color="inverse")
     with k2: st.metric("💸 Revenue at Risk", f"R$ {rev_at_risk:,.0f}", "ความเสียหายที่อาจเกิด", delta_color="inverse")
@@ -160,22 +168,21 @@ if page == "1. 📊 Executive Summary":
     with k4: st.metric("✅ Active Customers", f"{active_count:,}", "ลูกค้าชั้นดี")
 
     st.markdown("---")
-
-    # Charts
     c1, c2 = st.columns([2, 1])
     
     with c1:
-        st.subheader("📈 Churn Risk Trend & Forecast")
+        st.subheader("📈 Churn Risk Trend")
         if 'order_purchase_timestamp' in df.columns:
             df['month_year'] = df['order_purchase_timestamp'].dt.to_period('M').astype(str)
             trend_df = df.groupby('month_year')['churn_probability'].mean().reset_index()
             trend_df.columns = ['Date', 'Churn_Prob']
             trend_df['Type'] = 'Actual'
+            # Convert to datetime for Altair
             trend_df['Date'] = pd.to_datetime(trend_df['Date'])
             
-            # Forecast Simulation
+            # Forecast (Dummy Logic)
             last_date = trend_df['Date'].max()
-            last_val = trend_df['Churn_Prob'].iloc[-1]
+            last_val = trend_df['Churn_Prob'].iloc[-1] if not trend_df.empty else 0.5
             future_dates = [last_date + pd.DateOffset(months=i) for i in range(1, 4)]
             future_vals = [last_val * (1 + 0.02*i) for i in range(1, 4)]
             forecast_df = pd.DataFrame({'Date': future_dates, 'Churn_Prob': future_vals, 'Type': ['Forecast']*3})
@@ -191,7 +198,7 @@ if page == "1. 📊 Executive Summary":
             ).properties(height=350)
             st.altair_chart(chart, use_container_width=True)
         else:
-            st.warning("⚠️ Missing 'order_purchase_timestamp' for Trend Chart")
+            st.warning("⚠️ No date column for Trend Chart")
 
     with c2:
         st.subheader("🍩 Business Health")
@@ -212,7 +219,6 @@ if page == "1. 📊 Executive Summary":
 # ==========================================
 elif page == "2. 🔍 Customer Detail":
     st.title("🔍 เจาะลึกกลุ่มเสี่ยง (Customer Deep Dive)")
-    st.markdown("วิเคราะห์เจาะลึก: **รอบการซื้อของแต่ละสินค้า** และ **สัดส่วนลูกค้ากลุ่มเสี่ยง**")
     
     with st.expander("🔎 ตัวกรองข้อมูล (Filters)", expanded=True):
         f1, f2, f3 = st.columns(3)
@@ -231,7 +237,6 @@ elif page == "2. 🔍 Customer Detail":
     filtered_df = df[mask]
 
     if 'product_category_name' in df.columns and not filtered_df.empty:
-        # Calculate Stats
         cat_overview = df.groupby('product_category_name').agg({
             'customer_unique_id': 'count',
             'cat_median_days': 'mean'
@@ -255,15 +260,7 @@ elif page == "2. 🔍 Customer Detail":
 
         with col_t:
             st.subheader("📋 รายละเอียด")
-            st.dataframe(
-                cat_stats,
-                column_config={
-                    "Cycle_Days": st.column_config.NumberColumn("รอบซื้อ (วัน)", format="%d"),
-                    "Risk_Pct": st.column_config.ProgressColumn("% เสี่ยง", format="%.1f%%", min_value=0, max_value=1)
-                },
-                hide_index=True,
-                use_container_width=True
-            )
+            st.dataframe(cat_stats, use_container_width=True, hide_index=True)
 
     st.markdown("---")
     st.subheader(f"📄 รายชื่อลูกค้า ({len(filtered_df):,} คน)")
@@ -280,21 +277,25 @@ elif page == "2. 🔍 Customer Detail":
     )
 
 # ==========================================
-# PAGE 3: 🎯 Action Plan (Marketing ROI)
+# PAGE 3: 🎯 Action Plan
 # ==========================================
 elif page == "3. 🎯 Action Plan":
     st.title("🎯 Marketing Campaign Simulator")
-    st.markdown("### วิเคราะห์ความคุ้มค่า (ROI): ดึงลูกค้ากลุ่ม 'ลังเล' กลับมา")
+    st.markdown("### วิเคราะห์ความคุ้มค่า (ROI)")
     
+    # Filter Target (Risk 60-85%)
     target_customers = df[(df['churn_probability'] >= 0.60) & (df['churn_probability'] <= 0.85)].copy()
     total_target = len(target_customers)
     
     if total_target == 0:
-        st.warning("ไม่พบลูกค้ากลุ่มเป้าหมาย (Risk 60-85%)")
-        st.stop()
+        st.warning("⚠️ ไม่พบลูกค้ากลุ่มเป้าหมาย (ใช้ข้อมูลจำลองแทน)")
+        # สร้างข้อมูลจำลองถ้าไม่เจอ
+        target_customers = df.head(50).copy()
+        total_target = 50
 
     with st.container():
-        st.markdown(f"#### 🎯 เป้าหมาย: {total_target:,} คน (Revenue at Risk: R$ {target_customers['payment_value'].sum():,.0f})")
+        val_risk = target_customers['payment_value'].sum() if 'payment_value' in df.columns else 0
+        st.markdown(f"#### 🎯 เป้าหมาย: {total_target:,} คน (Value: R$ {val_risk:,.0f})")
         c1, c2, c3 = st.columns(3)
         with c1: voucher = st.slider("💰 มูลค่าคูปอง (R$)", 0, 50, 0, step=5)
         with c2: speed = st.selectbox("🚚 ขนส่ง", ["ปกติ", "ส่งด่วน (-2 วัน)"])
@@ -305,28 +306,15 @@ elif page == "3. 🎯 Action Plan":
     # Simulation Logic
     df_sim = target_customers.copy()
     impact = (voucher / 10) * 0.02 if voucher > 0 else 0
-    if voucher > 0 and 'review_score' in df_sim.columns:
-        df_sim['review_score'] = (df_sim['review_score'] + (voucher/20)).clip(upper=5.0)
     
-    if speed == "ส่งด่วน (-2 วัน)" and 'delivery_days' in df_sim.columns:
-        df_sim['delivery_days'] = (df_sim['delivery_days'] - 2).clip(lower=1)
-        if 'delay_days' in df_sim.columns: df_sim['delay_days'] -= 2
-
-    # Re-predict
-    X_sim = pd.DataFrame(index=df_sim.index)
-    for col in feature_names:
-        X_sim[col] = df_sim[col] if col in df_sim.columns else 0
+    # Artificial impact
+    final_probs = df_sim['churn_probability'] - impact
+    if speed == "ส่งด่วน (-2 วัน)":
+        final_probs = final_probs - 0.05
     
-    try:
-        new_probs = model.predict_proba(X_sim)[:, 1] if hasattr(model, "predict_proba") else model.predict(X_sim)
-    except:
-        new_probs = df_sim['churn_probability'] # Fallback if model fails
-        
-    final_probs = new_probs - impact
     df_sim['new_prob'] = final_probs
-    
     success = df_sim[df_sim['new_prob'] < 0.5]
-    saved_rev = success['payment_value'].sum()
+    saved_rev = success['payment_value'].sum() if 'payment_value' in df_sim.columns else 0
     roi = saved_rev - cost
     
     st.markdown("---")
@@ -337,7 +325,6 @@ elif page == "3. 🎯 Action Plan":
     roi_color = "normal" if roi > 0 else "inverse"
     res4.metric("💰 ROI", f"R$ {roi:,.0f}", delta_color=roi_color)
     
-    # Visualization
     col_g, col_l = st.columns([1.5, 1])
     with col_g:
         chart_data = pd.DataFrame({
@@ -346,32 +333,28 @@ elif page == "3. 🎯 Action Plan":
         })
         chart = alt.Chart(chart_data).mark_area(opacity=0.5, interpolate='step').encode(
             x=alt.X('Risk', bin=alt.Bin(maxbins=20)),
-            y='count()',
-            color='Type'
+            y='count()', color='Type'
         ).properties(height=350)
         st.altair_chart(chart, use_container_width=True)
-        
     with col_l:
-        st.dataframe(success[['customer_unique_id', 'payment_value', 'new_prob']].head(20), hide_index=True)
+        st.dataframe(success[['customer_unique_id', 'new_prob']].head(20), hide_index=True)
 
 # ==========================================
-# PAGE 4: 🚛 Logistics Insights
+# PAGE 4: 🚛 Logistics
 # ==========================================
 elif page == "4. 🚛 Logistics Insights":
     st.title("🚛 Logistics Heatmap")
-    
     if 'customer_state' not in df.columns:
-        st.warning("⚠️ ข้อมูลไม่ครบ: ขาด customer_state")
+        st.error("No state data")
         st.stop()
 
     col_map, col_stat = st.columns([2, 1])
     with col_map:
         state_stats = df.groupby('customer_state').agg({
-            'customer_unique_id': 'count',
-            'delivery_days': 'mean',
-            'churn_probability': 'mean'
+            'customer_unique_id': 'count', 'delivery_days': 'mean', 'churn_probability': 'mean'
         }).reset_index()
-        state_stats = state_stats[state_stats['customer_unique_id'] > 20]
+        # Filter noise
+        state_stats = state_stats[state_stats['customer_unique_id'] > 5]
         
         chart = alt.Chart(state_stats).mark_circle(size=100).encode(
             x=alt.X('delivery_days', title='Avg Delivery Days'),
@@ -381,7 +364,6 @@ elif page == "4. 🚛 Logistics Insights":
             tooltip=['customer_state', 'delivery_days', 'churn_probability']
         ).properties(title='Logistics Risk Map', height=400).interactive()
         st.altair_chart(chart, use_container_width=True)
-        
     with col_stat:
         st.subheader("🚨 Top 5 รัฐที่มีปัญหา")
         st.dataframe(state_stats.sort_values('churn_probability', ascending=False).head(5), hide_index=True)
@@ -395,18 +377,17 @@ elif page == "4. 🚛 Logistics Insights":
             city_stats = city_df.groupby('customer_city').agg({
                 'customer_unique_id': 'count', 'delivery_days': 'mean', 'churn_probability': 'mean'
             }).reset_index()
-            st.dataframe(city_stats[city_stats['customer_unique_id'] >= 5].sort_values('churn_probability', ascending=False).head(10), use_container_width=True)
+            st.dataframe(city_stats[city_stats['customer_unique_id'] >= 2].sort_values('churn_probability', ascending=False).head(10), use_container_width=True)
     else:
-        st.info("💡 ไม่มีข้อมูลระดับเมือง (customer_city)")
+        st.info("ไม่มีข้อมูลรายเมืองในไฟล์จำลอง")
 
 # ==========================================
 # PAGE 5: 🏪 Seller Audit
 # ==========================================
 elif page == "5. 🏪 Seller Audit":
     st.title("🏪 Seller Watchlist")
-    
     if 'seller_id' not in df.columns:
-        st.warning("⚠️ ข้อมูลไม่ครบ: ขาด seller_id")
+        st.error("No seller data")
         st.stop()
         
     seller_stats = df.groupby('seller_id').agg({
@@ -414,8 +395,7 @@ elif page == "5. 🏪 Seller Audit":
         'review_score': 'mean', 'payment_value': 'sum'
     }).reset_index()
     
-    # Filter Active Sellers
-    bad_sellers = seller_stats[seller_stats['customer_unique_id'] >= 20].sort_values('churn_probability', ascending=False).head(50)
+    bad_sellers = seller_stats[seller_stats['customer_unique_id'] >= 5].sort_values('churn_probability', ascending=False).head(50)
     
     k1, k2, k3 = st.columns(3)
     k1.metric("🚨 ร้านเสี่ยงสูง", f"{len(bad_sellers)} ร้าน")
@@ -425,9 +405,8 @@ elif page == "5. 🏪 Seller Audit":
     st.dataframe(bad_sellers.head(20), use_container_width=True, hide_index=True)
     
     st.markdown("### 🔍 Quality vs Risk")
-    chart = alt.Chart(seller_stats[seller_stats['customer_unique_id'] >= 20]).mark_circle(color='#e74c3c').encode(
+    chart = alt.Chart(seller_stats[seller_stats['customer_unique_id'] >= 5]).mark_circle(color='#e74c3c').encode(
         x='review_score', y='churn_probability', size='payment_value',
         tooltip=['seller_id', 'review_score', 'churn_probability']
     ).properties(height=350).interactive()
     st.altair_chart(chart, use_container_width=True)
-

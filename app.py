@@ -238,123 +238,132 @@ elif page == "3. 🎯 Action Plan":
 # ==========================================
 elif page == "2. 🔍 Customer Detail":
     st.title("🔍 เจาะลึกกลุ่มเสี่ยง (Customer Deep Dive)")
-    st.markdown("วิเคราะห์ว่าลูกค้ากลุ่มเสี่ยง **มาจากสินค้าหมวดไหน** และ **หายไปนานแค่ไหนแล้ว**")
+    st.markdown("วิเคราะห์เจาะลึก: **รอบการซื้อของแต่ละสินค้า** และ **สัดส่วนลูกค้ากลุ่มเสี่ยง**")
     
-    # --- 1. FILTERS (แถบตัวเลือกด้านบน) ---
+    # --- 1. FILTERS ---
     with st.expander("🔎 ตัวกรองข้อมูล (Filters)", expanded=True):
         col_f1, col_f2, col_f3 = st.columns(3)
         
         with col_f1:
-            # เลือกสถานะ (Default เป็นกลุ่มเสี่ยง)
             risk_options = ['High Risk', 'Warning (Late > 1.5x)', 'Medium Risk', 'Lost (Late > 3x)', 'Active']
             default_risk = ['High Risk', 'Warning (Late > 1.5x)']
             selected_status = st.multiselect("1. เลือกสถานะลูกค้า:", risk_options, default=default_risk)
             
         with col_f2:
-            # เลือกหมวดหมู่สินค้า
             all_cats = list(df['product_category_name'].unique()) if 'product_category_name' in df.columns else []
             selected_cats = st.multiselect("2. เลือกหมวดสินค้า (ว่าง = ทั้งหมด):", all_cats)
             
         with col_f3:
-            # ค้นหาด้วย ID
             search_id = st.text_input("3. ค้นหา Customer ID:", "")
 
-    # --- 2. FILTER LOGIC ---
-    # กรองข้อมูลตามที่เลือก
+    # Apply Filters
     mask = df['status'].isin(selected_status)
     if selected_cats:
         mask = mask & df['product_category_name'].isin(selected_cats)
     if search_id:
         mask = mask & df['customer_unique_id'].str.contains(search_id, case=False)
-        
     filtered_df = df[mask]
-    
-    # แสดงจำนวนที่พบ
-    st.markdown(f"### 📋 พบลูกค้าจำนวน: `{len(filtered_df):,}` คน")
-    st.markdown("---")
 
-    # --- 3. CHARTS (ตอบโจทย์ของคุณ) ---
-    col_insight1, col_insight2 = st.columns(2)
-
-    # โจทย์ข้อ 1: ลูกค้ากลุ่มนี้มาจากสินค้าอะไรบ้าง?
-    with col_insight1:
-        st.subheader("📦 กลุ่มเสี่ยงมาจากหมวดไหนเยอะสุด?")
+    # --- 2. STATS CALCULATION (หัวใจสำคัญ: คำนวณยอดรวมและรอบซื้อ) ---
+    if 'product_category_name' in df.columns and not filtered_df.empty:
         
-        if not filtered_df.empty and 'product_category_name' in df.columns:
-            # นับจำนวนลูกค้าในแต่ละหมวด
-            cat_risk_count = filtered_df['product_category_name'].value_counts().reset_index()
-            cat_risk_count.columns = ['Category', 'Customer_Count']
-            
-            # ตัดมาเฉพาะ Top 10 เพื่อให้กราฟสวย
-            top_cat_risk = cat_risk_count.head(10)
-            
-            bar_chart = alt.Chart(top_cat_risk).mark_bar().encode(
-                x=alt.X('Customer_Count', title='จำนวนลูกค้ากลุ่มเสี่ยง'),
-                y=alt.Y('Category', sort='-x', title='หมวดสินค้า'),
-                color=alt.value('#e74c3c'), # สีแดงสื่อถึงความเสี่ยง
-                tooltip=['Category', 'Customer_Count']
-            ).properties(height=350)
-            
-            st.altair_chart(bar_chart, use_container_width=True)
-        else:
-            st.info("ไม่พบข้อมูลสำหรับการแสดงผลกราฟหมวดหมู่")
-
-    # โจทย์ข้อ 2: หายไปกี่วันแล้ว? (ดูจาก Lateness Score)
-    with col_insight2:
-        st.subheader("⏳ พวกเขาหายไปนานแค่ไหนแล้ว?")
-        st.caption("แกน X คือคะแนนความล่าช้า (Lateness Score): 1.0 = ครบรอบซื้อพอดี, 2.0 = หายไป 2 เท่าของรอบปกติ")
+        # A. เตรียมข้อมูลสรุปรายหมวดหมู่ (Group By Category)
+        # เราต้อง Group จาก df ตัวเต็ม (เพื่อหา Total) แล้วค่อยมาเทียบกับ Filtered (Risk)
         
-        if not filtered_df.empty:
-            # Histogram แสดงการกระจายตัวของความล่าช้า
-            hist_chart = alt.Chart(filtered_df).mark_bar().encode(
-                x=alt.X('lateness_score', bin=alt.Bin(maxbins=20), title='Lateness Score (เท่าของรอบปกติ)'),
-                y=alt.Y('count()', title='จำนวนลูกค้า'),
-                color=alt.Color('status', legend=None), # สีตามสถานะ
-                tooltip=['count()', alt.Tooltip('lateness_score', bin=True, title='ช่วงคะแนน')]
-            ).properties(height=350)
-            
-            st.altair_chart(hist_chart, use_container_width=True)
-            
-            # คำนวณค่าเฉลี่ยให้ดูง่ายๆ
-            avg_late = filtered_df['lateness_score'].mean()
-            st.markdown(f"**ค่าเฉลี่ยกลุ่มนี้:** หายไปนานกว่าปกติ **{avg_late:.1f} เท่า**")
+        # 1. ข้อมูลภาพรวม (Total Count & Cycle) จาก DataFrame ทั้งหมด
+        cat_overview = df.groupby('product_category_name').agg({
+            'customer_unique_id': 'count',          # จำนวนลูกค้าทั้งหมดในหมวดนี้
+            'cat_median_days': 'mean'               # รอบการซื้อมาตรฐาน (ค่าจะเท่ากันทั้งหมวด เลยใช้ mean ได้)
+        }).reset_index().rename(columns={'customer_unique_id': 'Total_Customers', 'cat_median_days': 'Buying_Cycle_Days'})
+        
+        # 2. ข้อมูลเฉพาะกลุ่มเสี่ยง (Risk Count) จาก Filtered DataFrame
+        cat_risk = filtered_df.groupby('product_category_name').agg({
+            'customer_unique_id': 'count',          # จำนวนลูกค้ากลุ่มเสี่ยง
+            'churn_probability': 'mean',            # ความเสี่ยงเฉลี่ย
+            'lateness_score': 'mean'                # หายไปนานเฉลี่ยกี่เท่า
+        }).reset_index().rename(columns={'customer_unique_id': 'Risk_Count'})
+        
+        # 3. รวมตารางเข้าด้วยกัน
+        cat_stats = pd.merge(cat_risk, cat_overview, on='product_category_name', how='left')
+        
+        # คำนวณ % Risk
+        cat_stats['Risk_Percentage'] = (cat_stats['Risk_Count'] / cat_stats['Total_Customers'])
+        
+        # เรียงลำดับตามจำนวนคนเสี่ยง (จากมากไปน้อย)
+        cat_stats = cat_stats.sort_values(by='Risk_Count', ascending=False)
 
-    # --- 4. DATA TABLE (ตารางรายชื่อ) ---
+        # --- 3. DISPLAY INSIGHTS ---
+        col_chart, col_table = st.columns([1.5, 2.5]) # แบ่งหน้าจอ ซ้ายกราฟ / ขวาตาราง
+        
+        with col_chart:
+            st.subheader("📊 Top 10 หมวดเสี่ยงสูงสุด")
+            st.caption("เทียบจำนวนคนเสี่ยง (สีแดง) vs คนทั้งหมด (สีเทาจางๆ)")
+            
+            # กราฟแท่งแสดงจำนวน
+            base = alt.Chart(cat_stats.head(10)).encode(y=alt.Y('product_category_name', sort='-x', title=None))
+            
+            # แท่งพื้นหลัง (Total)
+            bar_total = base.mark_bar(color='#f0f2f6').encode(
+                x=alt.X('Total_Customers', title='จำนวนลูกค้า'),
+                tooltip=['product_category_name', 'Total_Customers', 'Buying_Cycle_Days']
+            )
+            
+            # แท่งสีแดง (Risk)
+            bar_risk = base.mark_bar(color='#e74c3c').encode(
+                x=alt.X('Risk_Count'),
+                tooltip=['product_category_name', 'Risk_Count', 'Risk_Percentage']
+            )
+            
+            st.altair_chart(bar_total + bar_risk, use_container_width=True)
+            
+            st.info(f"💡 **Note:** แท่งสีเทาคือจำนวนลูกค้าทั้งหมดในหมวดนั้น ส่วนแท่งสีแดงคือกลุ่มเสี่ยงที่คุณเลือก")
+
+        with col_table:
+            st.subheader("📋 รายละเอียดพฤติกรรมสินค้า")
+            st.dataframe(
+                cat_stats,
+                column_config={
+                    "product_category_name": "หมวดหมู่สินค้า",
+                    "Buying_Cycle_Days": st.column_config.NumberColumn(
+                        "🔄 รอบซื้อ (วัน)", 
+                        help="ระยะเวลาเฉลี่ยที่คนมักจะกลับมาซื้อซ้ำ (cat_median_days)",
+                        format="%d วัน"
+                    ),
+                    "Risk_Count": st.column_config.NumberColumn("⚠️ คนเสี่ยง", format="%d คน"),
+                    "Total_Customers": st.column_config.NumberColumn("📦 ทั้งหมด", format="%d คน"),
+                    "Risk_Percentage": st.column_config.ProgressColumn(
+                        "% สัดส่วนความเสี่ยง",
+                        help="คนเสี่ยงคิดเป็นกี่ % ของลูกค้าทั้งหมดในหมวดนี้",
+                        format="%.1f%%",
+                        min_value=0,
+                        max_value=1
+                    ),
+                    "lateness_score": st.column_config.NumberColumn("⏳ หายไป (เท่า)", format="%.1fx")
+                },
+                hide_index=True,
+                use_container_width=True
+            )
+
+    else:
+        st.warning("⚠️ ไม่พบข้อมูลหมวดหมู่สินค้า หรือ ไม่พบข้อมูลตามตัวกรอง")
+
+    # --- 4. INDIVIDUAL LIST (รายชื่อรายคน) ---
     st.markdown("---")
-    st.subheader("📄 รายชื่อลูกค้า (Export ได้)")
+    st.subheader(f"📄 รายชื่อลูกค้า ({len(filtered_df):,} คน)")
     
-    # เลือกคอลัมน์ที่จะโชว์
-    cols_to_show = ['customer_unique_id', 'status', 'churn_probability', 'lateness_score', 
-                    'product_category_name', 'payment_value', 'review_score']
+    show_cols = ['customer_unique_id', 'status', 'churn_probability', 'lateness_score', 
+                 'cat_median_days', 'payment_value', 'product_category_name']
+    final_cols = [c for c in show_cols if c in df.columns]
     
-    # กรองเอาเฉพาะคอลัมน์ที่มีจริงในไฟล์
-    final_cols = [c for c in cols_to_show if c in df.columns]
-    
-    # แสดงตารางแบบ Interactive
     st.dataframe(
         filtered_df[final_cols].sort_values(by='churn_probability', ascending=False),
         column_config={
-            "churn_probability": st.column_config.ProgressColumn(
-                "Risk Prob",
-                help="ความน่าจะเป็นที่จะ Churn",
-                format="%.2f",
-                min_value=0,
-                max_value=1,
-            ),
-            "lateness_score": st.column_config.NumberColumn(
-                "Late Score",
-                format="%.1fx",
-                help="หายไปนานกี่เท่าของรอบปกติ"
-            ),
-            "payment_value": st.column_config.NumberColumn(
-                "Value (R$)",
-                format="R$ %.2f"
-            )
+            "cat_median_days": st.column_config.NumberColumn("รอบปกติ (วัน)", format="%d"),
+            "lateness_score": st.column_config.NumberColumn("Late Score", format="%.1fx"),
+            "churn_probability": st.column_config.ProgressColumn("Risk Prob", format="%.2f", min_value=0, max_value=1)
         },
-        use_container_width=True,
-        hide_index=True
+        use_container_width=True
     )
-
 # ==========================================
 # PAGE 3: 📦 Product Insight
 # ==========================================
@@ -399,6 +408,7 @@ elif page == "4. 🎯 ปฏิบัติการกู้คืน (Rescue M
     
     st.success(f"💎 พบลูกค้าศักยภาพสูงที่กำลังจะหลุดมือ: **{len(rescue_df):,} คน**")
     st.dataframe(rescue_df[['customer_unique_id', 'payment_value', 'lateness_score', 'product_category_name']].sort_values('payment_value', ascending=False))
+
 
 
 

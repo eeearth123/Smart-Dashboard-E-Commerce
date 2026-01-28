@@ -230,8 +230,7 @@ if page == "1. 📊 Executive Summary":
     st.info("💡 **Insight:** ลูกค้ากลุ่ม **High Risk** และ **Warning** คิดเป็นสัดส่วนที่มีนัยสำคัญ แนะนำให้ไปที่หน้า **'Action Plan'** เพื่อดึงรายชื่อทำแคมเปญด่วน")
 
 
-elif page == "3. 🎯 Action Plan":
-    st.write("หน้า 3 กำลังพัฒนา...") # ใส่โค้ดหน้า 3 ของเก่าที่นี่
+
 
 # ==========================================
 # PAGE 2: 🔍 Customer Detail (Deep Dive)
@@ -365,35 +364,151 @@ elif page == "2. 🔍 Customer Detail":
         use_container_width=True
     )
 # ==========================================
-# PAGE 3: 📦 Product Insight
+# PAGE 3: 🎯 Action Plan (Simulation)
 # ==========================================
-elif page == "3. 📦 สินค้าและหมวดหมู่ (Product Insight)":
-    st.title("📦 สินค้าหมวดไหนคนหนีเยอะสุด?")
+elif page == "3. 🎯 Action Plan":
+    st.title("🎯 จำลองกลยุทธ์แก้เกม (What-if Simulation)")
+    st.markdown("ลองปรับเปลี่ยนตัวแปรต่างๆ เพื่อดูว่า **AI จะลดค่าความเสี่ยงลงเท่าไหร่**")
     
-    if 'product_category_name' in df.columns:
-        cat_stats = df.groupby('product_category_name').agg({
-            'churn_probability': 'mean',
-            'lateness_score': 'mean',
-            'customer_unique_id': 'count'
-        }).reset_index()
+    # เช็คก่อนว่าโมเดลพร้อมไหม
+    if 'model' not in assets or 'features' not in assets:
+        st.error("Model not loaded properly.")
+        st.stop()
         
-        cat_stats = cat_stats[cat_stats['customer_unique_id'] > 20].sort_values('churn_probability', ascending=False).head(15)
-        
-        chart_cat = alt.Chart(cat_stats).mark_bar().encode(
-            x=alt.X('churn_probability', title='โอกาส Churn เฉลี่ย'),
-            y=alt.Y('product_category_name', sort='-x', title='หมวดสินค้า'),
-            color=alt.condition(
-                alt.datum.churn_probability > 0.7,
-                alt.value('#e74c3c'),
-                alt.value('#3498db')
-            ),
-            tooltip=['product_category_name', 'churn_probability', 'customer_unique_id']
-        ).properties(height=500)
-        
-        st.altair_chart(chart_cat, use_container_width=True)
-    else:
-        st.error("ไม่พบคอลัมน์ product_category_name")
+    feature_names = assets['features']
 
+    # --- 1. SETTING PANEL (แผงควบคุม) ---
+    with st.container():
+        st.subheader("🎛️ ปรับปรุงประสิทธิภาพ (Simulation Controls)")
+        
+        col_ctrl1, col_ctrl2 = st.columns(2)
+        
+        with col_ctrl1:
+            st.markdown("#### 🚚 กลยุทธ์ขนส่ง (Logistics)")
+            # ปรับลดวันส่งของ (สมมติว่าส่งเร็วขึ้น)
+            improve_days = st.slider("ลดเวลาจัดส่งลง (วัน):", 0, 7, 0, help="ถ้าเราส่งของเร็วขึ้น X วัน จะช่วยลดความเสี่ยงได้ไหม?")
+            
+        with col_ctrl2:
+            st.markdown("#### 📸 กลยุทธ์คอนเทนต์ (Content)")
+            # เพิ่มจำนวนรูปภาพ (สมมติว่าถ่ายรูปเพิ่ม)
+            improve_photos = st.slider("เพิ่มรูปสินค้า (รูป):", 0, 5, 0, help="ถ้าสินค้ามีรูปเยอะขึ้น ลูกค้าจะมั่นใจขึ้นไหม?")
+            # เพิ่มความยาวคำบรรยาย
+            improve_desc = st.checkbox("✅ ปรับปรุงคำบรรยายสินค้าให้ละเอียดขึ้น (+100 ตัวอักษร)", value=False)
+
+    # --- 2. RUN SIMULATION (คำนวณใหม่) ---
+    # สร้างปุ่มกดเพื่อเริ่มคำนวณ (เพื่อไม่ให้หนักเครื่องตอนเลื่อน Slider)
+    if st.button("🚀 เริ่มจำลองผลลัพธ์ (Run Simulation)", type="primary"):
+        
+        with st.spinner("⏳ AI กำลังคำนวณความเสี่ยงใหม่..."):
+            # 1. จำลองข้อมูล (Clone Data)
+            df_sim = df.copy()
+            
+            # 2. ปรับแก้ค่าตาม Slider (Modify Data)
+            # -- แก้เรื่องขนส่ง
+            if 'delivery_days' in df_sim.columns:
+                # ลดจำนวนวันที่ใช้ส่ง (Minimum คือ 1 วัน)
+                df_sim['delivery_days'] = df_sim['delivery_days'] - improve_days
+                df_sim['delivery_days'] = df_sim['delivery_days'].clip(lower=1) 
+            
+            if 'delay_days' in df_sim.columns:
+                # ลดจำนวนวันที่ล่าช้า
+                df_sim['delay_days'] = df_sim['delay_days'] - improve_days
+            
+            # -- แก้เรื่อง Content
+            if 'product_photos_qty' in df_sim.columns:
+                df_sim['product_photos_qty'] = df_sim['product_photos_qty'] + improve_photos
+            
+            if improve_desc and 'product_description_lenght' in df_sim.columns:
+                df_sim['product_description_lenght'] = df_sim['product_description_lenght'] + 100
+
+            # 3. เตรียมข้อมูลเข้าโมเดล (Prepare X_sim)
+            # ต้องเรียง Column ให้เหมือนตอนเทรนเป๊ะๆ
+            X_sim = pd.DataFrame(index=df_sim.index)
+            for col in feature_names:
+                if col in df_sim.columns:
+                    X_sim[col] = df_sim[col]
+                else:
+                    X_sim[col] = 0 # ถ้าไม่มีให้เติม 0
+            
+            # 4. ให้ AI ทำนายใหม่ (Re-Predict)
+            if hasattr(model, "predict_proba"):
+                new_probs = model.predict_proba(X_sim)[:, 1]
+            else:
+                new_probs = model.predict(X_sim)
+            
+            # 5. เปรียบเทียบผล (Compare)
+            df_sim['new_churn_prob'] = new_probs
+            df_sim['old_churn_prob'] = df['churn_probability'] # ค่าเดิม
+            df_sim['prob_diff'] = df_sim['old_churn_prob'] - df_sim['new_churn_prob'] # ค่าที่ลดลง (ยิ่งเยอะยิ่งดี)
+            
+            # นับจำนวนคนที่ "รอด" (เดิม High Risk -> ใหม่ Low Risk)
+            # สมมติ Cut-off ที่ 0.7
+            saved_customers = df_sim[
+                (df_sim['old_churn_prob'] > 0.7) & 
+                (df_sim['new_churn_prob'] <= 0.7)
+            ]
+            
+            total_saved = len(saved_customers)
+            money_saved = saved_customers['payment_value'].sum() if 'payment_value' in saved_customers.columns else 0
+
+        # --- 3. DISPLAY RESULTS (แสดงผล) ---
+        st.markdown("---")
+        st.subheader("📊 ผลลัพธ์การจำลอง (Simulation Result)")
+        
+        # KPI Cards
+        k1, k2, k3 = st.columns(3)
+        with k1:
+            st.metric("👥 ลูกค้าที่กู้คืนได้ (Estimated)", f"{total_saved:,} คน", help="คนที่ความเสี่ยงลดลงจากระดับสูงจนอยู่ในเกณฑ์ปลอดภัย")
+        with k2:
+            st.metric("💸 รายได้ที่รักษาไว้ได้", f"R$ {money_saved:,.0f}", help="ยอดเงินรวมของลูกค้าที่กู้คืนได้")
+        with k3:
+            avg_drop = df_sim['prob_diff'].mean() * 100
+            st.metric("📉 ความเสี่ยงลดลงเฉลี่ย", f"{avg_drop:.2f}%", help="ค่าเฉลี่ยความน่าจะเป็นที่ลดลงของทุกคน")
+
+        # --- CHART: หมวดไหนได้ผลดีสุด? ---
+        col_chart, col_list = st.columns([1.5, 1])
+        
+        with col_chart:
+            st.markdown("#### 🏆 หมวดสินค้าที่ตอบสนองดีที่สุด")
+            st.caption("ถ้าทำตามแผนนี้ สินค้ากลุ่มไหนจะลดความเสี่ยงได้เยอะสุด?")
+            
+            if 'product_category_name' in df_sim.columns:
+                # หาค่าเฉลี่ยความเสี่ยงที่ลดลง แยกตามหมวด
+                cat_improvement = df_sim.groupby('product_category_name')['prob_diff'].mean().reset_index()
+                # คูณ 100 ให้ดูเป็น %
+                cat_improvement['prob_diff'] = cat_improvement['prob_diff'] * 100
+                
+                # Top 10 Improvement
+                top_improve = cat_improvement.sort_values('prob_diff', ascending=False).head(10)
+                
+                chart_imp = alt.Chart(top_improve).mark_bar(color='#2ecc71').encode(
+                    x=alt.X('prob_diff', title='ความเสี่ยงลดลงเฉลี่ย (%)'),
+                    y=alt.Y('product_category_name', sort='-x', title='หมวดสินค้า'),
+                    tooltip=['product_category_name', alt.Tooltip('prob_diff', format='.2f')]
+                ).properties(height=400)
+                
+                st.altair_chart(chart_imp, use_container_width=True)
+            
+        with col_list:
+            st.markdown("#### 📋 ตัวอย่างลูกค้าที่กู้คืนได้")
+            if not saved_customers.empty:
+                show_cols = ['customer_unique_id', 'product_category_name', 'old_churn_prob', 'new_churn_prob']
+                final_cols = [c for c in show_cols if c in df_sim.columns]
+                
+                st.dataframe(
+                    saved_customers[final_cols].sort_values('old_churn_prob', ascending=False).head(50),
+                    column_config={
+                        "old_churn_prob": st.column_config.NumberColumn("Risk เดิม", format="%.2f"),
+                        "new_churn_prob": st.column_config.NumberColumn("Risk ใหม่", format="%.2f"),
+                    },
+                    hide_index=True,
+                    use_container_width=True
+                )
+            else:
+                st.warning("แผนนี้อาจยังไม่แรงพอที่จะเปลี่ยนสถานะลูกค้ากลุ่ม High Risk ได้ ลองปรับค่าเพิ่มดูครับ")
+
+    else:
+        st.info("👈 ปรับค่า Slider ด้านบน แล้วกดปุ่ม **'เริ่มจำลองผลลัพธ์'** เพื่อดู Insight ครับ")
 # ==========================================
 # PAGE 4: 🎯 Rescue Mission
 # ==========================================
@@ -408,6 +523,7 @@ elif page == "4. 🎯 ปฏิบัติการกู้คืน (Rescue M
     
     st.success(f"💎 พบลูกค้าศักยภาพสูงที่กำลังจะหลุดมือ: **{len(rescue_df):,} คน**")
     st.dataframe(rescue_df[['customer_unique_id', 'payment_value', 'lateness_score', 'product_category_name']].sort_values('payment_value', ascending=False))
+
 
 
 

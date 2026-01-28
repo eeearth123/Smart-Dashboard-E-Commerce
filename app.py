@@ -108,10 +108,21 @@ def get_status(row):
 df['status'] = df.apply(get_status, axis=1)
 
 # ==========================================
-# 4. DASHBOARD LAYOUT: Executive Summary
+# 4. DASHBOARD LAYOUT: Navigation
 # ==========================================
 st.sidebar.title("✈️ Olist Cockpit")
-page = st.sidebar.radio("Navigation", ["1. 📊 Executive Summary", "2. 🔍 Customer Detail", "3. 🎯 Action Plan"])
+
+# ✅ แก้บรรทัดนี้ให้มีครบ 5 หน้าครับ
+page = st.sidebar.radio("Navigation", [
+    "1. 📊 Executive Summary", 
+    "2. 🔍 Customer Detail", 
+    "3. 🎯 Action Plan",
+    "4. 🚛 Logistics Insights", 
+    "5. 🏪 Seller Audit"
+])
+
+st.sidebar.markdown("---")
+st.sidebar.info("Select a page to analyze different aspects of your business.")
 
 if page == "1. 📊 Executive Summary":
     st.title("📊 Executive Summary (Business Health)")
@@ -691,6 +702,7 @@ elif page == "5. 🏪 Seller Audit":
     
     st.altair_chart(scatter_seller, use_container_width=True)
     st.info("💡 ร้านที่ดีควรอยู่ด้าน **'ล่าง'** (Churn ต่ำ) / ร้านที่มีปัญหาจะลอยอยู่ด้าน **'บน'** (Churn สูง)")
+
 
 
 

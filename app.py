@@ -515,19 +515,183 @@ elif page == "3. 🎯 Action Plan":
         else:
             st.info("ยังไม่มีลูกค้าที่กลับใจ ลองเพิ่มมูลค่า Voucher หรือเลือกส่งด่วนดูครับ")
 # ==========================================
-# PAGE 4: 🎯 Rescue Mission
+# PAGE 4: 🚛 Logistics Insights
 # ==========================================
-elif page == "4. 🎯 ปฏิบัติการกู้คืน (Rescue Mission)":
-    st.title("🎯 รายชื่อลูกค้าเกรด A ที่ต้องดึงกลับมา")
+elif page == "4. 🚛 Logistics Insights":
+    st.title("🚛 เจาะลึกระบบขนส่ง (Logistics Heatmap)")
+    st.markdown("วิเคราะห์ประสิทธิภาพการจัดส่งรายพื้นที่: **รัฐไหนส่งช้า?** และ **เมืองไหนลูกค้าหนีเยอะ?**")
+
+    # เช็คข้อมูล
+    if 'customer_state' not in df.columns:
+        st.error("ไม่พบข้อมูล 'customer_state' กรุณารัน Data Prep ใหม่")
+        st.stop()
+
+    # --- PART 1: STATE LEVEL OVERVIEW ---
+    st.subheader("🗺️ ภาพรวมรายรัฐ (State Performance)")
     
-    avg_pay = df['payment_value'].mean() if 'payment_value' in df.columns else 0
-    rescue_df = df[
-        (df['status'] == 'Warning (Late > 1.5x)') & 
-        (df['payment_value'] > avg_pay)
-    ]
+    col_map, col_stat = st.columns([2, 1])
     
-    st.success(f"💎 พบลูกค้าศักยภาพสูงที่กำลังจะหลุดมือ: **{len(rescue_df):,} คน**")
-    st.dataframe(rescue_df[['customer_unique_id', 'payment_value', 'lateness_score', 'product_category_name']].sort_values('payment_value', ascending=False))
+    with col_map:
+        # เตรียมข้อมูลรายรัฐ
+        state_stats = df.groupby('customer_state').agg({
+            'customer_unique_id': 'count',
+            'delivery_days': 'mean',
+            'churn_probability': 'mean',
+            'delay_days': lambda x: (x > 0).mean() # % ออเดอร์ที่ล่าช้า
+        }).reset_index()
+        
+        # กรองรัฐที่มีข้อมูลน้อยเกินไปออก (เพื่อให้กราฟแม่นยำ)
+        state_stats = state_stats[state_stats['customer_unique_id'] > 20]
+
+        # Scatter Plot: ยิ่งขวาบน = ยิ่งแย่ (ส่งช้า + เสี่ยงสูง)
+        scatter_chart = alt.Chart(state_stats).mark_circle(size=100).encode(
+            x=alt.X('delivery_days', title='ระยะเวลาจัดส่งเฉลี่ย (วัน)'),
+            y=alt.Y('churn_probability', title='โอกาส Churn เฉลี่ย', scale=alt.Scale(domain=[0.5, 1.0])),
+            color=alt.Color('churn_probability', scale=alt.Scale(scheme='reds'), title='Risk Level'),
+            size=alt.Size('customer_unique_id', title='จำนวนลูกค้า'),
+            tooltip=['customer_state', 'delivery_days', 'churn_probability', 'delay_days']
+        ).properties(
+            title='Logistics Risk Map (ยิ่งอยู่ขวาบน ยิ่งต้องแก้ด่วน!)',
+            height=400
+        ).interactive()
+        
+        st.altair_chart(scatter_chart, use_container_width=True)
+
+    with col_stat:
+        st.markdown("#### 🚨 Top 5 รัฐที่มีปัญหา")
+        # เรียงตามความเสี่ยง Churn
+        worst_states = state_stats.sort_values('churn_probability', ascending=False).head(5)
+        
+        st.dataframe(
+            worst_states[['customer_state', 'churn_probability', 'delivery_days']],
+            column_config={
+                "customer_state": "รัฐ",
+                "churn_probability": st.column_config.ProgressColumn("Risk", format="%.2f", min_value=0, max_value=1),
+                "delivery_days": st.column_config.NumberColumn("ส่งนาน (วัน)", format="%.1f")
+            },
+            hide_index=True,
+            use_container_width=True
+        )
+        st.info("💡 รัฐเหล่านี้คือจุดที่ลูกค้ามีความไม่พอใจสูงสุด ลองพิจารณาเปลี่ยน Partner ขนส่งในพื้นที่นี้")
+
+    # --- PART 2: CITY DRILL DOWN ---
+    st.markdown("---")
+    st.subheader("🏙️ เจาะลึกรายเมือง (City Drill-down)")
+    
+    selected_state = st.selectbox("เลือกรัฐที่ต้องการตรวจสอบ:", df['customer_state'].unique())
+    
+    if selected_state:
+        # กรองข้อมูลเฉพาะรัฐนั้น
+        state_df = df[df['customer_state'] == selected_state]
+        
+        # Group by City
+        city_stats = state_df.groupby('customer_city').agg({
+            'customer_unique_id': 'count',
+            'delivery_days': 'mean',
+            'churn_probability': 'mean',
+            'lateness_score': 'mean'
+        }).reset_index()
+        
+        # เอาเฉพาะเมืองที่มี Order อย่างน้อย 5 รายการ (กัน Noise)
+        city_stats = city_stats[city_stats['customer_unique_id'] >= 5]
+        
+        # หาเมืองที่แย่ที่สุด 10 อันดับแรก
+        worst_cities = city_stats.sort_values('churn_probability', ascending=False).head(10)
+        
+        st.write(f"**Top 10 เมืองที่มีความเสี่ยงสูงสุดในรัฐ {selected_state}:**")
+        st.dataframe(
+            worst_cities,
+            column_config={
+                "customer_city": "เมือง",
+                "churn_probability": st.column_config.ProgressColumn("Risk", format="%.2f", min_value=0, max_value=1),
+                "delivery_days": st.column_config.NumberColumn("เวลาส่ง (วัน)", format="%.1f"),
+                "customer_unique_id": st.column_config.NumberColumn("ลูกค้า (คน)", format="%d")
+            },
+            hide_index=True,
+            use_container_width=True
+        )
+
+# ==========================================
+# PAGE 5: 🏪 Seller Audit
+# ==========================================
+elif page == "5. 🏪 Seller Audit":
+    st.title("🏪 ตรวจสอบคุณภาพร้านค้า (Seller Watchlist)")
+    st.markdown("ตามล่าร้านค้าที่เป็น **'ต้นเหตุ'** ทำให้ลูกค้าหนี (ขายเยอะ แต่รักษาลูกค้าไม่ได้)")
+
+    if 'seller_id' not in df.columns:
+        st.error("ไม่พบข้อมูล 'seller_id' กรุณารัน Data Prep ใหม่")
+        st.stop()
+
+    # --- PART 1: METRICS ---
+    # คำนวณภาพรวม
+    seller_stats = df.groupby('seller_id').agg({
+        'customer_unique_id': 'count',          # Volume
+        'churn_probability': 'mean',            # Risk
+        'review_score': 'mean',                 # Quality
+        'delay_days': 'mean',                   # Ops
+        'payment_value': 'sum'                  # Revenue Impact
+    }).reset_index()
+
+    # กรองเฉพาะร้าน Active (ขายเกิน 20 ออเดอร์)
+    active_sellers = seller_stats[seller_stats['customer_unique_id'] >= 20]
+    
+    # ร้านค้ากลุ่มเสี่ยง (High Churn Seller)
+    bad_sellers = active_sellers.sort_values('churn_probability', ascending=False).head(50)
+    
+    total_bad_impact = bad_sellers['payment_value'].sum()
+    avg_bad_churn = bad_sellers['churn_probability'].mean() * 100
+
+    k1, k2, k3 = st.columns(3)
+    k1.metric("🚨 ร้านค้ากลุ่มเสี่ยง (Watchlist)", f"{len(bad_sellers)} ร้าน", "Churn Rate สูงผิดปกติ")
+    k2.metric("💸 ยอดขายจากร้านกลุ่มนี้", f"R$ {total_bad_impact:,.0f}", "รายได้ที่เสี่ยงจะหายไปถาวร")
+    k3.metric("📉 อัตราลูกค้าหนีเฉลี่ย", f"{avg_bad_churn:.1f}%", help="เทียบกับค่าเฉลี่ยปกติของแพลตฟอร์ม")
+
+    # --- PART 2: BLACKLIST TABLE ---
+    st.markdown("### 📋 Blacklist: 20 อันดับร้านค้าที่ควรตรวจสอบด่วน")
+    st.caption("ร้านเหล่านี้มียอดขายสูง แต่ลูกค้าซื้อแล้ว 'ไม่กลับมาอีกเลย' (One-time purchase & Leave)")
+
+    st.dataframe(
+        bad_sellers.head(20),
+        column_config={
+            "seller_id": "Seller ID",
+            "churn_probability": st.column_config.ProgressColumn(
+                "Avg Churn Risk", 
+                help="ความน่าจะเป็นเฉลี่ยที่ลูกค้าของร้านนี้จะหนี",
+                format="%.2f", 
+                min_value=0, 
+                max_value=1
+            ),
+            "review_score": st.column_config.NumberColumn("Review Avg", format="%.1f ⭐"),
+            "customer_unique_id": st.column_config.NumberColumn("Total Orders", format="%d"),
+            "delay_days": st.column_config.NumberColumn("Delay Avg", format="%.1f วัน"),
+            "payment_value": st.column_config.NumberColumn("Total Sales", format="R$ %.0f")
+        },
+        hide_index=True,
+        use_container_width=True
+    )
+
+    # --- PART 3: SCATTER ANALYSIS ---
+    st.markdown("---")
+    st.subheader("🔍 วิเคราะห์ความสัมพันธ์: คุณภาพ vs ความเสี่ยง")
+    
+    # เลือกแกนวิเคราะห์
+    x_axis = st.selectbox("เลือกปัจจัยวิเคราะห์:", 
+                          ["review_score", "delay_days", "customer_unique_id"], 
+                          format_func=lambda x: "คะแนนรีวิว" if x == "review_score" else "วันส่งล่าช้า" if x == "delay_days" else "จำนวนออเดอร์")
+
+    scatter_seller = alt.Chart(active_sellers).mark_circle(color='#e74c3c', opacity=0.6).encode(
+        x=alt.X(x_axis, title=x_axis),
+        y=alt.Y('churn_probability', title='โอกาสลูกค้าหนี (Churn Risk)'),
+        size=alt.Size('payment_value', title='ยอดขายรวม'),
+        tooltip=['seller_id', 'review_score', 'churn_probability', 'customer_unique_id']
+    ).properties(
+        height=350,
+        title=f"Seller Performance Analysis"
+    ).interactive()
+    
+    st.altair_chart(scatter_seller, use_container_width=True)
+    st.info("💡 ร้านที่ดีควรอยู่ด้าน **'ล่าง'** (Churn ต่ำ) / ร้านที่มีปัญหาจะลอยอยู่ด้าน **'บน'** (Churn สูง)")
+
 
 
 

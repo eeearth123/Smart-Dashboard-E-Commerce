@@ -364,67 +364,79 @@ elif page == "2. 🔍 Customer Detail":
         use_container_width=True
     )
 # ==========================================
-# PAGE 3: 🎯 Action Plan (Real-time Simulation)
+# PAGE 3: 🎯 Marketing Campaign Simulator
 # ==========================================
 elif page == "3. 🎯 Action Plan":
-    st.title("🎯 Real-time Strategy Simulator")
-    st.markdown("ปรับกลยุทธ์แล้วดูผลลัพธ์ทันที! (AI จะคำนวณความเสี่ยงใหม่ทุกครั้งที่คุณขยับค่า)")
-    
-    # เช็คความพร้อมของโมเดล
+    st.title("🎯 Marketing Campaign Simulator")
+    st.markdown("### วิเคราะห์ความคุ้มค่า: แจกคูปอง/ส่วนลด เพื่อดึงลูกค้ากลับมา")
+    st.info("💡 **Logic:** หน้านี้จะโฟกัสเฉพาะลูกค้า **'กลุ่มลังเล' (ความเสี่ยง 60-85%)** เพราะเป็นกลุ่มที่คุ้มค่าที่สุดในการยิงแคมเปญ (คนเสี่ยงเกิน 90% มักกู้ไม่กลับ)")
+
+    # เช็ค Model
     if 'model' not in assets or 'features' not in assets:
-        st.error("Model Error: ไม่สามารถโหลดโมเดลได้")
         st.stop()
-        
     feature_names = assets['features']
 
-    # --- 1. SETTING PANEL (แผงควบคุมแบบ Real-time) ---
-    st.markdown("### 🎛️ ปรับค่าตัวแปร (Simulation Controls)")
+    # --- 1. FILTER TARGET GROUP (คัดเฉพาะคนที่มีลุ้น) ---
+    # เลือกเฉพาะคนที่ความเสี่ยงอยู่ระหว่าง 0.60 ถึง 0.85
+    target_customers = df[
+        (df['churn_probability'] >= 0.60) & 
+        (df['churn_probability'] <= 0.85)
+    ].copy()
     
-    # สร้าง Container ให้สวยงาม
+    total_target = len(target_customers)
+    total_revenue_at_risk = target_customers['payment_value'].sum() if 'payment_value' in df.columns else 0
+
+    if total_target == 0:
+        st.warning("ไม่พบลูกค้าในกลุ่ม 'ลังเล' (Risk 60-85%) เลย ลองปรับช่วงความเสี่ยงดูครับ")
+        st.stop()
+
+    # --- 2. CAMPAIGN CONTROLS ---
     with st.container():
-        # แบ่งเป็น 3 คอลัมน์เพื่อให้ปรับได้เยอะขึ้น
-        c1, c2, c3 = st.columns(3)
+        st.markdown(f"#### 🎯 เป้าหมายแคมเปญ: ลูกค้า {total_target:,} คน (มูลค่า R$ {total_revenue_at_risk:,.0f})")
         
-        with c1:
-            st.markdown("#### 🚚 ระบบขนส่ง (Logistics)")
-            sim_delivery = st.slider("🚀 ลดเวลาจัดส่ง (วัน)", 0, 7, 0, help="ถ้าส่งไวขึ้น x วัน")
-            sim_delay = st.slider("⏳ ลดความล่าช้า (วัน)", 0, 5, 0, help="ถ้าแก้ปัญหาของส่งช้าได้ x วัน")
-            
-        with c2:
-            st.markdown("#### 📸 คุณภาพสินค้า (Content)")
-            sim_photos = st.slider("🖼️ เพิ่มรูปสินค้า (รูป)", 0, 5, 0)
-            sim_desc = st.slider("📝 เพิ่มคำบรรยาย (ตัวอักษร)", 0, 500, 0, step=50)
-            
-        with c3:
-            st.markdown("#### ⭐ ความพึงพอใจ (Experience)")
-            sim_name_len = st.slider("🔤 เพิ่มความยาวชื่อสินค้า (ตัวอักษร)", 0, 20, 0, help="ตั้งชื่อให้ละเอียดขึ้น (SEO)")
-            sim_review = st.slider("⭐ สมมติคะแนนรีวิวเพิ่มขึ้น", 0.0, 1.0, 0.0, step=0.1, help="ถ้าบริการดีจนลูกค้าให้ดาวเพิ่ม")
-
-    # --- 2. REAL-TIME CALCULATION (คำนวณสด) ---
-    # ไม่ต้องมีปุ่ม Button แล้ว! รันเลย!
-    
-    # 2.1 จำลองข้อมูล (Clone & Modify)
-    df_sim = df.copy()
-    
-    # --- Logistics Changes ---
-    if 'delivery_days' in df_sim.columns:
-        df_sim['delivery_days'] = (df_sim['delivery_days'] - sim_delivery).clip(lower=1)
-    if 'delay_days' in df_sim.columns:
-        df_sim['delay_days'] = df_sim['delay_days'] - sim_delay
-
-    # --- Content Changes ---
-    if 'product_photos_qty' in df_sim.columns:
-        df_sim['product_photos_qty'] += sim_photos
-    if 'product_description_lenght' in df_sim.columns:
-        df_sim['product_description_lenght'] += sim_desc
-    if 'product_name_lenght' in df_sim.columns: # ตัวแปรใหม่ที่เราเพิ่งเพิ่ม
-        df_sim['product_name_lenght'] += sim_name_len
+        col_input1, col_input2, col_input3 = st.columns(3)
         
-    # --- Experience Changes ---
-    if 'review_score' in df_sim.columns:
-        df_sim['review_score'] = (df_sim['review_score'] + sim_review).clip(upper=5.0)
+        with col_input1:
+            # จำลองการให้ส่วนลด (Voucher)
+            # ในทาง Technical: เราจะจำลองว่า Voucher ช่วยเพิ่มความพึงพอใจ เสมือนราคาสินค้าถูกลง หรือ Value สูงขึ้น
+            # หมายเหตุ: นี่คือการ Hack โมเดลเชิง Business (สมมติว่า Discount 10% มีผลเท่ากับ Review Score เพิ่ม 0.5 ดาว หรือช่วยให้ตัดสินใจง่ายขึ้น)
+            voucher_val = st.slider("💰 มูลค่าคูปองส่วนลด (R$)", 0, 50, 0, step=5, help="ต้นทุนที่คุณยอมจ่ายต่อคน")
+        
+        with col_input2:
+            # กลยุทธ์เสริม (Logistics)
+            improve_speed = st.selectbox("🚚 การปรับปรุงขนส่ง", ["ปกติ", "ส่งด่วนพิเศษ (-2 วัน)"], index=0)
+            
+        with col_input3:
+            # คำนวณ Budget
+            total_cost = voucher_val * total_target
+            st.metric("ใช้งบประมาณรวม (Cost)", f"R$ {total_cost:,.0f}", help="มูลค่าคูปอง x จำนวนลูกค้าเป้าหมาย")
 
-    # 2.2 เตรียมข้อมูลเข้าโมเดล
+    # --- 3. SIMULATION LOGIC ---
+    # จำลองข้อมูล
+    df_sim = target_customers.copy()
+    
+    # A. Effect ของ Voucher (เงิน)
+    # สมมติฐาน: การให้ Voucher ทำให้ลูกค้ารู้สึกคุ้มค่าขึ้น -> ลดโอกาส Churn
+    # (เราจะจำลองด้วยการเพิ่มคะแนน Review และ Is_Rich_Happy เพราะโมเดลชอบคนรวยและมีความสุข)
+    if voucher_val > 0:
+        # ยิ่งให้เยอะ ยิ่งลดความเสี่ยง (Impact Factor)
+        # สูตรสมมติ: ทุกๆ 10 R$ ช่วยลดความเสี่ยงลง 2% (0.02) แบบ Artificial
+        impact = (voucher_val / 10) * 0.02
+        
+        # นอกจากนี้ Voucher อาจทำให้ Review Score ดูดีขึ้นในใจลูกค้า
+        if 'review_score' in df_sim.columns:
+            df_sim['review_score'] = (df_sim['review_score'] + (voucher_val/20)).clip(upper=5.0)
+            
+    else:
+        impact = 0
+
+    # B. Effect ของ Speed
+    if improve_speed == "ส่งด่วนพิเศษ (-2 วัน)" and 'delivery_days' in df_sim.columns:
+        df_sim['delivery_days'] = (df_sim['delivery_days'] - 2).clip(lower=1)
+        if 'delay_days' in df_sim.columns:
+             df_sim['delay_days'] = df_sim['delay_days'] - 2
+
+    # --- 4. PREDICT ---
     X_sim = pd.DataFrame(index=df_sim.index)
     for col in feature_names:
         if col in df_sim.columns:
@@ -432,74 +444,83 @@ elif page == "3. 🎯 Action Plan":
         else:
             X_sim[col] = 0
             
-    # 2.3 ทำนายใหม่ (Prediction)
     if hasattr(model, "predict_proba"):
         new_probs = model.predict_proba(X_sim)[:, 1]
     else:
         new_probs = model.predict(X_sim)
-        
-    # 2.4 คำนวณผลต่าง
-    df_sim['new_churn_prob'] = new_probs
-    df_sim['old_churn_prob'] = df['churn_probability']
-    df_sim['prob_diff'] = df_sim['old_churn_prob'] - df_sim['new_churn_prob']
-    
-    # หาคนที่ "รอด" (Risk ลดลงจนต่ำกว่าเกณฑ์ 0.7)
-    saved_customers = df_sim[
-        (df_sim['old_churn_prob'] > 0.7) & 
-        (df_sim['new_churn_prob'] <= 0.7)
-    ]
-    
-    total_saved = len(saved_customers)
-    money_saved = saved_customers['payment_value'].sum() if 'payment_value' in saved_customers.columns else 0
 
-    # --- 3. DISPLAY RESULTS (แสดงผลลัพธ์) ---
+    # Apply Artificial Impact from Voucher (Business Logic Adjustment)
+    # เพราะโมเดลอาจจะไม่เข้าใจคำว่า "Voucher" โดยตรง เราจึงต้องช่วยปรับ Probability ลงตามความแรงของโปรโมชั่น
+    final_probs = new_probs - impact 
+    
+    # เปรียบเทียบ
+    df_sim['old_prob'] = target_customers['churn_probability']
+    df_sim['new_prob'] = final_probs
+    
+    # ตัดสินผล: ใครที่ความเสี่ยงลดลงจนต่ำกว่า 0.5 (ถือว่าซื้อใจสำเร็จ)
+    success_cases = df_sim[df_sim['new_prob'] < 0.5]
+    
+    saved_count = len(success_cases)
+    saved_revenue = success_cases['payment_value'].sum() if 'payment_value' in df_sim.columns else 0
+    
+    # คำนวณ ROI
+    roi = saved_revenue - total_cost
+    roi_percent = (roi / total_cost * 100) if total_cost > 0 else 0
+
+    # --- 5. DISPLAY RESULTS ---
     st.markdown("---")
+    st.subheader("📊 ผลลัพธ์แคมเปญ (Campaign Result)")
     
-    # แสดง KPI Cards แบบใหญ่ๆ
-    k1, k2, k3 = st.columns(3)
-    k1.metric("👥 ลูกค้าที่กู้คืนได้", f"{total_saved:,} คน", delta="Real-time Update")
-    k2.metric("💸 รายได้ที่รักษาไว้", f"R$ {money_saved:,.0f}")
+    # Result Cards
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("👥 ดึงลูกค้ากลับมาได้", f"{saved_count:,} คน", f"{(saved_count/total_target*100):.1f}% Success Rate")
+    c2.metric("💸 รายได้ที่รักษาได้", f"R$ {saved_revenue:,.0f}")
+    c3.metric("📉 ต้นทุนแคมเปญ", f"R$ {total_cost:,.0f}", type="normal")
     
-    # คำนวณค่าเฉลี่ยความเสี่ยงที่ลดลง
-    avg_imp = df_sim['prob_diff'].mean() * 100
-    k3.metric("📉 ความเสี่ยงลดลงเฉลี่ย", f"{avg_imp:.2f}%", help="ยิ่งเยอะยิ่งดี")
+    # ROI Color logic
+    roi_color = "normal" if roi > 0 else "inverse"
+    c4.metric("💰 กำไรสุทธิ (ROI)", f"R$ {roi:,.0f}", f"{roi_percent:.1f}% Return", delta_color=roi_color)
 
-    # --- 4. CHARTS & LIST ---
-    c_chart, c_list = st.columns([1.5, 1])
+    # --- 6. VISUALIZATION ---
+    col_chart, col_detail = st.columns([1.5, 1])
     
-    with c_chart:
-        st.subheader("🏆 หมวดสินค้าที่ตอบสนองดีที่สุด")
-        if 'product_category_name' in df_sim.columns:
-            cat_imp = df_sim.groupby('product_category_name')['prob_diff'].mean().reset_index()
-            cat_imp['prob_diff'] = cat_imp['prob_diff'] * 100
-            
-            # Top 8 Improvement
-            chart = alt.Chart(cat_imp.sort_values('prob_diff', ascending=False).head(8)).mark_bar(color='#2ecc71').encode(
-                x=alt.X('prob_diff', title='ความเสี่ยงลดลง (%)'),
-                y=alt.Y('product_category_name', sort='-x', title=None),
-                tooltip=['product_category_name', alt.Tooltip('prob_diff', format='.2f')]
-            ).properties(height=350)
-            
-            st.altair_chart(chart, use_container_width=True)
-            
-    with c_list:
-        st.subheader("📋 ตัวอย่างลูกค้าที่สถานะเปลี่ยน")
-        if not saved_customers.empty:
-            show_cols = ['customer_unique_id', 'product_category_name', 'old_churn_prob', 'new_churn_prob']
-            final_cols = [c for c in show_cols if c in df_sim.columns]
-            
+    with col_chart:
+        st.markdown("#### 📈 ความเสี่ยงเปลี่ยนไปอย่างไร? (Before vs After)")
+        
+        # Histogram เปรียบเทียบ
+        chart_data = pd.DataFrame({
+            'Risk': list(df_sim['old_prob']) + list(df_sim['new_prob']),
+            'Type': ['Before (Old Risk)'] * len(df_sim) + ['After (New Risk)'] * len(df_sim)
+        })
+        
+        chart = alt.Chart(chart_data).mark_area(opacity=0.5, interpolate='step').encode(
+            x=alt.X('Risk', bin=alt.Bin(maxbins=20), title='ระดับความเสี่ยง (Churn Probability)'),
+            y=alt.Y('count()', stack=None, title='จำนวนลูกค้า'),
+            color=alt.Color('Type', scale=alt.Scale(range=['#95a5a6', '#2ecc71'])),
+            tooltip=['Type', 'count()']
+        ).properties(height=350)
+        
+        st.altair_chart(chart, use_container_width=True)
+        st.caption("กราฟสีเขียวควรจะขยับไปทางซ้าย (ความเสี่ยงลดลง) เมื่อเทียบกับสีเทา")
+
+    with col_detail:
+        st.markdown("#### 🏆 Top Success Cases")
+        st.markdown("ลูกค้าที่ตอบสนองต่อแคมเปญดีที่สุด")
+        
+        if not success_cases.empty:
+            show_df = success_cases[['customer_unique_id', 'product_category_name', 'old_prob', 'new_prob', 'payment_value']]
             st.dataframe(
-                saved_customers[final_cols].sort_values('old_churn_prob', ascending=False).head(100),
+                show_df.sort_values('payment_value', ascending=False).head(20),
                 column_config={
-                    "old_churn_prob": st.column_config.NumberColumn("Risk เดิม", format="%.2f"),
-                    "new_churn_prob": st.column_config.NumberColumn("Risk ใหม่", format="%.2f", help="ค่าใหม่หลังจากปรับแผน"),
-                    "product_category_name": "สินค้า"
+                    "old_prob": st.column_config.NumberColumn("Risk เดิม", format="%.2f"),
+                    "new_prob": st.column_config.NumberColumn("Risk ใหม่", format="%.2f"),
+                    "payment_value": st.column_config.NumberColumn("ยอดเงิน", format="R$ %.0f")
                 },
                 hide_index=True,
                 use_container_width=True
             )
         else:
-            st.info("ℹ️ ลองปรับค่า Slider ให้เยอะขึ้นอีกนิดครับ ตอนนี้ยังไม่มีลูกค้าที่เปลี่ยนสถานะจาก High Risk เป็น Safe")
+            st.info("ยังไม่มีลูกค้าที่กลับใจ ลองเพิ่มมูลค่า Voucher หรือเลือกส่งด่วนดูครับ")
 # ==========================================
 # PAGE 4: 🎯 Rescue Mission
 # ==========================================
@@ -514,6 +535,7 @@ elif page == "4. 🎯 ปฏิบัติการกู้คืน (Rescue M
     
     st.success(f"💎 พบลูกค้าศักยภาพสูงที่กำลังจะหลุดมือ: **{len(rescue_df):,} คน**")
     st.dataframe(rescue_df[['customer_unique_id', 'payment_value', 'lateness_score', 'product_category_name']].sort_values('payment_value', ascending=False))
+
 
 
 

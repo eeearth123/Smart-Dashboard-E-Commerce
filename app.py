@@ -27,30 +27,34 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ==========================================
-# 2. LOAD ASSETS (Data & Model)
-# ==========================================
+import os  # <--- อย่าลืม import os ด้านบนสุด
+
 @st.cache_resource
 def load_data_and_model():
     data_dict = {}
     errors = []
+
+    # 1. หาตำแหน่งจริงของไฟล์ app.py ในเครื่อง
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # 2. สร้าง Path แบบระบุตำแหน่งชัดเจน
+    model_path = os.path.join(current_dir, 'olist_churn_model_best.pkl')
+    features_path = os.path.join(current_dir, 'model_features_best.pkl')
+    lite_data_path = os.path.join(current_dir, 'olist_dashboard_lite.csv')
     
     # 2.1 Load Model
     try:
-        data_dict['model'] = joblib.load('olist_churn_model_best.pkl')
-        data_dict['features'] = joblib.load('model_features_best.pkl')
+        data_dict['model'] = joblib.load(model_path)
+        data_dict['features'] = joblib.load(features_path)
     except Exception as e:
         errors.append(f"Model Error: {e}")
 
     # 2.2 Load Data
     try:
-        # พยายามโหลดไฟล์ Lite ก่อน
-        try:
-            df = pd.read_csv('olist_dashboard_lite.csv')
-        except:
-            df = pd.read_csv('olist_dashboard_input.csv')
+        # โหลดโดยใช้ Path เต็มที่สร้างไว้
+        df = pd.read_csv(lite_data_path)
         
-        # แปลงวันที่สำคัญ (จำเป็นสำหรับกราฟ Trend)
+        # แปลงวันที่
         if 'order_purchase_timestamp' in df.columns:
             df['order_purchase_timestamp'] = pd.to_datetime(df['order_purchase_timestamp'])
         
@@ -59,16 +63,6 @@ def load_data_and_model():
         errors.append(f"Data Error: {e}")
 
     return data_dict, errors
-
-# เรียกใช้งานโหลดข้อมูล
-assets, load_errors = load_data_and_model()
-
-# ถ้ามี Error ให้แจ้งเตือน แต่ถ้าข้อมูลไม่ครบให้หยุด
-if load_errors:
-    for err in load_errors:
-        st.error(f"⚠️ {err}")
-    if 'df' not in assets or 'model' not in assets:
-        st.stop()
 
 # ==========================================
 # 3. PREPARE DATA (AI Prediction & Status)
@@ -702,6 +696,7 @@ elif page == "5. 🏪 Seller Audit":
     
     st.altair_chart(scatter_seller, use_container_width=True)
     st.info("💡 ร้านที่ดีควรอยู่ด้าน **'ล่าง'** (Churn ต่ำ) / ร้านที่มีปัญหาจะลอยอยู่ด้าน **'บน'** (Churn สูง)")
+
 
 
 

@@ -229,8 +229,7 @@ if page == "1. 📊 Executive Summary":
     # --- Action Hint ---
     st.info("💡 **Insight:** ลูกค้ากลุ่ม **High Risk** และ **Warning** คิดเป็นสัดส่วนที่มีนัยสำคัญ แนะนำให้ไปที่หน้า **'Action Plan'** เพื่อดึงรายชื่อทำแคมเปญด่วน")
 
-elif page == "2. 🔍 Customer Detail":
-    st.write("หน้า 2 กำลังพัฒนา...") # ใส่โค้ดหน้า 2 ของเก่าที่นี่
+
 elif page == "3. 🎯 Action Plan":
     st.write("หน้า 3 กำลังพัฒนา...") # ใส่โค้ดหน้า 3 ของเก่าที่นี่
 
@@ -400,5 +399,6 @@ elif page == "4. 🎯 ปฏิบัติการกู้คืน (Rescue M
     
     st.success(f"💎 พบลูกค้าศักยภาพสูงที่กำลังจะหลุดมือ: **{len(rescue_df):,} คน**")
     st.dataframe(rescue_df[['customer_unique_id', 'payment_value', 'lateness_score', 'product_category_name']].sort_values('payment_value', ascending=False))
+
 
 

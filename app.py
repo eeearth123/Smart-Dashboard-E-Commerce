@@ -67,11 +67,23 @@ def load_data_and_model():
         
     return data_dict, errors
 
+assets, load_errors = load_data_and_model()
+
+# เช็ค Error ถ้ามีก็โชว์ แต่ถ้าโหลด Data ไม่ได้เลยให้หยุด
+if load_errors:
+    for err in load_errors:
+        st.error(f"⚠️ {err}")
+    
+    # ถ้าไม่มี Data มาเลย ให้หยุดทำงาน (กัน Error บรรทัดถัดไป)
+    if 'df' not in assets:
+        st.stop()
+
 # ==========================================
 # 3. PREPARE DATA
 # ==========================================
-df = assets['df']
-model = assets.get('model')  # ใช้ .get เพื่อกัน Error ถ้าโมเดลไม่มา
+
+df = assets['df'] 
+model = assets.get('model')
 feature_names = assets.get('features', [])
 
 # 3.1 Predict Logic (ถ้ามีโมเดลจริง)
@@ -379,4 +391,5 @@ elif page == "5. 🏪 Seller Audit":
         tooltip=['seller_id', 'review_score', 'churn_probability']
     ).properties(height=350).interactive()
     st.altair_chart(chart, use_container_width=True)
+
 

@@ -29,14 +29,14 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. LOAD ASSETS (with Dummy Data Fallback)
+# 2. LOAD ASSETS (Clean Version: ข้อมูลจริงเท่านั้น)
 # ==========================================
 @st.cache_resource
 def load_data_and_model():
     data_dict = {}
     errors = []
     
-    # 1. หาตำแหน่งไฟล์ (Path Fix)
+    # 1. หาตำแหน่งไฟล์ (Path Fix) - เก็บส่วนนี้ไว้กันเหนียวครับ
     current_dir = os.path.dirname(os.path.abspath(__file__))
     model_path = os.path.join(current_dir, 'olist_churn_model_best.pkl')
     features_path = os.path.join(current_dir, 'model_features_best.pkl')
@@ -47,56 +47,25 @@ def load_data_and_model():
         data_dict['model'] = joblib.load(model_path)
         data_dict['features'] = joblib.load(features_path)
     except Exception as e:
-        errors.append(f"Model Warning: {e}")
+        errors.append(f"Model Error: ไม่สามารถโหลดโมเดลได้ ({e})")
 
-    # 3. โหลด Data (ถ้าพังจะสร้างข้อมูลจำลอง)
+    # 3. โหลด Data (ลบส่วนสร้าง Dummy ทิ้งแล้ว)
     try:
-        # เช็คว่ามีไฟล์และไฟล์ไม่ว่างเปล่า
-        if os.path.exists(lite_data_path) and os.path.getsize(lite_data_path) > 0:
+        if os.path.exists(lite_data_path):
             df = pd.read_csv(lite_data_path)
+            
+            # แปลงวันที่
             if 'order_purchase_timestamp' in df.columns:
                 df['order_purchase_timestamp'] = pd.to_datetime(df['order_purchase_timestamp'])
+                
+            data_dict['df'] = df
         else:
-            raise ValueError("File missing or empty")
+            errors.append(f"Data Error: ไม่พบไฟล์ข้อมูลที่ {lite_data_path}")
             
     except Exception as e:
-        # ⚠️ FALLBACK SYSTEM: สร้างข้อมูลจำลองทันที (กันเว็บล่ม)
-        errors.append(f"Notice: ใช้ข้อมูลจำลอง (Dummy Data) เนื่องจาก: {e}")
+        errors.append(f"Data Error: อ่านไฟล์ไม่ได้ ({e})")
         
-        # สร้าง Dummy Data 100 แถว
-        dates = pd.date_range(start='2018-01-01', periods=100)
-        df = pd.DataFrame({
-            'customer_unique_id': [f'CUST_{i:03d}' for i in range(100)],
-            'order_purchase_timestamp': dates,
-            'payment_value': np.random.uniform(50, 500, 100),
-            'status': np.random.choice(['Active', 'High Risk', 'Warning (Late > 1.5x)'], 100),
-            'churn_probability': np.random.uniform(0.1, 0.9, 100),
-            'product_category_name': np.random.choice(['bed_bath_table', 'health_beauty', 'sports_leisure', 'furniture_decor'], 100),
-            'customer_state': np.random.choice(['SP', 'RJ', 'MG', 'RS'], 100),
-            'customer_city': np.random.choice(['sao paulo', 'rio de janeiro', 'belo horizonte', 'curitiba'], 100),
-            'seller_id': np.random.choice([f'SELLER_{i:02d}' for i in range(10)], 100),
-            'delivery_days': np.random.uniform(2, 15, 100),
-            'delay_days': np.random.uniform(0, 5, 100),
-            'review_score': np.random.randint(1, 6, 100),
-            'lateness_score': np.random.uniform(0.5, 3.0, 100),
-            'cat_median_days': np.random.uniform(30, 60, 100)
-        })
-        
-    data_dict['df'] = df
     return data_dict, errors
-
-# --- ส่วนสำคัญที่ห้ามหาย! (Calling the function) ---
-assets, load_errors = load_data_and_model()
-
-# แสดงแจ้งเตือน (แต่ไม่หยุดทำงาน ถ้ามี Dummy Data)
-if load_errors:
-    for err in load_errors:
-        st.warning(f"⚠️ {err}")
-
-# ถ้าไม่มีข้อมูลเลยจริงๆ (เคสแย่สุด) ถึงจะหยุด
-if 'df' not in assets:
-    st.error("Critical Error: ไม่สามารถโหลดข้อมูลได้เลย")
-    st.stop()
 
 # ==========================================
 # 3. PREPARE DATA
@@ -410,3 +379,4 @@ elif page == "5. 🏪 Seller Audit":
         tooltip=['seller_id', 'review_score', 'churn_probability']
     ).properties(height=350).interactive()
     st.altair_chart(chart, use_container_width=True)
+

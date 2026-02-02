@@ -127,73 +127,105 @@ st.sidebar.markdown("---")
 st.sidebar.info("Select a page to analyze different aspects of your business.")
 
 # ==========================================
-# PAGE 1: 📊 Executive Summary
+# PAGE 1: 📊 Executive Summary (with Filter)
 # ==========================================
 if page == "1. 📊 Executive Summary":
     st.title("📊 Executive Summary (Business Health)")
-    st.markdown("ภาพรวมสุขภาพของธุรกิจและแนวโน้มความเสี่ยงลูกค้า")
+    
+    # --- 1. FILTER SECTION (เพิ่มใหม่) ---
+    with st.expander("🌪️ กรองข้อมูล (Filter)", expanded=False):
+        all_cats = list(df['product_category_name'].unique()) if 'product_category_name' in df.columns else []
+        selected_cats_p1 = st.multiselect("เลือกหมวดหมู่สินค้า (ว่าง = ดูภาพรวมทั้งหมด):", all_cats, key="p1_cat_filter")
+    
+    # กรองข้อมูล (ถ้ามีการเลือก)
+    if selected_cats_p1:
+        df_display = df[df['product_category_name'].isin(selected_cats_p1)].copy()
+        filter_label = f"หมวด: {', '.join(selected_cats_p1[:3])}..."
+    else:
+        df_display = df.copy()
+        filter_label = "ภาพรวมทั้งบริษัท"
+
+    st.caption(f"กำลังแสดงผล: **{filter_label}**")
     st.markdown("---")
 
-    # KPI Calculation
-    total_customers = len(df)
-    risk_df = df[df['status'].isin(['High Risk', 'Warning (Late > 1.5x)'])]
-    risk_count = len(risk_df)
-    churn_rate = (risk_count / total_customers) * 100 if total_customers > 0 else 0
-    rev_at_risk = risk_df['payment_value'].sum() if 'payment_value' in df.columns else 0
-    active_count = len(df[df['status'] == 'Active'])
+    # --- 2. KPI CARDS (คำนวณจาก df_display) ---
+    total_customers = len(df_display)
+    
+    if total_customers > 0:
+        risk_df = df_display[df_display['status'].isin(['High Risk', 'Warning (Late > 1.5x)'])]
+        risk_count = len(risk_df)
+        churn_rate = (risk_count / total_customers) * 100
+        rev_at_risk = risk_df['payment_value'].sum() if 'payment_value' in df_display.columns else 0
+        active_count = len(df_display[df_display['status'] == 'Active'])
+    else:
+        churn_rate, rev_at_risk, risk_count, active_count = 0, 0, 0, 0
 
     k1, k2, k3, k4 = st.columns(4)
-    with k1: st.metric("🚨 Current Churn Rate", f"{churn_rate:.1f}%", delta="-Target 5%", delta_color="inverse")
-    with k2: st.metric("💸 Revenue at Risk", f"R$ {rev_at_risk:,.0f}", "ความเสียหายที่อาจเกิด", delta_color="inverse")
-    with k3: st.metric("👥 Risk vs Total", f"{risk_count:,} / {total_customers:,}", "ลูกค้ากลุ่มเสี่ยง")
+    with k1: st.metric("🚨 Churn Rate", f"{churn_rate:.1f}%", delta="-Target 5%", delta_color="inverse")
+    with k2: st.metric("💸 Revenue at Risk", f"R$ {rev_at_risk:,.0f}", "ยอดเงินกลุ่มเสี่ยง", delta_color="inverse")
+    with k3: st.metric("👥 Risk vs Total", f"{risk_count:,} / {total_customers:,}", "ลูกค้าเสี่ยง / ทั้งหมด")
     with k4: st.metric("✅ Active Customers", f"{active_count:,}", "ลูกค้าชั้นดี")
 
     st.markdown("---")
+
+    # --- 3. CHARTS ---
     c1, c2 = st.columns([2, 1])
     
     with c1:
-        st.subheader("📈 Churn Risk Trend")
-        if 'order_purchase_timestamp' in df.columns:
-            df['month_year'] = df['order_purchase_timestamp'].dt.to_period('M').astype(str)
-            trend_df = df.groupby('month_year')['churn_probability'].mean().reset_index()
+        st.subheader("📈 Churn Risk Trend & Forecast")
+        if 'order_purchase_timestamp' in df_display.columns and not df_display.empty:
+            # เตรียมข้อมูลกราฟ
+            df_display['month_year'] = df_display['order_purchase_timestamp'].dt.to_period('M').astype(str)
+            trend_df = df_display.groupby('month_year')['churn_probability'].mean().reset_index()
             trend_df.columns = ['Date', 'Churn_Prob']
             trend_df['Type'] = 'Actual'
-            # Convert to datetime for Altair
             trend_df['Date'] = pd.to_datetime(trend_df['Date'])
             
-            # Forecast (Dummy Logic)
-            last_date = trend_df['Date'].max()
-            last_val = trend_df['Churn_Prob'].iloc[-1] if not trend_df.empty else 0.5
-            future_dates = [last_date + pd.DateOffset(months=i) for i in range(1, 4)]
-            future_vals = [last_val * (1 + 0.02*i) for i in range(1, 4)]
-            forecast_df = pd.DataFrame({'Date': future_dates, 'Churn_Prob': future_vals, 'Type': ['Forecast']*3})
-            
-            full_trend = pd.concat([trend_df, forecast_df])
-            
-            chart = alt.Chart(full_trend).mark_line(point=True).encode(
-                x=alt.X('Date', axis=alt.Axis(format='%b %Y', title='Timeline')),
-                y=alt.Y('Churn_Prob', axis=alt.Axis(format='%', title='Avg Churn Risk')),
-                color=alt.Color('Type', scale=alt.Scale(domain=['Actual', 'Forecast'], range=['#2980b9', '#e74c3c'])),
-                strokeDash=alt.condition(alt.datum.Type == 'Forecast', alt.value([5, 5]), alt.value([0])),
-                tooltip=['Date', alt.Tooltip('Churn_Prob', format='.1%'), 'Type']
-            ).properties(height=350)
-            st.altair_chart(chart, use_container_width=True)
+            # Forecast Logic (สร้างเส้นเชื่อมต่อ)
+            if not trend_df.empty:
+                last_date = trend_df['Date'].max()
+                last_val = trend_df['Churn_Prob'].iloc[-1]
+                
+                # สร้างจุดเชื่อม (Anchor Point) เพื่อให้เส้นต่อกัน
+                anchor_df = pd.DataFrame({'Date': [last_date], 'Churn_Prob': [last_val], 'Type': ['Forecast']})
+                
+                # สร้างจุดอนาคต
+                future_dates = [last_date + pd.DateOffset(months=i) for i in range(1, 4)]
+                future_vals = [last_val * (1 + 0.02*i) for i in range(1, 4)]
+                future_df = pd.DataFrame({'Date': future_dates, 'Churn_Prob': future_vals, 'Type': ['Forecast']*3})
+                
+                # รวมข้อมูล (Actual + Anchor + Future)
+                full_trend = pd.concat([trend_df, anchor_df, future_df]).drop_duplicates()
+                
+                chart = alt.Chart(full_trend).mark_line(point=True).encode(
+                    x=alt.X('Date', axis=alt.Axis(format='%b %Y', title='Timeline')),
+                    y=alt.Y('Churn_Prob', axis=alt.Axis(format='%', title='Avg Churn Risk'), scale=alt.Scale(domain=[0.5, 1.0])),
+                    color=alt.Color('Type', scale=alt.Scale(domain=['Actual', 'Forecast'], range=['#2980b9', '#e74c3c'])),
+                    strokeDash=alt.condition(alt.datum.Type == 'Forecast', alt.value([5, 5]), alt.value([0])),
+                    tooltip=['Date', alt.Tooltip('Churn_Prob', format='.1%'), 'Type']
+                ).properties(height=350)
+                st.altair_chart(chart, use_container_width=True)
+            else:
+                st.info("ข้อมูลไม่เพียงพอสำหรับสร้างกราฟ Trend")
         else:
-            st.warning("⚠️ No date column for Trend Chart")
+            st.warning("⚠️ ไม่พบข้อมูลวันที่ หรือไม่มีข้อมูลตามตัวกรอง")
 
     with c2:
         st.subheader("🍩 Business Health")
-        status_counts = df['status'].value_counts().reset_index()
-        status_counts.columns = ['Status', 'Count']
-        domain = ['Active', 'Medium Risk', 'Warning (Late > 1.5x)', 'High Risk', 'Lost (Late > 3x)']
-        range_ = ['#2ecc71', '#f1c40f', '#e67e22', '#e74c3c', '#95a5a6']
-        
-        donut = alt.Chart(status_counts).mark_arc(innerRadius=60).encode(
-            theta=alt.Theta("Count", type="quantitative"),
-            color=alt.Color("Status", scale=alt.Scale(domain=domain, range=range_), legend=dict(orient='bottom')),
-            tooltip=['Status', 'Count']
-        ).properties(height=350)
-        st.altair_chart(donut, use_container_width=True)
+        if not df_display.empty:
+            status_counts = df_display['status'].value_counts().reset_index()
+            status_counts.columns = ['Status', 'Count']
+            domain = ['Active', 'Medium Risk', 'Warning (Late > 1.5x)', 'High Risk', 'Lost (Late > 3x)']
+            range_ = ['#2ecc71', '#f1c40f', '#e67e22', '#e74c3c', '#95a5a6']
+            
+            donut = alt.Chart(status_counts).mark_arc(innerRadius=60).encode(
+                theta=alt.Theta("Count", type="quantitative"),
+                color=alt.Color("Status", scale=alt.Scale(domain=domain, range=range_), legend=dict(orient='bottom')),
+                tooltip=['Status', 'Count']
+            ).properties(height=350)
+            st.altair_chart(donut, use_container_width=True)
+        else:
+            st.info("ไม่มีข้อมูลแสดงผล")
 
 # ==========================================
 # PAGE 2: 🔍 Customer Detail
@@ -391,5 +423,6 @@ elif page == "5. 🏪 Seller Audit":
         tooltip=['seller_id', 'review_score', 'churn_probability']
     ).properties(height=350).interactive()
     st.altair_chart(chart, use_container_width=True)
+
 
 

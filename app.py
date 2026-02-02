@@ -127,17 +127,17 @@ st.sidebar.markdown("---")
 st.sidebar.info("Select a page to analyze different aspects of your business.")
 
 # ==========================================
-# PAGE 1: 📊 Executive Summary (with Filter)
+# PAGE 1: 📊 Executive Summary (Updated)
 # ==========================================
 if page == "1. 📊 Executive Summary":
     st.title("📊 Executive Summary (Business Health)")
     
-    # --- 1. FILTER SECTION (เพิ่มใหม่) ---
+    # --- 1. FILTER SECTION ---
     with st.expander("🌪️ กรองข้อมูล (Filter)", expanded=False):
         all_cats = list(df['product_category_name'].unique()) if 'product_category_name' in df.columns else []
         selected_cats_p1 = st.multiselect("เลือกหมวดหมู่สินค้า (ว่าง = ดูภาพรวมทั้งหมด):", all_cats, key="p1_cat_filter")
     
-    # กรองข้อมูล (ถ้ามีการเลือก)
+    # กรองข้อมูล
     if selected_cats_p1:
         df_display = df[df['product_category_name'].isin(selected_cats_p1)].copy()
         filter_label = f"หมวด: {', '.join(selected_cats_p1[:3])}..."
@@ -148,23 +148,36 @@ if page == "1. 📊 Executive Summary":
     st.caption(f"กำลังแสดงผล: **{filter_label}**")
     st.markdown("---")
 
-    # --- 2. KPI CARDS (คำนวณจาก df_display) ---
+    # --- 2. KPI CARDS (Clean Version + Buying Cycle) ---
     total_customers = len(df_display)
     
+    # คำนวณตัวเลขพื้นฐาน
     if total_customers > 0:
         risk_df = df_display[df_display['status'].isin(['High Risk', 'Warning (Late > 1.5x)'])]
         risk_count = len(risk_df)
         churn_rate = (risk_count / total_customers) * 100
         rev_at_risk = risk_df['payment_value'].sum() if 'payment_value' in df_display.columns else 0
         active_count = len(df_display[df_display['status'] == 'Active'])
+        
+        # 🟢 คำนวณรอบการซื้อปกติ (Buying Cycle) ของกลุ่มที่เลือก
+        if 'cat_median_days' in df_display.columns:
+            avg_cycle = df_display['cat_median_days'].mean()
+            cycle_text = f"{avg_cycle:.0f} วัน"
+        else:
+            cycle_text = "N/A"
     else:
         churn_rate, rev_at_risk, risk_count, active_count = 0, 0, 0, 0
+        cycle_text = "-"
 
-    k1, k2, k3, k4 = st.columns(4)
-    with k1: st.metric("🚨 Churn Rate", f"{churn_rate:.1f}%", delta="-Target 5%", delta_color="inverse")
-    with k2: st.metric("💸 Revenue at Risk", f"R$ {rev_at_risk:,.0f}", "ยอดเงินกลุ่มเสี่ยง", delta_color="inverse")
-    with k3: st.metric("👥 Risk vs Total", f"{risk_count:,} / {total_customers:,}", "ลูกค้าเสี่ยง / ทั้งหมด")
-    with k4: st.metric("✅ Active Customers", f"{active_count:,}", "ลูกค้าชั้นดี")
+    # แสดงผล 5 คอลัมน์ (เพิ่มช่อง Buying Cycle)
+    k1, k2, k3, k4, k5 = st.columns(5)
+    
+    # ❌ ลบพารามิเตอร์ delta ออก เพื่อไม่ให้มีตัวหนังสือเล็กๆ ข้างล่าง
+    with k1: st.metric("🚨 Churn Rate", f"{churn_rate:.1f}%")
+    with k2: st.metric("💸 Revenue at Risk", f"R$ {rev_at_risk:,.0f}")
+    with k3: st.metric("👥 Risk vs Total", f"{risk_count:,} / {total_customers:,}")
+    with k4: st.metric("✅ Active Customers", f"{active_count:,}")
+    with k5: st.metric("🔄 รอบซื้อปกติ (Cycle)", cycle_text, help="ระยะเวลาเฉลี่ยที่ลูกค้าหมวดนี้มักจะกลับมาซื้อซ้ำ")
 
     st.markdown("---")
 
@@ -174,27 +187,21 @@ if page == "1. 📊 Executive Summary":
     with c1:
         st.subheader("📈 Churn Risk Trend & Forecast")
         if 'order_purchase_timestamp' in df_display.columns and not df_display.empty:
-            # เตรียมข้อมูลกราฟ
             df_display['month_year'] = df_display['order_purchase_timestamp'].dt.to_period('M').astype(str)
             trend_df = df_display.groupby('month_year')['churn_probability'].mean().reset_index()
             trend_df.columns = ['Date', 'Churn_Prob']
             trend_df['Type'] = 'Actual'
             trend_df['Date'] = pd.to_datetime(trend_df['Date'])
             
-            # Forecast Logic (สร้างเส้นเชื่อมต่อ)
             if not trend_df.empty:
                 last_date = trend_df['Date'].max()
                 last_val = trend_df['Churn_Prob'].iloc[-1]
                 
-                # สร้างจุดเชื่อม (Anchor Point) เพื่อให้เส้นต่อกัน
                 anchor_df = pd.DataFrame({'Date': [last_date], 'Churn_Prob': [last_val], 'Type': ['Forecast']})
-                
-                # สร้างจุดอนาคต
                 future_dates = [last_date + pd.DateOffset(months=i) for i in range(1, 4)]
                 future_vals = [last_val * (1 + 0.02*i) for i in range(1, 4)]
                 future_df = pd.DataFrame({'Date': future_dates, 'Churn_Prob': future_vals, 'Type': ['Forecast']*3})
                 
-                # รวมข้อมูล (Actual + Anchor + Future)
                 full_trend = pd.concat([trend_df, anchor_df, future_df]).drop_duplicates()
                 
                 chart = alt.Chart(full_trend).mark_line(point=True).encode(
@@ -208,20 +215,37 @@ if page == "1. 📊 Executive Summary":
             else:
                 st.info("ข้อมูลไม่เพียงพอสำหรับสร้างกราฟ Trend")
         else:
-            st.warning("⚠️ ไม่พบข้อมูลวันที่ หรือไม่มีข้อมูลตามตัวกรอง")
+            st.warning("⚠️ ไม่พบข้อมูลวันที่")
 
     with c2:
         st.subheader("🍩 Business Health")
-        if not df_display.empty:
-            status_counts = df_display['status'].value_counts().reset_index()
-            status_counts.columns = ['Status', 'Count']
+        if not df_display.empty and 'order_purchase_timestamp' in df_display.columns:
+            
+            # 🟢 คำนวณว่า "หายไปนานกี่วันแล้ว" (Days Gone)
+            # ใช้วันที่สุดท้ายใน Dataset เป็นจุดอ้างอิงปัจจุบัน
+            ref_date = df['order_purchase_timestamp'].max()
+            df_display['days_gone'] = (ref_date - df_display['order_purchase_timestamp']).dt.days
+            
+            # Group ข้อมูลเพื่อเอาไปพล็อตกราฟ
+            status_stats = df_display.groupby('status').agg({
+                'customer_unique_id': 'count',
+                'days_gone': 'mean' # หาค่าเฉลี่ยวันที่หายไป
+            }).reset_index()
+            
+            status_stats.columns = ['Status', 'Count', 'Avg_Days_Gone']
+            
             domain = ['Active', 'Medium Risk', 'Warning (Late > 1.5x)', 'High Risk', 'Lost (Late > 3x)']
             range_ = ['#2ecc71', '#f1c40f', '#e67e22', '#e74c3c', '#95a5a6']
             
-            donut = alt.Chart(status_counts).mark_arc(innerRadius=60).encode(
+            donut = alt.Chart(status_stats).mark_arc(innerRadius=60).encode(
                 theta=alt.Theta("Count", type="quantitative"),
                 color=alt.Color("Status", scale=alt.Scale(domain=domain, range=range_), legend=dict(orient='bottom')),
-                tooltip=['Status', 'Count']
+                # 🟢 เพิ่ม Avg_Days_Gone เข้าไปใน Tooltip
+                tooltip=[
+                    'Status', 
+                    alt.Tooltip('Count', format=',', title='จำนวนลูกค้า'),
+                    alt.Tooltip('Avg_Days_Gone', format='.0f', title='หายเงียบไป (วันเฉลี่ย)')
+                ]
             ).properties(height=350)
             st.altair_chart(donut, use_container_width=True)
         else:
@@ -423,6 +447,7 @@ elif page == "5. 🏪 Seller Audit":
         tooltip=['seller_id', 'review_score', 'churn_probability']
     ).properties(height=350).interactive()
     st.altair_chart(chart, use_container_width=True)
+
 
 
 

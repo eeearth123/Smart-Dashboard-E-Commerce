@@ -493,3 +493,50 @@ elif page == "6. 🔄 Buying Cycle Analysis":
         'customer_unique_id':'count', 'cat_median_days':'mean', 'lateness_score':'mean', 'churn_probability':'mean'
     }).reset_index()
     st.dataframe(summ.sort_values('cat_median_days'), use_container_width=True, hide_index=True)
+    # ... (ต่อจากตารางรายละเอียดใน Page 6 เดิม) ...
+
+    st.markdown("---")
+    st.subheader("📅 Seasonal Patterns: สินค้าขายดีเดือนไหน?")
+    st.caption("เฉดสีเข้ม = ช่วงที่สินค้านั้นขายดีที่สุด (High Season)")
+
+    if 'order_purchase_timestamp' in df.columns:
+        # 1. เตรียมข้อมูล (ดึงเดือนออกมา)
+        # สร้าง Copy เพื่อไม่ให้กระทบ df หลัก
+        season_df = df.copy()
+        season_df['month_num'] = season_df['order_purchase_timestamp'].dt.month
+        season_df['month_name'] = season_df['order_purchase_timestamp'].dt.strftime('%b') # Jan, Feb, ...
+        
+        # 2. จัดกลุ่มข้อมูล (Group by Category & Month)
+        # นับจำนวนออเดอร์ในแต่ละเดือน
+        heatmap_data = season_df.groupby(['product_category_name', 'month_num', 'month_name']).size().reset_index(name='sales_volume')
+        
+        # 3. คัดเฉพาะ Top Categories (เพื่อให้กราฟดูรู้เรื่อง ไม่รกเกินไป)
+        # เอาเฉพาะ 15 หมวดแรกที่มีคนซื้อเยอะสุด
+        top_cats = season_df['product_category_name'].value_counts().head(15).index.tolist()
+        heatmap_data = heatmap_data[heatmap_data['product_category_name'].isin(top_cats)]
+        
+        # 4. สร้าง Heatmap Chart
+        # แกน X: เดือน (Jan -> Dec)
+        # แกน Y: หมวดสินค้า
+        # สี: ยอดขาย (ยิ่งเข้มยิ่งขายดี)
+        heatmap = alt.Chart(heatmap_data).mark_rect().encode(
+            x=alt.X('month_name', 
+                    sort=['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], 
+                    title='เดือน (Month)'),
+            y=alt.Y('product_category_name', title='หมวดสินค้า'),
+            color=alt.Color('sales_volume', 
+                            scale=alt.Scale(scheme='orangered'), # สีส้ม-แดง (ร้อนแรง)
+                            title='ยอดขาย (Orders)'),
+            tooltip=['product_category_name', 'month_name', alt.Tooltip('sales_volume', format=',')]
+        ).properties(
+            height=500,
+            title='🔥 Heatmap แสดงช่วงเวลาขายดีของสินค้า Top 15'
+        )
+        
+        st.altair_chart(heatmap, use_container_width=True)
+        
+        st.info("💡 **Tip:** ลองสังเกตสีแดงเข้มในแต่ละแถว จะช่วยให้รู้ว่าต้องสต็อกของหรือยิงแอดสินค้านั้นเดือนไหน")
+        
+    else:
+        st.warning("⚠️ ไม่พบข้อมูลวันที่ (order_purchase_timestamp) ไม่สามารถวิเคราะห์ Seasonality ได้")
+

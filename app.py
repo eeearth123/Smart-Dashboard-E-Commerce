@@ -828,96 +828,153 @@ elif page == "5. 🏪 Seller Audit":
             height=600 # เพิ่มความสูงตารางให้ดูได้จุใจ
         )
 
-# ==========================================
-# PAGE 6: 🔄 Buying Cycle Analysis (หน้าใหม่ที่คุณขอ)
-# ==========================================
+# ==============================================================================
+# PAGE 6: 🔄 Buying Cycle Analysis (Comparison Mode)
+# ==============================================================================
 elif page == "6. 🔄 Buying Cycle Analysis":
     st.title("🔄 Buying Cycle Analysis")
-    st.markdown("วิเคราะห์รอบการซื้อ: **สินค้าไหนต้องซื้อซ้ำบ่อย? ลูกค้าเลทแค่ไหน?**")
+    st.markdown("วิเคราะห์รอบการซื้อ: **สินค้าหมวดนี้...ลูกค้ากลับมาซื้อซ้ำเร็วแค่ไหน?**")
     
-    avg_cycle = df['cat_median_days'].mean() if 'cat_median_days' in df.columns else 0
-    avg_late = df['lateness_score'].mean() if 'lateness_score' in df.columns else 0
+    # ---------------------------------------------------------
+    # 0. PREPARE DATA & FILTER
+    # ---------------------------------------------------------
+    # เช็คคอลัมน์จำเป็น
+    if 'cat_median_days' not in df.columns:
+        st.error("❌ ไม่พบข้อมูลรอบการซื้อ (cat_median_days)")
+        st.stop()
+
+    # Filter หมวดหมู่สินค้า
+    with st.container():
+        all_cats = sorted(list(df['product_category_name'].unique())) if 'product_category_name' in df.columns else []
+        sel_cats_p6 = st.multiselect("📦 เลือกหมวดสินค้า (เพื่อเปรียบเทียบกับภาพรวม):", all_cats, key="p6_cat_filter")
+        
+        # สร้าง Dataframe 2 ชุด: 
+        # 1. df_cycle (ข้อมูลที่กรองมา)
+        # 2. df (ข้อมูลทั้งหมด เอาไว้เทียบ Benchmark)
+        if sel_cats_p6:
+            df_cycle = df[df['product_category_name'].isin(sel_cats_p6)].copy()
+            filter_label = f"หมวด: {', '.join(sel_cats_p6[:3])}..."
+        else:
+            df_cycle = df.copy()
+            filter_label = "ภาพรวมทุกหมวด"
+
+    # ---------------------------------------------------------
+    # 1. METRICS (KPIs)
+    # ---------------------------------------------------------
+    avg_cycle = df_cycle['cat_median_days'].mean()
+    avg_late = df_cycle['lateness_score'].mean() if 'lateness_score' in df_cycle.columns else 0
+    
+    # นับคนซื้อซ้ำเร็ว (Fast Repeaters)
+    fast_repeaters = len(df_cycle[df_cycle['cat_median_days'] <= 30])
     
     m1, m2, m3 = st.columns(3)
-    m1.metric("⏱️ รอบซื้อเฉลี่ย (ทั้งบริษัท)", f"{avg_cycle:.0f} วัน")
-    m2.metric("🐢 ความล่าช้าเฉลี่ย (Late Score)", f"{avg_late:.2f} เท่า", "ถ้า > 1.0 คือเริ่มช้า")
-    m3.metric("📅 ซื้อซ้ำใน 30 วัน", f"{len(df[df['cat_median_days']<=30]):,} คน")
+    m1.metric(f"⏱️ รอบซื้อเฉลี่ย ({filter_label})", f"{avg_cycle:.0f} วัน", help="โดยเฉลี่ยลูกค้ากลุ่มนี้กลับมาซื้อซ้ำในกี่วัน")
+    m2.metric("🐢 ความล่าช้า (Late Score)", f"{avg_late:.2f} เท่า", "ถ้า > 1.0 คือเริ่มช้ากว่าปกติ")
+    m3.metric("📅 ซื้อซ้ำใน 30 วัน", f"{fast_repeaters:,} คน", help="ลูกค้าที่กลับมาซื้อใหม่ภายใน 1 เดือน")
     
     st.markdown("---")
-    
-    c1, c2 = st.columns(2)
-    with c1:
-        st.subheader("📦 รอบการซื้อแยกรายหมวด")
-        if 'cat_median_days' in df.columns:
-            cat_cyc = df.groupby('product_category_name')['cat_median_days'].median().reset_index().sort_values('cat_median_days').head(20)
-            chart = alt.Chart(cat_cyc).mark_bar().encode(
-                x=alt.X('cat_median_days', title='Days'), y=alt.Y('product_category_name', sort='x'),
-                color=alt.Color('cat_median_days', scale=alt.Scale(scheme='tealblues'))
-            )
-            st.altair_chart(chart, use_container_width=True)
-            
-    with c2:
-        st.subheader("🐢 Distribution of Lateness")
-        if 'lateness_score' in df.columns:
-            hist_df = df[df['lateness_score'] <= 10]
-            chart = alt.Chart(hist_df).mark_bar().encode(
-                x=alt.X('lateness_score', bin=alt.Bin(maxbins=30)),
-                y='count()',
-                color=alt.condition(alt.datum.lateness_score > 3, alt.value('red'), alt.value('green'))
-            )
-            st.altair_chart(chart, use_container_width=True)
-            
-    st.subheader("📋 รายละเอียดรายหมวด")
-    summ = df.groupby('product_category_name').agg({
-        'customer_unique_id':'count', 'cat_median_days':'mean', 'lateness_score':'mean', 'churn_probability':'mean'
-    }).reset_index()
-    st.dataframe(summ.sort_values('cat_median_days'), use_container_width=True, hide_index=True)
-    # ... (ต่อจากตารางรายละเอียดใน Page 6 เดิม) ...
 
+    # ---------------------------------------------------------
+    # 2. COMPARISON CHARTS (จุดสำคัญที่ขอมา)
+    # ---------------------------------------------------------
+    st.subheader("📊 เปรียบเทียบพฤติกรรมการซื้อซ้ำ (Repurchase Distribution)")
+    st.caption("กราฟแสดงจำนวนวัน (แกน X) ที่ลูกค้าใช้ในการกลับมาซื้อซ้ำ")
+
+    col_focus, col_bench = st.columns(2)
+
+    # --- CHART 1: FOCUS GROUP (หมวดที่เลือก) ---
+    with col_focus:
+        st.info(f"📍 **{filter_label}** (กลุ่มที่คุณเลือก)")
+        
+        # Histogram ของกลุ่มที่เลือก
+        hist_focus = alt.Chart(df_cycle).mark_bar().encode(
+            x=alt.X('cat_median_days', bin=alt.Bin(maxbins=20), title='ระยะเวลาซื้อซ้ำ (วัน)'),
+            y=alt.Y('count()', title='จำนวนลูกค้า'),
+            color=alt.value('#3498db'), # สีฟ้า
+            tooltip=['count()', alt.Tooltip('cat_median_days', bin=True, title='ช่วงวัน')]
+        ).properties(height=300, title=f"การกระจายตัวของ {filter_label}")
+        
+        st.altair_chart(hist_focus, use_container_width=True)
+
+    # --- CHART 2: OVERALL BENCHMARK (ภาพรวมบริษัท) ---
+    with col_bench:
+        st.warning("🏢 **ภาพรวมทั้งบริษัท** (Benchmark)")
+        
+        # Histogram ของข้อมูลทั้งหมด (ไม่กรอง)
+        hist_all = alt.Chart(df).mark_bar().encode(
+            x=alt.X('cat_median_days', bin=alt.Bin(maxbins=20), title='ระยะเวลาซื้อซ้ำ (วัน)'),
+            y=alt.Y('count()', title='จำนวนลูกค้า'),
+            color=alt.value('#95a5a6'), # สีเทา (จะได้ดูเป็น Background)
+            tooltip=['count()', alt.Tooltip('cat_median_days', bin=True, title='ช่วงวัน')]
+        ).properties(height=300, title="Benchmark: ภาพรวมสินค้าทั้งหมด")
+        
+        st.altair_chart(hist_all, use_container_width=True)
+
+    st.markdown("---")
+
+    # ---------------------------------------------------------
+    # 3. DETAILED TABLE (รายการสินค้าในหมวดที่เลือก)
+    # ---------------------------------------------------------
+    st.subheader(f"📋 รายละเอียดรายหมวดสินค้า ({filter_label})")
+    
+    # สรุปข้อมูลรายหมวด (เฉพาะที่ Filter มา)
+    summ = df_cycle.groupby('product_category_name').agg({
+        'customer_unique_id': 'count',
+        'cat_median_days': 'mean',
+        'lateness_score': 'mean',
+        'churn_probability': 'mean'
+    }).reset_index().rename(columns={
+        'customer_unique_id': 'Total Customers',
+        'cat_median_days': 'Avg Cycle (Days)',
+        'lateness_score': 'Avg Late Score',
+        'churn_probability': 'Churn Risk'
+    })
+    
+    st.dataframe(
+        summ.sort_values('Avg Cycle (Days)'),
+        column_config={
+            "Avg Cycle (Days)": st.column_config.NumberColumn(format="%.0f วัน"),
+            "Avg Late Score": st.column_config.NumberColumn(format="%.2f เท่า"),
+            "Churn Risk": st.column_config.ProgressColumn(format="%.2f", min_value=0, max_value=1)
+        },
+        use_container_width=True,
+        hide_index=True
+    )
+
+    # ---------------------------------------------------------
+    # 4. SEASONALITY HEATMAP (คงเดิมแต่ Filter ตาม)
+    # ---------------------------------------------------------
     st.markdown("---")
     st.subheader("📅 Seasonal Patterns: สินค้าขายดีเดือนไหน?")
-    st.caption("เฉดสีเข้ม = ช่วงที่สินค้านั้นขายดีที่สุด (High Season)")
+    st.caption(f"แสดงข้อมูลของ: **{filter_label}**")
 
-    if 'order_purchase_timestamp' in df.columns:
-        # 1. เตรียมข้อมูล (ดึงเดือนออกมา)
-        # สร้าง Copy เพื่อไม่ให้กระทบ df หลัก
-        season_df = df.copy()
+    if 'order_purchase_timestamp' in df_cycle.columns:
+        # เตรียมข้อมูล Heatmap จาก df_cycle (ที่กรองแล้ว)
+        season_df = df_cycle.copy()
         season_df['month_num'] = season_df['order_purchase_timestamp'].dt.month
-        season_df['month_name'] = season_df['order_purchase_timestamp'].dt.strftime('%b') # Jan, Feb, ...
+        season_df['month_name'] = season_df['order_purchase_timestamp'].dt.strftime('%b')
         
-        # 2. จัดกลุ่มข้อมูล (Group by Category & Month)
-        # นับจำนวนออเดอร์ในแต่ละเดือน
         heatmap_data = season_df.groupby(['product_category_name', 'month_num', 'month_name']).size().reset_index(name='sales_volume')
         
-        # 3. คัดเฉพาะ Top Categories (เพื่อให้กราฟดูรู้เรื่อง ไม่รกเกินไป)
-        # เอาเฉพาะ 15 หมวดแรกที่มีคนซื้อเยอะสุด
+        # ถ้าเลือกหลายหมวด มันอาจจะเยอะเกินไป ให้โชว์แค่ Top 15 ของหมวดที่เลือก
         top_cats = season_df['product_category_name'].value_counts().head(15).index.tolist()
         heatmap_data = heatmap_data[heatmap_data['product_category_name'].isin(top_cats)]
         
-        # 4. สร้าง Heatmap Chart
-        # แกน X: เดือน (Jan -> Dec)
-        # แกน Y: หมวดสินค้า
-        # สี: ยอดขาย (ยิ่งเข้มยิ่งขายดี)
-        heatmap = alt.Chart(heatmap_data).mark_rect().encode(
-            x=alt.X('month_name', 
-                    sort=['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], 
-                    title='เดือน (Month)'),
-            y=alt.Y('product_category_name', title='หมวดสินค้า'),
-            color=alt.Color('sales_volume', 
-                            scale=alt.Scale(scheme='orangered'), # สีส้ม-แดง (ร้อนแรง)
-                            title='ยอดขาย (Orders)'),
-            tooltip=['product_category_name', 'month_name', alt.Tooltip('sales_volume', format=',')]
-        ).properties(
-            height=500,
-            title='🔥 Heatmap แสดงช่วงเวลาขายดีของสินค้า Top 15'
-        )
-        
-        st.altair_chart(heatmap, use_container_width=True)
-        
-        st.info("💡 **Tip:** ลองสังเกตสีแดงเข้มในแต่ละแถว จะช่วยให้รู้ว่าต้องสต็อกของหรือยิงแอดสินค้านั้นเดือนไหน")
-        
+        if not heatmap_data.empty:
+            heatmap = alt.Chart(heatmap_data).mark_rect().encode(
+                x=alt.X('month_name', sort=['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], title='เดือน'),
+                y=alt.Y('product_category_name', title='หมวดสินค้า'),
+                color=alt.Color('sales_volume', scale=alt.Scale(scheme='orangered'), title='ยอดขาย'),
+                tooltip=['product_category_name', 'month_name', alt.Tooltip('sales_volume', format=',')]
+            ).properties(height=500) # ปรับความสูงให้เหมาะสม
+            
+            st.altair_chart(heatmap, use_container_width=True)
+        else:
+            st.info("ไม่มีข้อมูลเพียงพอสำหรับสร้าง Heatmap ในหมวดที่เลือก")
+            
     else:
-        st.warning("⚠️ ไม่พบข้อมูลวันที่ (order_purchase_timestamp) ไม่สามารถวิเคราะห์ Seasonality ได้")
+        st.warning("⚠️ ไม่พบข้อมูลวันที่ (order_purchase_timestamp)")
+
 
 
 

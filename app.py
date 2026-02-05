@@ -713,35 +713,120 @@ elif page == "4. 🚛 Logistics Insights":
         )
     else:
         st.warning("⚠️ ไม่พบข้อมูลเมือง (customer_city)")
-# ==========================================
-# PAGE 5: 🏪 Seller Audit (โค้ดเดิมของคุณ)
-# ==========================================
+# ==============================================================================
+# PAGE 5: 🏪 Seller Audit (Table View & Multi-Sort)
+# ==============================================================================
 elif page == "5. 🏪 Seller Audit":
-    st.title("🏪 Seller Watchlist")
+    st.title("🏪 Seller Audit & Performance")
+    st.markdown("ตรวจสอบประสิทธิภาพและความเสี่ยงรายร้านค้า")
+
+    # ---------------------------------------------------------
+    # 0. PREPARE DATA & FILTER
+    # ---------------------------------------------------------
     if 'seller_id' not in df.columns:
-        st.error("No seller data")
+        st.error("❌ ไม่พบข้อมูลผู้ขาย (seller_id)")
         st.stop()
+
+    # 1. Filter หมวดหมู่สินค้า
+    with st.container():
+        all_cats = sorted(list(df['product_category_name'].unique())) if 'product_category_name' in df.columns else []
+        sel_cats_p5 = st.multiselect("📦 กรองหมวดสินค้า:", all_cats, key="p5_cat_filter")
         
-    seller_stats = df.groupby('seller_id').agg({
-        'customer_unique_id': 'count', 'churn_probability': 'mean',
-        'review_score': 'mean', 'payment_value': 'sum'
-    }).reset_index()
+        if sel_cats_p5:
+            df_seller_view = df[df['product_category_name'].isin(sel_cats_p5)].copy()
+            filter_msg = f"หมวด: {', '.join(sel_cats_p5[:3])}..."
+        else:
+            df_seller_view = df.copy()
+            filter_msg = "ภาพรวมทุกหมวด"
+
+    # ---------------------------------------------------------
+    # 1. DATA AGGREGATION
+    # ---------------------------------------------------------
+    # รวมข้อมูลรายร้านค้า
+    seller_stats = df_seller_view.groupby('seller_id').agg({
+        'order_purchase_timestamp': 'count', # จำนวนออเดอร์
+        'payment_value': 'sum',              # ยอดขายรวม
+        'review_score': 'mean',              # คะแนนรีวิวเฉลี่ย
+        'delivery_days': 'mean',             # [NEW] เวลาส่งเฉลี่ย
+        'churn_probability': 'mean'          # ความเสี่ยงเฉลี่ย
+    }).reset_index().rename(columns={'order_purchase_timestamp': 'total_orders'})
+
+    # กรองร้านค้าที่มีออเดอร์น้อยเกินไปออก (เพื่อไม่ให้ค่าเฉลี่ยเพี้ยน)
+    # เช่น ร้านที่ขายชิ้นเดียวแล้วได้ 1 ดาว อาจจะไม่แฟร์ถ้าบอกว่าห่วยที่สุด
+    min_orders = 3
+    seller_stats = seller_stats[seller_stats['total_orders'] >= min_orders]
+
+    # ---------------------------------------------------------
+    # 2. KPI SUMMARY
+    # ---------------------------------------------------------
+    st.markdown("---")
+    c1, c2, c3, c4 = st.columns(4)
     
-    bad_sellers = seller_stats[seller_stats['customer_unique_id'] >= 5].sort_values('churn_probability', ascending=False).head(50)
+    with c1: st.metric("🏪 จำนวนร้านค้า", f"{len(seller_stats):,} ร้าน")
+    with c2: st.metric("💸 ยอดขายรวม", f"R$ {seller_stats['payment_value'].sum():,.0f}")
+    with c3: st.metric("⭐ รีวิวเฉลี่ย", f"{seller_stats['review_score'].mean():.2f}/5.0")
+    with c4: st.metric("🚚 ส่งเฉลี่ย", f"{seller_stats['delivery_days'].mean():.1f} วัน")
+
+    # ---------------------------------------------------------
+    # 3. SORTING & TABLE DISPLAY
+    # ---------------------------------------------------------
+    st.markdown("---")
     
-    k1, k2, k3 = st.columns(3)
-    k1.metric("🚨 ร้านเสี่ยงสูง", f"{len(bad_sellers)} ร้าน")
-    k2.metric("💸 ยอดขายกลุ่มนี้", f"R$ {bad_sellers['payment_value'].sum():,.0f}")
-    k3.metric("📉 Avg Churn", f"{bad_sellers['churn_probability'].mean()*100:.1f}%")
+    col_sort, col_display = st.columns([1, 3])
     
-    st.dataframe(bad_sellers.head(20), use_container_width=True, hide_index=True)
-    
-    st.markdown("### 🔍 Quality vs Risk")
-    chart = alt.Chart(seller_stats[seller_stats['customer_unique_id'] >= 5]).mark_circle(color='#e74c3c').encode(
-        x='review_score', y='churn_probability', size='payment_value',
-        tooltip=['seller_id', 'review_score', 'churn_probability']
-    ).properties(height=350).interactive()
-    st.altair_chart(chart, use_container_width=True)
+    with col_sort:
+        st.subheader("⚙️ จัดเรียงข้อมูล (Sort By)")
+        sort_mode = st.radio(
+            "เลือกเกณฑ์การเรียง:",
+            [
+                "🚨 ความเสี่ยงสูงสุด (Highest Risk)",
+                "🐢 ส่งของช้าสุด (Slowest Delivery)",
+                "⭐ คะแนนต่ำสุด (Lowest Rating)",
+                "💸 ยอดขายสูงสุด (Top Revenue)",
+                "📦 ขายเยอะสุด (Top Volume)"
+            ]
+        )
+        
+        # Logic การเรียงลำดับ
+        if "ความเสี่ยง" in sort_mode:
+            sorted_df = seller_stats.sort_values('churn_probability', ascending=False)
+            st.caption("แสดงร้านที่ลูกค้าซื้อแล้วหนี (Churn) มากที่สุด")
+        elif "ส่งของช้า" in sort_mode:
+            sorted_df = seller_stats.sort_values('delivery_days', ascending=False)
+            st.caption("แสดงร้านที่ใช้เวลาจัดส่งนานที่สุด")
+        elif "คะแนนต่ำ" in sort_mode:
+            sorted_df = seller_stats.sort_values('review_score', ascending=True) # น้อยไปมาก
+            st.caption("แสดงร้านที่ได้ดาวน้อยที่สุด")
+        elif "ยอดขาย" in sort_mode:
+            sorted_df = seller_stats.sort_values('payment_value', ascending=False)
+            st.caption("แสดงร้านที่ทำเงินได้มากที่สุด")
+        else: # Volume
+            sorted_df = seller_stats.sort_values('total_orders', ascending=False)
+            st.caption("แสดงร้านที่มีออเดอร์เยอะที่สุด")
+
+    with col_display:
+        st.subheader(f"📋 รายชื่อร้านค้า ({sort_mode})")
+        
+        st.dataframe(
+            sorted_df,
+            column_config={
+                "seller_id": "รหัสร้านค้า",
+                "total_orders": st.column_config.NumberColumn("จำนวนออเดอร์", help="จำนวนครั้งที่ขายได้"),
+                "payment_value": st.column_config.NumberColumn("ยอดขายรวม", format="R$ %.0f"),
+                "delivery_days": st.column_config.NumberColumn("ส่งเฉลี่ย (วัน)", format="%.1f วัน"),
+                "review_score": st.column_config.NumberColumn("รีวิว (ดาว)", format="%.1f ⭐"),
+                "churn_probability": st.column_config.ProgressColumn(
+                    "ความเสี่ยง Churn", 
+                    format="%.2f", 
+                    min_value=0, 
+                    max_value=1,
+                    help="ยิ่งหลอดแดงเยอะ แปลว่าลูกค้าซื้อร้านนี้แล้วไม่ค่อยกลับมาซื้อซ้ำ"
+                )
+            },
+            hide_index=True,
+            use_container_width=True,
+            height=600 # เพิ่มความสูงตารางให้ดูได้จุใจ
+        )
 
 # ==========================================
 # PAGE 6: 🔄 Buying Cycle Analysis (หน้าใหม่ที่คุณขอ)
@@ -833,6 +918,7 @@ elif page == "6. 🔄 Buying Cycle Analysis":
         
     else:
         st.warning("⚠️ ไม่พบข้อมูลวันที่ (order_purchase_timestamp) ไม่สามารถวิเคราะห์ Seasonality ได้")
+
 
 
 

@@ -501,47 +501,182 @@ elif page == "3. 🎯 Action Plan":
                 "สินค้าบางหมวดคนซื้อครั้งเดียวจบ (เช่น เฟอร์นิเจอร์) ทำให้ Churn สูง\n\n👉 **Action:** ยิงแอดขายพ่วงสินค้าหมวดของใช้ในบ้าน (Housewares) ที่ต้องซื้อซ้ำบ่อยๆ"
             )
         else: st.error("ไม่พบข้อมูล 'cat_churn_risk'")
-# ==========================================
-# PAGE 4: 🚛 Logistics Insights (โค้ดเดิมของคุณ)
-# ==========================================
+# ==============================================================================
+# PAGE 4: 🚛 Logistics Insights (Map & Money Flow)
+# ==============================================================================
 elif page == "4. 🚛 Logistics Insights":
-    st.title("🚛 Logistics Heatmap")
+    import pydeck as pdk # ใช้สำหรับทำ Map สวยๆ
+
+    st.title("🚛 Logistics Insights & Money Flow")
+    st.markdown("วิเคราะห์ปัญหาขนส่งและการเงินรายพื้นที่ (Geospatial Analysis)")
+
+    # ---------------------------------------------------------
+    # 0. PREPARE DATA & FILTER
+    # ---------------------------------------------------------
+    # เช็คว่ามีข้อมูลรัฐไหม
     if 'customer_state' not in df.columns:
-        st.error("No state data in CSV")
+        st.error("❌ ไม่พบข้อมูลรัฐ (customer_state)")
         st.stop()
 
-    col_map, col_stat = st.columns([2, 1])
-    with col_map:
-        state_stats = df.groupby('customer_state').agg({
-            'customer_unique_id': 'count', 'delivery_days': 'mean', 'churn_probability': 'mean'
-        }).reset_index()
-        state_stats = state_stats[state_stats['customer_unique_id'] > 5]
+    # 1. Filter หมวดหมู่สินค้า (เหมือนหน้าอื่นๆ)
+    with st.container():
+        all_cats = sorted(list(df['product_category_name'].unique())) if 'product_category_name' in df.columns else []
+        sel_cats_p4 = st.multiselect("📦 กรองหมวดสินค้า:", all_cats, key="p4_cat_filter")
         
-        chart = alt.Chart(state_stats).mark_circle(size=100).encode(
-            x=alt.X('delivery_days', title='Avg Delivery Days'),
-            y=alt.Y('churn_probability', title='Avg Churn Risk'),
-            color=alt.Color('churn_probability', scale=alt.Scale(scheme='reds')),
-            size='customer_unique_id',
-            tooltip=['customer_state', 'delivery_days', 'churn_probability']
-        ).properties(title='Logistics Risk Map', height=400).interactive()
-        st.altair_chart(chart, use_container_width=True)
-    with col_stat:
-        st.subheader("🚨 Top 5 รัฐที่มีปัญหา")
-        st.dataframe(state_stats.sort_values('churn_probability', ascending=False).head(5), hide_index=True)
+        if sel_cats_p4:
+            df_logistics = df[df['product_category_name'].isin(sel_cats_p4)].copy()
+        else:
+            df_logistics = df.copy()
 
+    # ---------------------------------------------------------
+    # 1. DATA PROCESSING (คำนวณ Metrics รายรัฐ)
+    # ---------------------------------------------------------
+    # สร้าง Dictionary พิกัดรัฐบราซิล (เพราะใน CSV อาจไม่มี Lat/Long)
+    brazil_states_coords = {
+        'AC': [-9.02, -70.81], 'AL': [-9.57, -36.78], 'AM': [-3.41, -65.85],
+        'AP': [0.90, -52.00], 'BA': [-12.58, -41.70], 'CE': [-5.49, -39.32],
+        'DF': [-15.79, -47.88], 'ES': [-19.18, -40.30], 'GO': [-15.82, -49.84],
+        'MA': [-5.19, -45.16], 'MG': [-19.81, -43.95], 'MS': [-20.77, -54.78],
+        'MT': [-12.96, -56.92], 'PA': [-6.31, -52.46], 'PB': [-7.24, -36.78],
+        'PE': [-8.81, -36.95], 'PI': [-7.71, -42.72], 'PR': [-25.25, -52.02],
+        'RJ': [-22.90, -43.17], 'RN': [-5.40, -36.95], 'RO': [-11.50, -63.58],
+        'RR': [2.73, -62.07], 'RS': [-30.03, -51.22], 'SC': [-27.24, -50.21],
+        'SE': [-10.57, -37.38], 'SP': [-23.55, -46.63], 'TO': [-10.17, -48.33]
+    }
+
+    # Group Data รายรัฐ
+    state_metrics = df_logistics.groupby('customer_state').agg({
+        'payment_value': 'sum',           # เงินหมุนเวียน
+        'delivery_days': 'mean',          # ส่งเฉลี่ยกี่วัน
+        'delay_days': lambda x: (x > 0).sum(), # ส่งช้ากี่ออเดอร์
+        'churn_probability': 'mean',      # ความเสี่ยงเฉลี่ย
+        'customer_unique_id': 'count'     # จำนวนออเดอร์
+    }).reset_index()
+
+    # Map Lat/Long ใส่เข้าไปใน Dataframe
+    state_metrics['lat'] = state_metrics['customer_state'].map(lambda x: brazil_states_coords.get(x, [0,0])[0])
+    state_metrics['lon'] = state_metrics['customer_state'].map(lambda x: brazil_states_coords.get(x, [0,0])[1])
+
+    # ---------------------------------------------------------
+    # 2. INTERACTIVE ZOOM & KPI
+    # ---------------------------------------------------------
     st.markdown("---")
-    st.subheader("🏙️ City Drill-down")
-    if 'customer_city' in df.columns:
-        sel_state = st.selectbox("เลือกรัฐ:", sorted(df['customer_state'].unique()))
-        if sel_state:
-            city_df = df[df['customer_state'] == sel_state]
-            city_stats = city_df.groupby('customer_city').agg({
-                'customer_unique_id': 'count', 'delivery_days': 'mean', 'churn_probability': 'mean'
-            }).reset_index()
-            st.dataframe(city_stats[city_stats['customer_unique_id'] >= 2].sort_values('churn_probability', ascending=False).head(10), use_container_width=True)
+    
+    col_sel, col_kpi1, col_kpi2, col_kpi3 = st.columns([1.5, 1, 1, 1])
+    
+    with col_sel:
+        # ตัวเลือกสำหรับ Zoom แผนที่
+        zoom_state = st.selectbox("🔍 โฟกัสรัฐ (Zoom to State):", ["All (ภาพรวมประเทศ)"] + sorted(state_metrics['customer_state'].unique()))
+    
+    # คำนวณ KPI ภาพรวม (หรือตามรัฐที่เลือก)
+    if zoom_state != "All (ภาพรวมประเทศ)":
+        display_data = state_metrics[state_metrics['customer_state'] == zoom_state]
+        view_lat = display_data['lat'].values[0]
+        view_lon = display_data['lon'].values[0]
+        view_zoom = 5.5 # ซูมเข้าไปใกล้ๆ
     else:
-        st.info("ไม่มีข้อมูลรายเมือง")
+        display_data = state_metrics
+        view_lat = -14.2350
+        view_lon = -51.9253
+        view_zoom = 3.5 # ซูมไกลเห็นทั้งประเทศ
 
+    # แสดง KPI ด้านบน
+    total_rev = display_data['payment_value'].sum()
+    avg_del = display_data['delivery_days'].mean()
+    total_late = display_data['delay_days'].sum()
+
+    with col_kpi1: st.metric("💰 เงินหมุนเวียน", f"R$ {total_rev:,.0f}")
+    with col_kpi2: st.metric("🚚 ส่งเฉลี่ย (วัน)", f"{avg_del:.1f} วัน")
+    with col_kpi3: st.metric("⚠️ ส่งช้า (ครั้ง)", f"{total_late:,} ออเดอร์", delta_color="inverse")
+
+    # ---------------------------------------------------------
+    # 3. MAP & DETAIL TABLE
+    # ---------------------------------------------------------
+    c_map, c_table = st.columns([2, 1])
+
+    with c_map:
+        st.subheader(f"🗺️ แผนที่การเงินและความเสี่ยง ({zoom_state})")
+        
+        # ตั้งค่าสีตามความเสี่ยง (แดง=เสี่ยง, เขียว=ดี)
+        # R, G, B, A (Alpha)
+        state_metrics['color'] = state_metrics['churn_probability'].apply(
+            lambda x: [231, 76, 60, 200] if x > 0.8 else ([241, 196, 15, 200] if x > 0.5 else [46, 204, 113, 200])
+        )
+        
+        # ตั้งค่าขนาดวงกลมตามยอดเงิน (Normalize ให้ไม่ใหญ่เกิน)
+        max_val = state_metrics['payment_value'].max()
+        state_metrics['radius'] = state_metrics['payment_value'] / max_val * 400000
+
+        # Layer แผนที่
+        layer = pdk.Layer(
+            "ScatterplotLayer",
+            state_metrics,
+            get_position='[lon, lat]',
+            get_color='color',
+            get_radius='radius',
+            pickable=True,
+            opacity=0.8,
+            stroked=True,
+            filled=True,
+            radius_min_pixels=5,
+            radius_max_pixels=50,
+        )
+
+        # Tooltip เวลาเอาเมาส์ชี้
+        tooltip = {
+            "html": "<b>รัฐ: {customer_state}</b><br/>"
+                    "💰 ยอดเงิน: R$ {payment_value:,.0f}<br/>"
+                    "🚚 ส่งเฉลี่ย: {delivery_days:.1f} วัน<br/>"
+                    "⚠️ ส่งช้า: {delay_days} ครั้ง<br/>"
+                    "📉 ความเสี่ยง Churn: {churn_probability:.2f}",
+            "style": {"backgroundColor": "steelblue", "color": "white"}
+        }
+
+        # View State (มุมกล้อง)
+        view_state = pdk.ViewState(
+            latitude=view_lat,
+            longitude=view_lon,
+            zoom=view_zoom,
+            pitch=30,
+        )
+
+        # Render Map
+        r = pdk.Deck(
+            layers=[layer],
+            initial_view_state=view_state,
+            tooltip=tooltip,
+            map_style="mapbox://styles/mapbox/light-v9"
+        )
+        st.pydeck_chart(r)
+        
+        st.caption("🔴 สีแดง = Churn Risk สูง | 🟢 สีเขียว = Churn Risk ต่ำ | 🔵 ขนาดวงกลม = ยอดเงิน (Revenue)")
+
+    with c_table:
+        st.subheader("🚨 รัฐที่มีปัญหา (Top Issues)")
+        
+        # เรียงลำดับตามความเสี่ยง หรือ ตามจำนวนส่งช้า
+        sort_mode = st.radio("เรียงลำดับตาม:", ["ความเสี่ยง (Churn Risk)", "จำนวนส่งช้า (Late Count)"])
+        
+        if sort_mode == "ความเสี่ยง (Churn Risk)":
+            top_issues = state_metrics.sort_values('churn_probability', ascending=False).head(10)
+        else:
+            top_issues = state_metrics.sort_values('delay_days', ascending=False).head(10)
+
+        # ปรับแต่งตารางให้สวยงาม
+        st.dataframe(
+            top_issues[['customer_state', 'payment_value', 'delivery_days', 'delay_days', 'churn_probability']],
+            column_config={
+                "customer_state": "รัฐ",
+                "payment_value": st.column_config.NumberColumn("เงินหมุนเวียน", format="R$ %.0f"),
+                "delivery_days": st.column_config.NumberColumn("ส่งเฉลี่ย (วัน)", format="%.1f"),
+                "delay_days": st.column_config.NumberColumn("ส่งช้า (ครั้ง)"),
+                "churn_probability": st.column_config.ProgressColumn("ความเสี่ยง", format="%.2f", min_value=0, max_value=1)
+            },
+            hide_index=True,
+            use_container_width=True
+        )
+        
+        st.info(f"💡 รัฐ **{top_issues.iloc[0]['customer_state']}** มีปัญหาหนักที่สุดในเกณฑ์นี้")
 # ==========================================
 # PAGE 5: 🏪 Seller Audit (โค้ดเดิมของคุณ)
 # ==========================================
@@ -662,6 +797,7 @@ elif page == "6. 🔄 Buying Cycle Analysis":
         
     else:
         st.warning("⚠️ ไม่พบข้อมูลวันที่ (order_purchase_timestamp) ไม่สามารถวิเคราะห์ Seasonality ได้")
+
 
 
 

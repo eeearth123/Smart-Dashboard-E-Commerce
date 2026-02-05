@@ -330,7 +330,83 @@ elif page == "2. 🔍 Customer Detail":
 elif page == "3. 🎯 Action Plan":
     st.title("🎯 Action Plan & Simulator")
     st.markdown("### วางแผนกลยุทธ์แก้ปัญหาแบบเจาะจง (Targeted Strategy)")
-    
+    def render_strategy_story(title, icon, target_df, total_pop, strategy_name, default_cost, compare_col=None, good_value=None, bad_values=None, rec_text=""):
+        n_target = len(target_df)
+        pct_problem = (n_target / total_pop) * 100 if total_pop > 0 else 0
+        
+        # --- UI ส่วนแสดงปัญหา ---
+        st.subheader(f"{icon} {title}")
+        c_prob, c_sol, c_res = st.columns([1, 1.2, 1])
+        
+        with c_prob:
+            st.info(f"**📉 ปัญหา:** พบ {n_target:,} คน ({pct_problem:.1f}%)")
+            st.progress(min(pct_problem / 100, 1.0))
+
+        with c_sol:
+            st.markdown(f"**🛠️ วิธีแก้ไข: {strategy_name}**")
+            st.write(rec_text)
+            st.markdown("---")
+            
+            # 1. รับค่า Cost ก่อน
+            cost = st.number_input(f"งบต่อหัว (R$)", value=default_cost, min_value=1, step=1, key=f"cost_{title}")
+            
+            # --- 🤖 ADVANCED AI LOGIC ---
+            # 2. คำนวณ Max Potential (เพดานสูงสุดถ้าแก้ปัญหาได้หมดจด)
+            max_potential = 5 # Default
+            ai_msg = ""
+            
+            if compare_col and good_value is not None and 'churn_probability' in df_p3.columns:
+                try:
+                    if bad_values: bad_group = df_p3[df_p3[compare_col].isin(bad_values)]
+                    else: bad_group = target_df
+                    bad_churn = bad_group['churn_probability'].mean() if not bad_group.empty else 0.8
+                    
+                    if isinstance(good_value, list): good_group = df_p3[df_p3[compare_col].isin(good_value)]
+                    elif isinstance(good_value, (int, float)): good_group = df_p3[df_p3[compare_col] <= good_value]
+                    else: good_group = df_p3[df_p3[compare_col] == good_value]
+                    good_churn = good_group['churn_probability'].mean() if not good_group.empty else 0.4
+                    
+                    # คำนวณส่วนต่าง (Potential Uplift)
+                    uplift = (bad_churn - good_churn) * 100
+                    max_potential = max(int(uplift * 0.5), 1) # คิดแค่ 50% ของศักยภาพเพื่อความปลอดภัย
+                except: pass
+
+            # 3. 🔥 Budget Constraint (ลดเพดานลง ถ้างบน้อย)
+            # ถ้างบ < 5 R$ (เช่น SMS) AI จะไม่ยอมให้ Success Rate เกิน 3%
+            if cost < 5:
+                realistic_rate = min(max_potential, 3)
+                constraint_msg = " (งบน้อย = ผลลัพธ์จำกัด)"
+            elif cost < 15:
+                realistic_rate = min(max_potential, 10)
+                constraint_msg = " (งบปานกลาง)"
+            else:
+                realistic_rate = max_potential
+                constraint_msg = " (งบสูง = ผลลัพธ์เต็มที่)"
+            
+            # ---------------------------
+
+            st.markdown(f"**🤖 AI Prediction:** `{realistic_rate}%`")
+            st.caption(f"(Max Potential: {max_potential}% {constraint_msg})")
+            
+            # สไลเดอร์จะขยับตาม realistic_rate อัตโนมัติเมื่อเปลี่ยน Cost
+            lift = st.slider(f"ปรับค่าคาดการณ์ความสำเร็จ (%)", 1, 100, realistic_rate, key=f"lift_{title}")
+
+        with c_res:
+            budget = n_target * cost
+            saved_users = int(n_target * (lift / 100))
+            revenue = saved_users * avg_ltv
+            roi = ((revenue - budget) / budget) * 100 if budget > 0 else 0
+            
+            st.success(f"**🚀 ผลลัพธ์**")
+            st.metric("💸 งบประมาณ", f"R$ {budget:,.0f}")
+            st.metric("👥 ดึงลูกค้าคืน", f"{saved_users:,} คน")
+            st.metric("💰 กำไร (ROI)", f"{roi:+.0f}%", delta=f"+{revenue:,.0f}")
+            
+            # เพิ่มคำเตือนเรื่องงบ
+            if roi > 0:
+                st.caption("✅ คุ้มค่า")
+            else:
+                st.error("⚠️ ขาดทุน")
     # ---------------------------------------------------------
     # 0. PREPARE DATA & FILTER
     # ---------------------------------------------------------
@@ -715,6 +791,7 @@ elif page == "6. 🔄 Buying Cycle Analysis":
         
     else:
         st.warning("⚠️ ไม่พบข้อมูลวันที่ (order_purchase_timestamp) ไม่สามารถวิเคราะห์ Seasonality ได้")
+
 
 
 

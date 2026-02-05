@@ -83,13 +83,13 @@ if load_errors:
         st.stop()
 
 # ==========================================
-# 3. PREPARE DATA
+# 3. PREPARE DATA (แก้ตรงนี้)
 # ==========================================
 df = assets['df'] 
 model = assets.get('model')
 feature_names = assets.get('features', [])
 
-# 3.1 Predict Logic (ใช้ Logic เดิมของคุณ)
+# 3.1 Predict Logic
 if 'churn_probability' not in df.columns and model is not None:
     X_pred = pd.DataFrame(index=df.index)
     for col in feature_names:
@@ -102,13 +102,21 @@ if 'churn_probability' not in df.columns and model is not None:
     except:
         df['churn_probability'] = 0.5 # Fallback
 
-# 3.2 Define Status Logic (Logic เดิมที่คุณกำหนด + Priority)
+# -------------------------------------------------------------
+# 🔧 [FIX] เพิ่มส่วนนี้เข้าไปเพื่อแก้ Error is_churn หาย
+# -------------------------------------------------------------
+if 'is_churn' not in df.columns:
+    # ถ้าไม่มีเฉลยจริง ให้ใช้ "ผลทำนายของ AI" แทน
+    # ถ้าความน่าจะเป็น > 0.5 ให้ถือว่าเป็น Churn (1), ถ้าไม่ก็เป็น Stay (0)
+    df['is_churn'] = (df['churn_probability'] > 0.5).astype(int)
+# -------------------------------------------------------------
+
+# 3.2 Define Status Logic
 if 'status' not in df.columns:
     def get_status(row):
         prob = row.get('churn_probability', 0)
         late = row.get('lateness_score', 0)
         
-        # Priority ตามที่คุณต้องการ
         if late > 3.0: return 'Lost (Late > 3x)'
         if prob > 0.75: return 'High Risk'
         if late > 1.5: return 'Warning (Late > 1.5x)'
@@ -630,6 +638,7 @@ elif page == "6. 🔄 Buying Cycle Analysis":
         
     else:
         st.warning("⚠️ ไม่พบข้อมูลวันที่ (order_purchase_timestamp) ไม่สามารถวิเคราะห์ Seasonality ได้")
+
 
 
 

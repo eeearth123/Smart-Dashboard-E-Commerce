@@ -859,87 +859,48 @@ elif page == "6. 🔄 Buying Cycle Analysis":
             filter_label = "ภาพรวมทุกหมวด"
 
     # ---------------------------------------------------------
-    # 1. METRICS (KPIs)
+    # 1. METRICS (KPIs) - ปรับปรุงใหม่ให้มีเปรียบเทียบ (Delta)
     # ---------------------------------------------------------
-    avg_cycle = df_cycle['cat_median_days'].mean()
-    avg_late = df_cycle['lateness_score'].mean() if 'lateness_score' in df_cycle.columns else 0
+    # 1.1 คำนวณค่าเฉลี่ยบริษัท (Global Benchmark) เอาไว้เป็นตัวตั้ง
+    global_avg_cycle = df['cat_median_days'].mean()
+    global_avg_late = df['lateness_score'].mean() if 'lateness_score' in df.columns else 0
     
-    # นับคนซื้อซ้ำเร็ว (Fast Repeaters)
+    # 1.2 คำนวณค่าของหมวดที่เลือก (Selected Category)
+    curr_avg_cycle = df_cycle['cat_median_days'].mean()
+    curr_avg_late = df_cycle['lateness_score'].mean() if 'lateness_score' in df_cycle.columns else 0
+    
+    # 1.3 นับจำนวนคนซื้อเร็ว
     fast_repeaters = len(df_cycle[df_cycle['cat_median_days'] <= 30])
     
+    # แสดงผล
     m1, m2, m3 = st.columns(3)
-    m1.metric(f"⏱️ รอบซื้อเฉลี่ย ({filter_label})", f"{avg_cycle:.0f} วัน", help="โดยเฉลี่ยลูกค้ากลุ่มนี้กลับมาซื้อซ้ำในกี่วัน")
-    m2.metric("🐢 ความล่าช้า (Late Score)", f"{avg_late:.2f} เท่า", "ถ้า > 1.0 คือเริ่มช้ากว่าปกติ")
-    m3.metric("📅 ซื้อซ้ำใน 30 วัน", f"{fast_repeaters:,} คน", help="ลูกค้าที่กลับมาซื้อใหม่ภายใน 1 เดือน")
     
-    st.markdown("---")
-
-    # ---------------------------------------------------------
-    # 2. COMPARISON CHARTS (จุดสำคัญที่ขอมา)
-    # ---------------------------------------------------------
-    st.subheader("📊 เปรียบเทียบพฤติกรรมการซื้อซ้ำ (Repurchase Distribution)")
-    st.caption("กราฟแสดงจำนวนวัน (แกน X) ที่ลูกค้าใช้ในการกลับมาซื้อซ้ำ")
-
-    col_focus, col_bench = st.columns(2)
-
-    # --- CHART 1: FOCUS GROUP (หมวดที่เลือก) ---
-    with col_focus:
-        st.info(f"📍 **{filter_label}** (กลุ่มที่คุณเลือก)")
-        
-        # Histogram ของกลุ่มที่เลือก
-        hist_focus = alt.Chart(df_cycle).mark_bar().encode(
-            x=alt.X('cat_median_days', bin=alt.Bin(maxbins=20), title='ระยะเวลาซื้อซ้ำ (วัน)'),
-            y=alt.Y('count()', title='จำนวนลูกค้า'),
-            color=alt.value('#3498db'), # สีฟ้า
-            tooltip=['count()', alt.Tooltip('cat_median_days', bin=True, title='ช่วงวัน')]
-        ).properties(height=300, title=f"การกระจายตัวของ {filter_label}")
-        
-        st.altair_chart(hist_focus, use_container_width=True)
-
-    # --- CHART 2: OVERALL BENCHMARK (ภาพรวมบริษัท) ---
-    with col_bench:
-        st.warning("🏢 **ภาพรวมทั้งบริษัท** (Benchmark)")
-        
-        # Histogram ของข้อมูลทั้งหมด (ไม่กรอง)
-        hist_all = alt.Chart(df).mark_bar().encode(
-            x=alt.X('cat_median_days', bin=alt.Bin(maxbins=20), title='ระยะเวลาซื้อซ้ำ (วัน)'),
-            y=alt.Y('count()', title='จำนวนลูกค้า'),
-            color=alt.value('#95a5a6'), # สีเทา (จะได้ดูเป็น Background)
-            tooltip=['count()', alt.Tooltip('cat_median_days', bin=True, title='ช่วงวัน')]
-        ).properties(height=300, title="Benchmark: ภาพรวมสินค้าทั้งหมด")
-        
-        st.altair_chart(hist_all, use_container_width=True)
-
-    st.markdown("---")
-
-    # ---------------------------------------------------------
-    # 3. DETAILED TABLE (รายการสินค้าในหมวดที่เลือก)
-    # ---------------------------------------------------------
-    st.subheader(f"📋 รายละเอียดรายหมวดสินค้า ({filter_label})")
-    
-    # สรุปข้อมูลรายหมวด (เฉพาะที่ Filter มา)
-    summ = df_cycle.groupby('product_category_name').agg({
-        'customer_unique_id': 'count',
-        'cat_median_days': 'mean',
-        'lateness_score': 'mean',
-        'churn_probability': 'mean'
-    }).reset_index().rename(columns={
-        'customer_unique_id': 'Total Customers',
-        'cat_median_days': 'Avg Cycle (Days)',
-        'lateness_score': 'Avg Late Score',
-        'churn_probability': 'Churn Risk'
-    })
-    
-    st.dataframe(
-        summ.sort_values('Avg Cycle (Days)'),
-        column_config={
-            "Avg Cycle (Days)": st.column_config.NumberColumn(format="%.0f วัน"),
-            "Avg Late Score": st.column_config.NumberColumn(format="%.2f เท่า"),
-            "Churn Risk": st.column_config.ProgressColumn(format="%.2f", min_value=0, max_value=1)
-        },
-        use_container_width=True,
-        hide_index=True
+    # Metric 1: รอบการซื้อ
+    m1.metric(
+        label=f"⏱️ รอบซื้อ ({filter_label})", 
+        value=f"{curr_avg_cycle:.0f} วัน",
+        delta=f"{curr_avg_cycle - global_avg_cycle:.0f} วัน (เทียบภาพรวม)",
+        delta_color="inverse", # น้อยกว่า = ดี (สีเขียว)
+        help="ถ้าตัวเลขเป็นสีเขียว แสดงว่าลูกค้าหมวดนี้กลับมาซื้อซ้ำเร็วกว่าปกติ"
     )
+    
+    # Metric 2: ความล่าช้า (Late Score) <-- จุดที่คุณทักท้วง
+    m2.metric(
+        label=f"🐢 ความล่าช้า ({filter_label})", 
+        value=f"{curr_avg_late:.2f} เท่า",
+        delta=f"{curr_avg_late - global_avg_late:.2f} (เทียบภาพรวม)",
+        delta_color="inverse", # น้อยกว่า = ดี (สีเขียว)
+        help="ถ้า > 1.0 คือเริ่มช้ากว่าปกติ / ถ้าตัวเลข Delta เป็นสีแดง แสดงว่าหมวดนี้ลูกค้าจ่ายช้ากว่าหมวดอื่น"
+    )
+    
+    # Metric 3: ซื้อซ้ำใน 30 วัน
+    m3.metric(
+        label="📅 ซื้อซ้ำใน 30 วัน", 
+        value=f"{fast_repeaters:,} คน",
+        help="จำนวนลูกค้าที่กลับมาซื้อซ้ำภายใน 1 เดือน"
+    )
+    
+    st.markdown("---")
 
     # ---------------------------------------------------------
     # 4. SEASONALITY HEATMAP (คงเดิมแต่ Filter ตาม)
@@ -974,6 +935,7 @@ elif page == "6. 🔄 Buying Cycle Analysis":
             
     else:
         st.warning("⚠️ ไม่พบข้อมูลวันที่ (order_purchase_timestamp)")
+
 
 
 

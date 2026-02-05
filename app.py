@@ -325,29 +325,79 @@ elif page == "2. 🔍 Customer Detail":
     )
 
 # ==============================================================================
-# PAGE 3: 🎯 Action Plan (AI-Driven & Full Simulator)
+# PAGE 3: 🎯 Action Plan (Multi-Filter + Smart AI Simulator)
 # ==============================================================================
 elif page == "3. 🎯 Action Plan":
     st.title("🎯 Action Plan & Simulator")
     st.markdown("### วางแผนกลยุทธ์แก้ปัญหาแบบเจาะจง (Targeted Strategy)")
+    
+    # ---------------------------------------------------------
+    # 0. PREPARE DATA & MULTI-FILTER
+    # ---------------------------------------------------------
+    # เช็คตัวแปรตั้งต้น
+    if 'df_display' not in locals():
+        df_display = df.copy()
+
+    # ส่วนตัวกรอง (Filter) เฉพาะหน้านี้
+    with st.container():
+        st.markdown("##### 🔎 เลือกกลุ่มสินค้าที่ต้องการโฟกัส (เลือกได้หลายอัน)")
+        
+        # ดึงรายชื่อหมวดหมู่ทั้งหมด
+        all_cats = sorted(list(df['product_category_name'].unique())) if 'product_category_name' in df.columns else []
+        
+        # [NEW] ใช้ multiselect ให้เลือกได้หลายอัน
+        sel_cats_p3 = st.multiselect(
+            "หมวดสินค้า (ปล่อยว่าง = ดูภาพรวมทั้งหมด):", 
+            all_cats, 
+            key="p3_cat_multiselect"
+        )
+        
+        # กรองข้อมูลตามที่เลือก (ถ้าไม่เลือกเลย ให้เอาทั้งหมด)
+        if sel_cats_p3:
+            df_p3 = df_display[df_display['product_category_name'].isin(sel_cats_p3)].copy()
+            filter_msg = f"หมวด: {', '.join(sel_cats_p3[:3])}{'...' if len(sel_cats_p3)>3 else ''}"
+        else:
+            df_p3 = df_display.copy()
+            filter_msg = "ภาพรวมทุกหมวด"
+
+        # สรุปภาพรวมประชากร
+        total_pop = len(df_p3)
+        # คำนวณ LTV (ยอดซื้อเฉลี่ยต่อคน) เพื่อใช้คำนวณรายได้
+        avg_ltv = df_p3['payment_value'].mean() if 'payment_value' in df_p3.columns else 150
+        
+        c1, c2 = st.columns([3, 1])
+        with c1:
+            st.info(f"📊 กำลังวิเคราะห์: **{filter_msg}**")
+        with c2:
+            st.metric("👥 ลูกค้าในกลุ่มนี้", f"{total_pop:,} คน", help="จำนวนลูกค้าทั้งหมดตาม Filter ที่เลือก")
+
+    st.markdown("---")
+
+    # ---------------------------------------------------------
+    # 1. HELPER FUNCTION (ฟังก์ชันวาด Story และคำนวณ AI แบบฉลาด)
+    # ---------------------------------------------------------
     def render_strategy_story(title, icon, target_df, total_pop, strategy_name, default_cost, compare_col=None, good_value=None, bad_values=None, rec_text=""):
+        """
+        ฟังก์ชันสำหรับสร้าง UI และคำนวณ AI Prediction แบบ Dynamic (ตามงบ)
+        """
         n_target = len(target_df)
         pct_problem = (n_target / total_pop) * 100 if total_pop > 0 else 0
         
         # --- UI ส่วนแสดงปัญหา ---
         st.subheader(f"{icon} {title}")
-        c_prob, c_sol, c_res = st.columns([1, 1.2, 1])
+        c_prob, c_sol, c_res = st.columns([1, 1.3, 1])
         
         with c_prob:
-            st.info(f"**📉 ปัญหา:** พบ {n_target:,} คน ({pct_problem:.1f}%)")
+            st.info(f"**📉 ปัญหา:** พบ {n_target:,} คน\n({pct_problem:.1f}% ของกลุ่มนี้)")
             st.progress(min(pct_problem / 100, 1.0))
+            st.caption("แถบสีแสดงสัดส่วนคนที่มีปัญหา")
 
         with c_sol:
             st.markdown(f"**🛠️ วิธีแก้ไข: {strategy_name}**")
             st.write(rec_text)
             st.markdown("---")
             
-            # 1. รับค่า Cost ก่อน
+            # 1. รับค่า Cost ก่อน (เพื่อให้ AI เอาไปคิด)
             cost = st.number_input(f"งบต่อหัว (R$)", value=default_cost, min_value=1, step=1, key=f"cost_{title}")
             
             # --- 🤖 ADVANCED AI LOGIC ---
@@ -357,10 +407,12 @@ elif page == "3. 🎯 Action Plan":
             
             if compare_col and good_value is not None and 'churn_probability' in df_p3.columns:
                 try:
+                    # หา Churn Rate ของกลุ่มปัญหา
                     if bad_values: bad_group = df_p3[df_p3[compare_col].isin(bad_values)]
                     else: bad_group = target_df
                     bad_churn = bad_group['churn_probability'].mean() if not bad_group.empty else 0.8
                     
+                    # หา Churn Rate ของกลุ่มตัวอย่างที่ดี (Benchmark)
                     if isinstance(good_value, list): good_group = df_p3[df_p3[compare_col].isin(good_value)]
                     elif isinstance(good_value, (int, float)): good_group = df_p3[df_p3[compare_col] <= good_value]
                     else: good_group = df_p3[df_p3[compare_col] == good_value]
@@ -368,19 +420,20 @@ elif page == "3. 🎯 Action Plan":
                     
                     # คำนวณส่วนต่าง (Potential Uplift)
                     uplift = (bad_churn - good_churn) * 100
-                    max_potential = max(int(uplift * 0.5), 1) # คิดแค่ 50% ของศักยภาพเพื่อความปลอดภัย
+                    # คิดแค่ 50% ของศักยภาพเพื่อความปลอดภัย (Conservative)
+                    max_potential = max(int(uplift * 0.5), 1) 
                 except: pass
 
             # 3. 🔥 Budget Constraint (ลดเพดานลง ถ้างบน้อย)
-            # ถ้างบ < 5 R$ (เช่น SMS) AI จะไม่ยอมให้ Success Rate เกิน 3%
-            if cost < 5:
-                realistic_rate = min(max_potential, 3)
+            # นี่คือ Logic ความสมจริงทางธุรกิจ
+            if cost < 5: # งบน้อย (เช่น SMS)
+                realistic_rate = min(max_potential, 3) # ไม่เกิน 3%
                 constraint_msg = " (งบน้อย = ผลลัพธ์จำกัด)"
-            elif cost < 15:
-                realistic_rate = min(max_potential, 10)
+            elif cost < 15: # งบกลางๆ
+                realistic_rate = min(max_potential, 10) # ไม่เกิน 10%
                 constraint_msg = " (งบปานกลาง)"
-            else:
-                realistic_rate = max_potential
+            else: # งบสูง (Voucher)
+                realistic_rate = max_potential # ปล่อยเต็มศักยภาพ
                 constraint_msg = " (งบสูง = ผลลัพธ์เต็มที่)"
             
             # ---------------------------
@@ -402,131 +455,6 @@ elif page == "3. 🎯 Action Plan":
             st.metric("👥 ดึงลูกค้าคืน", f"{saved_users:,} คน")
             st.metric("💰 กำไร (ROI)", f"{roi:+.0f}%", delta=f"+{revenue:,.0f}")
             
-            # เพิ่มคำเตือนเรื่องงบ
-            if roi > 0:
-                st.caption("✅ คุ้มค่า")
-            else:
-                st.error("⚠️ ขาดทุน")
-    # ---------------------------------------------------------
-    # 0. PREPARE DATA & FILTER
-    # ---------------------------------------------------------
-    # เช็คตัวแปรตั้งต้น
-    if 'df_display' not in locals():
-        df_display = df.copy()
-
-    # ส่วนตัวกรอง (Filter) เฉพาะหน้านี้
-    with st.container():
-        st.markdown("##### 🔎 เลือกกลุ่มสินค้าที่ต้องการโฟกัส")
-        c1, c2 = st.columns([2, 1])
-        with c1:
-            all_cats = list(df['product_category_name'].unique()) if 'product_category_name' in df.columns else []
-            sel_cat_p3 = st.selectbox("หมวดสินค้า:", ["รวมทุกหมวด (All Categories)"] + sorted(all_cats), key="p3_cat_select")
-        
-        # กรองข้อมูลตามที่เลือก
-        if sel_cat_p3 != "รวมทุกหมวด (All Categories)":
-            df_p3 = df_display[df_display['product_category_name'] == sel_cat_p3].copy()
-        else:
-            df_p3 = df_display.copy()
-
-        # สรุปภาพรวมประชากร
-        total_pop = len(df_p3)
-        # คำนวณ LTV (ยอดซื้อเฉลี่ยต่อคน) เพื่อใช้คำนวณรายได้
-        avg_ltv = df_p3['payment_value'].mean() if 'payment_value' in df_p3.columns else 150
-        
-        with c2:
-            st.metric("👥 ลูกค้าในกลุ่มนี้", f"{total_pop:,} คน", help="จำนวนลูกค้าทั้งหมดตาม Filter ที่เลือก")
-
-    st.markdown("---")
-
-    # ---------------------------------------------------------
-    # 1. HELPER FUNCTION (ฟังก์ชันวาด Story และคำนวณ AI)
-    # ---------------------------------------------------------
-    def render_strategy_story(title, icon, target_df, total_pop, strategy_name, default_cost, compare_col=None, good_value=None, bad_values=None, rec_text=""):
-        """
-        ฟังก์ชันสำหรับสร้าง UI ของแต่ละกลยุทธ์ และคำนวณ AI Prediction
-        """
-        n_target = len(target_df)
-        pct_problem = (n_target / total_pop) * 100 if total_pop > 0 else 0
-        
-        # --- 🤖 AI PREDICTION LOGIC (หัวใจสำคัญ) ---
-        ai_success_rate = 5 # ค่า Default
-        ai_msg = "ใช้ค่ามาตรฐานอุตสาหกรรม (Conservative)"
-        
-        # ถ้ามีข้อมูลให้เปรียบเทียบ ให้คำนวณ Uplift จริง
-        if compare_col and good_value is not None and 'churn_probability' in df_p3.columns:
-            try:
-                # 1. หา Churn Rate ของกลุ่มปัญหา (Bad Group)
-                if bad_values:
-                    bad_group = df_p3[df_p3[compare_col].isin(bad_values)]
-                else: # กรณีไม่ได้ส่ง bad_values มา ให้ใช้กลุ่ม target โดยตรง
-                    bad_group = target_df
-                
-                bad_churn = bad_group['churn_probability'].mean() if not bad_group.empty else 0.8
-                
-                # 2. หา Churn Rate ของกลุ่มตัวอย่างที่ดี (Good Group / Benchmark)
-                if isinstance(good_value, list): # กรณีค่าเป็น List (เช่น ['voucher'])
-                    good_group = df_p3[df_p3[compare_col].isin(good_value)]
-                elif isinstance(good_value, (int, float)): # กรณีค่าเป็นตัวเลข (เช่น <= 0.2)
-                    # สมมติ Logic ว่าค่าน้อยคือดี (เช่น delay, freight_ratio)
-                    good_group = df_p3[df_p3[compare_col] <= good_value]
-                else: # กรณีค่าเป็น String ตัวเดียว
-                    good_group = df_p3[df_p3[compare_col] == good_value]
-
-                good_churn = good_group['churn_probability'].mean() if not good_group.empty else 0.4
-                
-                # 3. คำนวณส่วนต่าง (Potential Uplift)
-                # เช่น กลุ่มเสี่ยง Churn 80% vs กลุ่มดี Churn 20% => ส่วนต่าง 60%
-                potential_uplift = (bad_churn - good_churn) * 100
-                
-                # 4. ตั้งค่า AI Prediction (คิดแค่ 50% ของศักยภาพเพื่อไม่ให้ Overpromise)
-                if potential_uplift > 0:
-                    ai_success_rate = max(int(potential_uplift * 0.5), 1)
-                    ai_msg = f"คำนวณจากส่วนต่างความเสี่ยง (Bad {bad_churn:.0%} vs Good {good_churn:.0%})"
-            except Exception as e:
-                ai_msg = f"ไม่สามารถคำนวณ AI ได้ ({str(e)})"
-
-        # ----------------------------------------
-        # ส่วนแสดงผล (UI Rendering)
-        # ----------------------------------------
-        st.subheader(f"{icon} {title}")
-        
-        c_prob, c_sol, c_res = st.columns([1, 1.2, 1])
-        
-        # Column 1: ปัญหา (Problem)
-        with c_prob:
-            st.info(f"**📉 ปัญหาที่พบ:**\n\nพบกลุ่มเป้าหมาย **{n_target:,} คน**\nคิดเป็น **{pct_problem:.1f}%** ของทั้งหมด")
-            st.progress(min(pct_problem / 100, 1.0))
-            st.caption("แถบสีแสดงสัดส่วนคนที่มีปัญหานี้")
-
-        # Column 2: ทางแก้ (Solution & Simulator)
-        with c_sol:
-            st.markdown(f"**🛠️ วิธีแก้ไข: {strategy_name}**")
-            st.write(rec_text)
-            
-            st.markdown("---")
-            st.markdown("**🎚️ Simulator (จำลองผลลัพธ์):**")
-            
-            # Input 1: ต้นทุน
-            cost = st.number_input(f"งบต่อหัว (R$)", value=default_cost, min_value=1, step=1, key=f"cost_{title}")
-            
-            # Input 2: Success Rate (Auto by AI)
-            st.markdown(f"**🤖 AI Prediction:** `{ai_success_rate}%`")
-            st.caption(f"({ai_msg})")
-            lift = st.slider(f"ปรับค่าคาดการณ์ความสำเร็จ (%)", 1, 100, ai_success_rate, key=f"lift_{title}")
-
-        # Column 3: ผลลัพธ์ (ROI Result)
-        with c_res:
-            budget = n_target * cost
-            saved_users = int(n_target * (lift / 100))
-            revenue = saved_users * avg_ltv
-            roi = ((revenue - budget) / budget) * 100 if budget > 0 else 0
-            
-            # Card แสดงผล
-            st.success(f"**🚀 ผลลัพธ์คาดการณ์**")
-            st.metric("💸 งบประมาณ (Budget)", f"R$ {budget:,.0f}")
-            st.metric("👥 ดึงลูกค้าคืนได้", f"{saved_users:,} คน")
-            st.metric("💰 กำไร (ROI)", f"{roi:+.0f}%", delta=f"รายได้เพิ่ม +{revenue:,.0f}")
-
             if roi > 0:
                 st.caption("✅ **คุ้มค่าการลงทุน!**")
             else:
@@ -581,7 +509,7 @@ elif page == "3. 🎯 Action Plan":
                 # AI Comparison logic
                 compare_col='freight_ratio',
                 good_value=0.1,  # เทียบกับคนที่ค่าส่งถูก (Ratio < 10%)
-                bad_values=None, # (ใช้ target เป็นตัวตั้ง)
+                bad_values=None,
                 rec_text=f"ลูกค้ากลุ่มนี้ลังเลเพราะค่าส่งแพง (เฉลี่ย R$ {avg_freight:.0f})\n\n👉 **Action:** แจกโค้ดส่วนลดค่าส่ง เพื่อลดแรงต้าน (Friction) ในการตัดสินใจ"
             )
         else:
@@ -791,6 +719,7 @@ elif page == "6. 🔄 Buying Cycle Analysis":
         
     else:
         st.warning("⚠️ ไม่พบข้อมูลวันที่ (order_purchase_timestamp) ไม่สามารถวิเคราะห์ Seasonality ได้")
+
 
 
 

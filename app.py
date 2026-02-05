@@ -316,132 +316,159 @@ elif page == "2. 🔍 Customer Detail":
         use_container_width=True
     )
 
-# ==========================================
-# PAGE 3: 🎯 Action Plan (โค้ดเดิมของคุณ)
-# ==========================================
-elif page == "3. 🎯 Action Plan":
-    st.title("🎯 Marketing Campaign Simulator")
-    st.markdown("### วิเคราะห์ความคุ้มค่า (ROI)")
-    # เพิ่มบรรทัดนี้ต่อจากส่วน Load Data หรือส่วน Sidebar Filter
+# ==============================================================================
+# PAGE 3: Action Plan & Simulator (แผนกลยุทธ์และจำลองผลลัพธ์)
+# ==============================================================================
+elif page == 'Plan & Simulator':
+    st.title("🎯 Action Plan & Simulator")
+    st.markdown("### ระบบแนะนำกลยุทธ์และจำลองแคมเปญ")
+    
+    # ---------------------------------------------------------
+    # 0. เตรียมข้อมูล (Data Prep)
+    # ---------------------------------------------------------
+    # ใช้ df_display ถ้ามี (จาก Sidebar Filter) ถ้าไม่มีให้ใช้ df ทั้งหมด
     if 'df_display' not in locals():
-    df_display = df.copy() # ถ้ายังไม่มีตัวแปรนี้ ให้ใช้ข้อมูลทั้งหมดไปก่อน
-    
-    # Filter Target (Risk 60-85%)
-    target_customers = df[(df['churn_probability'] >= 0.60) & (df['churn_probability'] <= 0.85)].copy()
-    total_target = len(target_customers)
-    
-    if total_target == 0:
-        st.warning("⚠️ ไม่พบลูกค้ากลุ่มเป้าหมาย")
-        target_customers = df.head(50).copy()
-        total_target = 50
-
-    with st.container():
-        val_risk = target_customers['payment_value'].sum() if 'payment_value' in df.columns else 0
-        st.markdown(f"#### 🎯 เป้าหมาย: {total_target:,} คน (Value: R$ {val_risk:,.0f})")
-        c1, c2, c3 = st.columns(3)
-        with c1: voucher = st.slider("💰 มูลค่าคูปอง (R$)", 0, 50, 0, step=5)
-        with c2: speed = st.selectbox("🚚 ขนส่ง", ["ปกติ", "ส่งด่วน (-2 วัน)"])
-        with c3: 
-            cost = voucher * total_target
-            st.metric("งบประมาณ (Cost)", f"R$ {cost:,.0f}")
-
-    # Simulation Logic
-    df_sim = target_customers.copy()
-    impact = (voucher / 10) * 0.02 if voucher > 0 else 0
-    
-    # Artificial impact
-    final_probs = df_sim['churn_probability'] - impact
-    if speed == "ส่งด่วน (-2 วัน)":
-        final_probs = final_probs - 0.05
-    
-    df_sim['new_prob'] = final_probs
-    success = df_sim[df_sim['new_prob'] < 0.5]
-    saved_rev = success['payment_value'].sum() if 'payment_value' in df_sim.columns else 0
-    roi = saved_rev - cost
-    
-    st.markdown("---")
-    res1, res2, res3, res4 = st.columns(4)
-    res1.metric("👥 กู้คืนได้", f"{len(success):,} คน")
-    res2.metric("💸 รายได้ที่รักษาได้", f"R$ {saved_rev:,.0f}")
-    res3.metric("📉 ต้นทุน", f"R$ {cost:,.0f}")
-    roi_color = "normal" if roi > 0 else "inverse"
-    res4.metric("💰 ROI", f"R$ {roi:,.0f}", delta_color=roi_color)
-    
-    col_g, col_l = st.columns([1.5, 1])
-    with col_g:
-        chart_data = pd.DataFrame({
-            'Risk': list(target_customers['churn_probability']) + list(final_probs),
-            'Type': ['Before'] * len(target_customers) + ['After'] * len(final_probs)
-        })
-        chart = alt.Chart(chart_data).mark_area(opacity=0.5, interpolate='step').encode(
-            x=alt.X('Risk', bin=alt.Bin(maxbins=20)),
-            y='count()', color='Type'
-        ).properties(height=350)
-        st.altair_chart(chart, use_container_width=True)
-    with col_l:
-        st.dataframe(success[['customer_unique_id', 'new_prob']].head(20), hide_index=True)
-    # ... (ต่อจากส่วน Simulator เดิมใน Page 3) ...
-
-    st.markdown("---")
-    st.header("🧠 Smart Recommendations: กลยุทธ์เจาะจงกลุ่มเป้าหมาย")
-    st.caption("ระบบวิเคราะห์จากพฤติกรรมลูกค้าที่เลือกอยู่ (Filtered Data) เพื่อแนะนำ Action ที่เหมาะสมที่สุด")
-
-    # สร้าง 4 คอลัมน์สำหรับโชว์ตัวเลข
-    col1, col2, col3, col4 = st.columns(4)
-
-    # ---------------------------------------------------------
-    # 1. Payment Strategy (เปลี่ยนคนจ่ายบัตร ให้ถือ Voucher)
-    # ---------------------------------------------------------
-    if 'payment_type' in df_display.columns:
-        # หาคนที่จ่ายด้วยบัตร/โอน (กลุ่มเสี่ยง)
-        target_payment = df_display[df_display['payment_type'].isin(['credit_card', 'boleto'])]
-        count_pay = len(target_payment)
+        df_display = df.copy()
         
-        col1.metric("🎯 เป้าหมาย: Voucher Cashback", f"{count_pay:,} คน", help="คนกลุ่มนี้จ่ายบัตร/โอน ซึ่งเสี่ยง Churn สูง ควรจูงใจให้ถือ Voucher")
-        if count_pay > 0:
-            with col1.expander("ดู Action Plan"):
-                st.info("💡 **แนะนำ:** ให้ Cashback 5% เป็น Voucher สำหรับการซื้อครั้งถัดไป\n\n(เพราะสถิติชี้ว่าคนถือ Voucher มีโอกาสอยู่ต่อสูงถึง 60%)")
+    # ---------------------------------------------------------
+    # 1. SMART RECOMMENDATIONS (ระบบแนะนำอัตโนมัติ)
+    # ---------------------------------------------------------
+    st.markdown("#### 🧠 Smart Recommendations: กลยุทธ์เจาะจงกลุ่มเป้าหมาย")
+    st.caption("ระบบวิเคราะห์จากข้อมูลลูกค้าปัจจุบัน (Filtered Data) เพื่อแนะนำ Action ที่เหมาะสมที่สุด")
 
-    # ---------------------------------------------------------
-    # 2. Shipping Strategy (ช่วยคนค่าส่งแพง)
-    # ---------------------------------------------------------
+    rec_col1, rec_col2, rec_col3, rec_col4 = st.columns(4)
+
+    # --- 1.1 Payment Strategy (Cashback Voucher) ---
+    if 'payment_type' in df_display.columns:
+        # กลุ่มเป้าหมาย: จ่ายบัตรเครดิต/โอน (เสี่ยง Churn)
+        target_pay = df_display[df_display['payment_type'].isin(['credit_card', 'boleto'])]
+        count_pay = len(target_pay)
+        
+        rec_col1.metric("🎯 เป้าหมาย: Voucher Cashback", f"{count_pay:,} คน", help="คนกลุ่มนี้จ่ายบัตร/โอน ซึ่งเสี่ยง Churn สูง ควรจูงใจให้ถือ Voucher")
+        if count_pay > 0:
+            with rec_col1.expander("ดูแผนงาน"):
+                st.info("💡 **แนะนำ:** ให้ Cashback 5% เป็น Voucher\n\n(สถิติ: คนถือ Voucher อยู่ต่อสูงถึง 60%)")
+
+    # --- 1.2 Shipping Strategy (Free Shipping) ---
     if 'freight_ratio' in df_display.columns:
-        # หาคนที่ค่าส่งแพงเกิน 20% ของราคาสินค้า
+        # กลุ่มเป้าหมาย: ค่าส่งแพงเกิน 20% ของราคาสินค้า
         target_freight = df_display[df_display['freight_ratio'] > 0.2]
         count_freight = len(target_freight)
         
-        col2.metric("🚚 เป้าหมาย: Free Shipping", f"{count_freight:,} คน", help="คนกลุ่มนี้จ่ายค่าส่งแพงเมื่อเทียบกับของ (Freight Ratio > 20%)")
+        rec_col2.metric("🚚 เป้าหมาย: Free Shipping", f"{count_freight:,} คน", help="คนกลุ่มนี้จ่ายค่าส่งแพงเมื่อเทียบกับของ (Freight Ratio > 20%)")
         if count_freight > 0:
-            with col2.expander("ดู Action Plan"):
-                st.warning(f"💡 **แนะนำ:** ยิงแอด 'โค้ดส่งฟรี' ให้คนกลุ่มนี้โดยเฉพาะ\n\n(ค่าส่งเฉลี่ยกลุ่มนี้คือ {target_freight['freight_value'].mean():.2f} R$)")
+            with rec_col2.expander("ดูแผนงาน"):
+                avg_freight = target_freight['freight_value'].mean()
+                st.warning(f"💡 **แนะนำ:** แจกโค้ดส่งฟรี\n\n(Cost เฉลี่ย: {avg_freight:.2f} R$ ต่อคน)")
 
-    # ---------------------------------------------------------
-    # 3. Recovery Strategy (ง้อคนที่ของส่งช้า)
-    # ---------------------------------------------------------
+    # --- 1.3 Recovery Strategy (Sorry Coupon) ---
     if 'delay_days' in df_display.columns:
-        # หาคนที่ของ delay
+        # กลุ่มเป้าหมาย: ของส่งช้า (Delay > 0)
         target_delay = df_display[df_display['delay_days'] > 0]
         count_delay = len(target_delay)
         
-        col3.metric("❤️ เป้าหมาย: Sorry Coupon", f"{count_delay:,} คน", help="คนกลุ่มนี้ได้รับของล่าช้ากว่ากำหนด")
+        rec_col3.metric("❤️ เป้าหมาย: Sorry Coupon", f"{count_delay:,} คน", help="คนกลุ่มนี้ได้รับของล่าช้ากว่ากำหนด")
         if count_delay > 0:
-            with col3.expander("ดู Action Plan"):
-                st.error(f"💡 **แนะนำ:** ส่ง SMS ขอโทษและมอบส่วนลดทันที\n\n(เลทเฉลี่ย {target_delay['delay_days'].mean():.1f} วัน)")
+            with rec_col3.expander("ดูแผนงาน"):
+                avg_delay = target_delay['delay_days'].mean()
+                st.error(f"💡 **แนะนำ:** ส่ง SMS ขอโทษ + ส่วนลด\n\n(เลทเฉลี่ย: {avg_delay:.1f} วัน)")
 
-    # ---------------------------------------------------------
-    # 4. Product Bundling (ลดความเสี่ยงสินค้า)
-    # ---------------------------------------------------------
-    if 'cat_churn_risk' in df_display.columns and 'product_category_name' in df_display.columns:
-        # หาคนที่ซื้อสินค้ากลุ่มเสี่ยงสูง (Risk > 80%)
-        target_risk_cat = df_display[df_display['cat_churn_risk'] > 0.8]
-        count_risk_cat = len(target_risk_cat)
+    # --- 1.4 Bundling Strategy (Risk Reduction) ---
+    if 'cat_churn_risk' in df_display.columns:
+        # กลุ่มเป้าหมาย: ซื้อหมวดเสี่ยงสูง (Risk > 80%)
+        target_risk = df_display[df_display['cat_churn_risk'] > 0.8]
+        count_risk = len(target_risk)
         
-        col4.metric("🛍️ เป้าหมาย: Cross-sell", f"{count_risk_cat:,} คน", help="คนกลุ่มนี้ซื้อสินค้าในหมวดที่มี Churn Rate สูง")
-        if count_risk_cat > 0:
-            top_risk_cat = target_risk_cat['product_category_name'].value_counts().idxmax()
-            with col4.expander("ดู Action Plan"):
-                st.success(f"💡 **แนะนำ:** หมวด '{top_risk_cat}' คนซื้อแล้วหนีเยอะ ลองจัดเซ็ตคู่กับสินค้าที่ซื้อซ้ำบ่อย (เช่น Housewares)")
+        rec_col4.metric("🛍️ เป้าหมาย: Cross-sell", f"{count_risk:,} คน", help="ซื้อสินค้าในหมวดที่มี Churn Rate สูง")
+        if count_risk > 0:
+            with rec_col4.expander("ดูแผนงาน"):
+                st.success("💡 **แนะนำ:** เสนอขายพ่วงสินค้าหมวด Housewares (เสี่ยงต่ำ) เพื่อดึงให้กลับมาซื้อซ้ำ")
 
+    st.markdown("---")
+
+    # ---------------------------------------------------------
+    # 2. EVIDENCE: PAYMENT INSIGHT CHART (หลักฐานยืนยัน)
+    # ---------------------------------------------------------
+    st.subheader("📊 ทำไมต้อง Voucher? (Data Evidence)")
+    col_chart, col_desc = st.columns([2, 1])
+    
+    with col_chart:
+        if 'payment_type' in df.columns: # ใช้ข้อมูล Full df เพื่อดู Pattern รวม
+             # เตรียมข้อมูล
+            pay_stats = df.groupby('payment_type')['is_churn'].agg(['count', 'mean']).reset_index()
+            pay_stats['stay_rate'] = 1 - pay_stats['mean'] # แปลง Churn เป็น Stay
+            
+            # กราฟ
+            chart = alt.Chart(pay_stats).mark_bar().encode(
+                x=alt.X('stay_rate', axis=alt.Axis(format='%', title='โอกาสอยู่ต่อ (Stay Rate)')),
+                y=alt.Y('payment_type', sort='-x', title='วิธีชำระเงิน'),
+                color=alt.condition(
+                    alt.datum.payment_type == 'voucher',
+                    alt.value('#2ecc71'),  # สีเขียว (Hero)
+                    alt.value('#bdc3c7')   # สีเทา
+                ),
+                tooltip=['payment_type', alt.Tooltip('stay_rate', format='.1%'), alt.Tooltip('count', format=',')]
+            ).properties(height=250)
+            
+            st.altair_chart(chart, use_container_width=True)
+            
+    with col_desc:
+        st.info("""
+        **💡 Insight สำคัญ:**
+        
+        กราฟด้านซ้ายแสดงให้เห็นชัดเจนว่าลูกค้าที่ใช้ **Voucher** มีอัตราการอยู่ต่อ (Retention) สูงกว่ากลุ่มอื่นอย่างเห็นได้ชัด
+        
+        นี่คือเหตุผลที่เราแนะนำให้เปลี่ยน **"การคืนเงิน"** หรือ **"ส่วนลด"** ให้อยู่ในรูปของ Voucher แทนเงินสด
+        """)
+
+    st.markdown("---")
+
+    # ---------------------------------------------------------
+    # 3. CAMPAIGN SIMULATOR (จำลองผลลัพธ์)
+    # ---------------------------------------------------------
+    st.subheader("🧮 Campaign Simulator: คำนวณความคุ้มค่า")
+    st.caption("ลองปรับตัวเลขเพื่อดูว่าถ้าเราอัดฉีดงบการตลาด จะได้ผลตอบแทนคุ้มค่าหรือไม่?")
+
+    sim_col1, sim_col2 = st.columns(2)
+    
+    with sim_col1:
+        st.markdown("**1. กำหนดพารามิเตอร์แคมเปญ**")
+        
+        # เลือกจำนวนคนที่จะยิงแคมเปญ
+        total_customers = len(df_display)
+        target_pct = st.slider("เลือกสัดส่วนลูกค้าเป้าหมาย (%)", 10, 100, 50, 10)
+        n_target = int(total_customers * (target_pct / 100))
+        
+        # เลือกงบประมาณต่อหัว
+        cost_per_head = st.slider("ต้นทุนต่อหัว (Voucher/Ads) [R$]", 5, 100, 20, 5)
+        
+        # ประเมินประสิทธิภาพ (Conversion Lift)
+        conversion_lift = st.slider("คาดการณ์ผลที่เพิ่มขึ้น (Conversion Lift %)", 1, 20, 5, 1)
+
+    with sim_col2:
+        st.markdown("**2. ผลลัพธ์คาดการณ์ (ROI Estimate)**")
+        
+        # คำนวณ
+        total_cost = n_target * cost_per_head
+        
+        # สมมติกำไรต่อหัว (Customer Lifetime Value - LTV)
+        avg_ltv = df_display['payment_value'].mean() if 'payment_value' in df_display.columns else 150
+        
+        # รายได้ที่เพิ่มขึ้น = จำนวนคน * %Lift * LTV
+        # (สูตรอย่างง่าย: คนที่เดิมจะหนี แต่เราดึงกลับมาได้)
+        retained_users = int(n_target * (conversion_lift / 100))
+        revenue_gain = retained_users * avg_ltv
+        roi = ((revenue_gain - total_cost) / total_cost) * 100 if total_cost > 0 else 0
+        
+        # แสดงผล
+        st.metric("👥 เป้าหมายแคมเปญ", f"{n_target:,} คน")
+        st.metric("💸 งบประมาณที่ต้องใช้", f"R$ {total_cost:,.0f}")
+        st.metric("💰 รายได้คาดการณ์ (Revenue Gain)", f"R$ {revenue_gain:,.0f}", delta=f"ดึงลูกค้ากลับมาได้ {retained_users} คน")
+        
+        if roi > 0:
+            st.success(f"🚀 **กำไร (ROI): +{roi:.1f}%** (แคมเปญนี้คุ้มค่า!)")
+        else:
+            st.error(f"⚠️ **ขาดทุน (ROI): {roi:.1f}%** (ต้นทุนสูงกว่ารายได้ที่คาดหวัง)")
 # ==========================================
 # PAGE 4: 🚛 Logistics Insights (โค้ดเดิมของคุณ)
 # ==========================================
@@ -603,6 +630,7 @@ elif page == "6. 🔄 Buying Cycle Analysis":
         
     else:
         st.warning("⚠️ ไม่พบข้อมูลวันที่ (order_purchase_timestamp) ไม่สามารถวิเคราะห์ Seasonality ได้")
+
 
 
 

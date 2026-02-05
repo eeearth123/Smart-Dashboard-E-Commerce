@@ -502,36 +502,37 @@ elif page == "3. 🎯 Action Plan":
             )
         else: st.error("ไม่พบข้อมูล 'cat_churn_risk'")
 # ==============================================================================
-# PAGE 4: 🚛 Logistics Insights (Map & Money Flow)
+# PAGE 4: 🚛 Logistics Insights (State Map & City Details)
 # ==============================================================================
 elif page == "4. 🚛 Logistics Insights":
-    import pydeck as pdk # ใช้สำหรับทำ Map สวยๆ
+    import pydeck as pdk
 
-    st.title("🚛 Logistics Insights & Money Flow")
-    st.markdown("วิเคราะห์ปัญหาขนส่งและการเงินรายพื้นที่ (Geospatial Analysis)")
+    st.title("🚛 Logistics Insights")
+    st.markdown("วิเคราะห์ปัญหาขนส่งและการเงิน รายรัฐ (Map) และรายเมือง (Table)")
 
     # ---------------------------------------------------------
     # 0. PREPARE DATA & FILTER
     # ---------------------------------------------------------
-    # เช็คว่ามีข้อมูลรัฐไหม
     if 'customer_state' not in df.columns:
         st.error("❌ ไม่พบข้อมูลรัฐ (customer_state)")
         st.stop()
 
-    # 1. Filter หมวดหมู่สินค้า (เหมือนหน้าอื่นๆ)
+    # 1. Filter หมวดหมู่สินค้า
     with st.container():
         all_cats = sorted(list(df['product_category_name'].unique())) if 'product_category_name' in df.columns else []
         sel_cats_p4 = st.multiselect("📦 กรองหมวดสินค้า:", all_cats, key="p4_cat_filter")
         
         if sel_cats_p4:
             df_logistics = df[df['product_category_name'].isin(sel_cats_p4)].copy()
+            filter_msg = f"หมวด: {', '.join(sel_cats_p4[:3])}..."
         else:
             df_logistics = df.copy()
+            filter_msg = "ภาพรวมทุกหมวด"
 
     # ---------------------------------------------------------
-    # 1. DATA PROCESSING (คำนวณ Metrics รายรัฐ)
+    # 1. DATA PROCESSING (STATE LEVEL)
     # ---------------------------------------------------------
-    # สร้าง Dictionary พิกัดรัฐบราซิล (เพราะใน CSV อาจไม่มี Lat/Long)
+    # พิกัดรัฐบราซิล (Latitude, Longitude)
     brazil_states_coords = {
         'AC': [-9.02, -70.81], 'AL': [-9.57, -36.78], 'AM': [-3.41, -65.85],
         'AP': [0.90, -52.00], 'BA': [-12.58, -41.70], 'CE': [-5.49, -39.32],
@@ -546,68 +547,70 @@ elif page == "4. 🚛 Logistics Insights":
 
     # Group Data รายรัฐ
     state_metrics = df_logistics.groupby('customer_state').agg({
-        'payment_value': 'sum',           # เงินหมุนเวียน
-        'delivery_days': 'mean',          # ส่งเฉลี่ยกี่วัน
-        'delay_days': lambda x: (x > 0).sum(), # ส่งช้ากี่ออเดอร์
-        'churn_probability': 'mean',      # ความเสี่ยงเฉลี่ย
-        'customer_unique_id': 'count'     # จำนวนออเดอร์
-    }).reset_index()
+        'payment_value': 'sum',                 # เงินหมุนเวียน
+        'delivery_days': 'mean',                # ส่งเฉลี่ยกี่วัน
+        'delay_days': lambda x: (x > 0).sum(),  # ส่งช้ากี่ออเดอร์ (Count Late)
+        'churn_probability': 'mean',            # ความเสี่ยงเฉลี่ย
+        'order_purchase_timestamp': 'count'     # จำนวนออเดอร์
+    }).reset_index().rename(columns={'order_purchase_timestamp': 'total_orders'})
 
-    # Map Lat/Long ใส่เข้าไปใน Dataframe
+    # Map Lat/Long
     state_metrics['lat'] = state_metrics['customer_state'].map(lambda x: brazil_states_coords.get(x, [0,0])[0])
     state_metrics['lon'] = state_metrics['customer_state'].map(lambda x: brazil_states_coords.get(x, [0,0])[1])
 
     # ---------------------------------------------------------
-    # 2. INTERACTIVE ZOOM & KPI
+    # 2. MAP & STATE TABLE
     # ---------------------------------------------------------
     st.markdown("---")
     
+    # ส่วนควบคุม Zoom
     col_sel, col_kpi1, col_kpi2, col_kpi3 = st.columns([1.5, 1, 1, 1])
     
     with col_sel:
-        # ตัวเลือกสำหรับ Zoom แผนที่
-        zoom_state = st.selectbox("🔍 โฟกัสรัฐ (Zoom to State):", ["All (ภาพรวมประเทศ)"] + sorted(state_metrics['customer_state'].unique()))
+        zoom_state = st.selectbox("🔍 โฟกัสรัฐ (Zoom):", ["All (ภาพรวมประเทศ)"] + sorted(state_metrics['customer_state'].unique()))
     
-    # คำนวณ KPI ภาพรวม (หรือตามรัฐที่เลือก)
+    # กำหนดมุมกล้อง (View State)
     if zoom_state != "All (ภาพรวมประเทศ)":
         display_data = state_metrics[state_metrics['customer_state'] == zoom_state]
-        view_lat = display_data['lat'].values[0]
-        view_lon = display_data['lon'].values[0]
-        view_zoom = 5.5 # ซูมเข้าไปใกล้ๆ
+        if not display_data.empty:
+            view_lat = display_data['lat'].values[0]
+            view_lon = display_data['lon'].values[0]
+            view_zoom = 6 # ซูมเข้าไปใกล้ๆ
+        else:
+            view_lat, view_lon, view_zoom = -14.2350, -51.9253, 3.5
     else:
         display_data = state_metrics
-        view_lat = -14.2350
-        view_lon = -51.9253
-        view_zoom = 3.5 # ซูมไกลเห็นทั้งประเทศ
+        view_lat, view_lon, view_zoom = -14.2350, -51.9253, 3.5
 
-    # แสดง KPI ด้านบน
+    # KPI Summary
     total_rev = display_data['payment_value'].sum()
     avg_del = display_data['delivery_days'].mean()
     total_late = display_data['delay_days'].sum()
 
     with col_kpi1: st.metric("💰 เงินหมุนเวียน", f"R$ {total_rev:,.0f}")
-    with col_kpi2: st.metric("🚚 ส่งเฉลี่ย (วัน)", f"{avg_del:.1f} วัน")
-    with col_kpi3: st.metric("⚠️ ส่งช้า (ครั้ง)", f"{total_late:,} ออเดอร์", delta_color="inverse")
+    with col_kpi2: st.metric("🚚 ส่งเฉลี่ย", f"{avg_del:.1f} วัน")
+    with col_kpi3: st.metric("⚠️ ส่งช้า (Late)", f"{total_late:,} ครั้ง", delta_color="inverse")
 
-    # ---------------------------------------------------------
-    # 3. MAP & DETAIL TABLE
-    # ---------------------------------------------------------
-    c_map, c_table = st.columns([2, 1])
+    # --- ส่วนแสดงแผนที่และตารางรัฐ ---
+    c_map, c_state_table = st.columns([2, 1])
 
     with c_map:
-        st.subheader(f"🗺️ แผนที่การเงินและความเสี่ยง ({zoom_state})")
+        st.subheader(f"🗺️ แผนที่ ({zoom_state})")
         
-        # ตั้งค่าสีตามความเสี่ยง (แดง=เสี่ยง, เขียว=ดี)
-        # R, G, B, A (Alpha)
+        # ตั้งค่าสีวงกลม: แดง=เสี่ยงมาก, เหลือง=กลาง, เขียว=ดี
         state_metrics['color'] = state_metrics['churn_probability'].apply(
             lambda x: [231, 76, 60, 200] if x > 0.8 else ([241, 196, 15, 200] if x > 0.5 else [46, 204, 113, 200])
         )
         
-        # ตั้งค่าขนาดวงกลมตามยอดเงิน (Normalize ให้ไม่ใหญ่เกิน)
+        # ตั้งค่าขนาดวงกลมตามยอดเงิน
         max_val = state_metrics['payment_value'].max()
-        state_metrics['radius'] = state_metrics['payment_value'] / max_val * 400000
+        # ป้องกันการหารด้วยศูนย์
+        if max_val > 0:
+            state_metrics['radius'] = state_metrics['payment_value'] / max_val * 400000
+        else:
+            state_metrics['radius'] = 10000
 
-        # Layer แผนที่
+        # สร้าง Layer
         layer = pdk.Layer(
             "ScatterplotLayer",
             state_metrics,
@@ -619,64 +622,97 @@ elif page == "4. 🚛 Logistics Insights":
             stroked=True,
             filled=True,
             radius_min_pixels=5,
-            radius_max_pixels=50,
+            radius_max_pixels=60,
         )
 
-        # Tooltip เวลาเอาเมาส์ชี้
         tooltip = {
             "html": "<b>รัฐ: {customer_state}</b><br/>"
                     "💰 ยอดเงิน: R$ {payment_value:,.0f}<br/>"
                     "🚚 ส่งเฉลี่ย: {delivery_days:.1f} วัน<br/>"
                     "⚠️ ส่งช้า: {delay_days} ครั้ง<br/>"
-                    "📉 ความเสี่ยง Churn: {churn_probability:.2f}",
+                    "📉 ความเสี่ยง: {churn_probability:.2f}",
             "style": {"backgroundColor": "steelblue", "color": "white"}
         }
 
-        # View State (มุมกล้อง)
-        view_state = pdk.ViewState(
-            latitude=view_lat,
-            longitude=view_lon,
-            zoom=view_zoom,
-            pitch=30,
-        )
-
-        # Render Map
+        # ใช้ map_style เป็น None หรือ 'light' เพื่อให้โหลดพื้นหลังได้ง่ายขึ้น
         r = pdk.Deck(
             layers=[layer],
-            initial_view_state=view_state,
+            initial_view_state=pdk.ViewState(latitude=view_lat, longitude=view_lon, zoom=view_zoom, pitch=20),
             tooltip=tooltip,
-            map_style="mapbox://styles/mapbox/light-v9"
+            map_provider='carto',
+            map_style='light' # ใช้ Carto Light เป็นพื้นหลัง (โหลดง่ายกว่า Mapbox)
         )
         st.pydeck_chart(r)
-        
-        st.caption("🔴 สีแดง = Churn Risk สูง | 🟢 สีเขียว = Churn Risk ต่ำ | 🔵 ขนาดวงกลม = ยอดเงิน (Revenue)")
 
-    with c_table:
+    with c_state_table:
         st.subheader("🚨 รัฐที่มีปัญหา (Top Issues)")
+        sort_mode = st.radio("เรียงตาม:", ["ส่งช้าเยอะสุด (Late Count)", "ความเสี่ยงสูงสุด (Risk)"], horizontal=True)
         
-        # เรียงลำดับตามความเสี่ยง หรือ ตามจำนวนส่งช้า
-        sort_mode = st.radio("เรียงลำดับตาม:", ["ความเสี่ยง (Churn Risk)", "จำนวนส่งช้า (Late Count)"])
-        
-        if sort_mode == "ความเสี่ยง (Churn Risk)":
-            top_issues = state_metrics.sort_values('churn_probability', ascending=False).head(10)
-        else:
+        if "ส่งช้า" in sort_mode:
             top_issues = state_metrics.sort_values('delay_days', ascending=False).head(10)
+        else:
+            top_issues = state_metrics.sort_values('churn_probability', ascending=False).head(10)
 
-        # ปรับแต่งตารางให้สวยงาม
         st.dataframe(
             top_issues[['customer_state', 'payment_value', 'delivery_days', 'delay_days', 'churn_probability']],
             column_config={
                 "customer_state": "รัฐ",
                 "payment_value": st.column_config.NumberColumn("เงินหมุนเวียน", format="R$ %.0f"),
-                "delivery_days": st.column_config.NumberColumn("ส่งเฉลี่ย (วัน)", format="%.1f"),
-                "delay_days": st.column_config.NumberColumn("ส่งช้า (ครั้ง)"),
+                "delivery_days": st.column_config.NumberColumn("ส่ง (วัน)", format="%.1f"),
+                "delay_days": st.column_config.NumberColumn("ช้า (ครั้ง)"),
                 "churn_probability": st.column_config.ProgressColumn("ความเสี่ยง", format="%.2f", min_value=0, max_value=1)
             },
             hide_index=True,
             use_container_width=True
         )
+
+    # ---------------------------------------------------------
+    # 3. CITY LEVEL DETAILS (เพิ่มส่วนนี้ตามที่ขอ)
+    # ---------------------------------------------------------
+    st.markdown("---")
+    st.subheader("🏙️ เจาะลึกรายเมือง (City Drill-down)")
+    st.caption("ข้อมูลรายละเอียดของแต่ละเมือง (แสดงเฉพาะเมืองที่มีออเดอร์อย่างน้อย 2 รายการ)")
+
+    if 'customer_city' in df_logistics.columns:
+        # Group Data รายเมือง
+        city_metrics = df_logistics.groupby(['customer_state', 'customer_city']).agg({
+            'customer_unique_id': 'count',          # จำนวนลูกค้า
+            'payment_value': 'sum',                 # เงินหมุนเวียน
+            'delivery_days': 'mean',                # ส่งเฉลี่ย
+            'delay_days': lambda x: (x > 0).sum(),  # ส่งช้ากี่ครั้ง
+            'churn_probability': 'mean'             # ความเสี่ยง
+        }).reset_index()
         
-        st.info(f"💡 รัฐ **{top_issues.iloc[0]['customer_state']}** มีปัญหาหนักที่สุดในเกณฑ์นี้")
+        # กรองเมืองเล็กๆ ออก (เอาเฉพาะที่มี Data > 1) เพื่อให้ตารางมีความหมาย
+        city_metrics = city_metrics[city_metrics['customer_unique_id'] >= 2]
+        
+        # Filter ตามรัฐที่เลือกด้านบน (ถ้ามีการซูมรัฐ)
+        if zoom_state != "All (ภาพรวมประเทศ)":
+            city_display = city_metrics[city_metrics['customer_state'] == zoom_state]
+            st.info(f"📍 แสดงรายชื่อเมืองในรัฐ: **{zoom_state}**")
+        else:
+            city_display = city_metrics
+            st.info("📍 แสดงรายชื่อเมืองทั่วประเทศ (Top 50 ที่มีปัญหา)")
+
+        # เรียงลำดับเมืองที่มีปัญหา (ส่งช้าเยอะสุดขึ้นก่อน)
+        city_display = city_display.sort_values('delay_days', ascending=False).head(50)
+
+        st.dataframe(
+            city_display,
+            column_config={
+                "customer_state": "รัฐ",
+                "customer_city": "เมือง",
+                "customer_unique_id": st.column_config.NumberColumn("จำนวนลูกค้า"),
+                "payment_value": st.column_config.NumberColumn("ยอดเงินรวม", format="R$ %.0f"),
+                "delivery_days": st.column_config.NumberColumn("ส่งเฉลี่ย (วัน)", format="%.1f"),
+                "delay_days": st.column_config.NumberColumn("ส่งช้า (ครั้ง)"),
+                "churn_probability": st.column_config.ProgressColumn("ความเสี่ยง (Avg)", format="%.2f", min_value=0, max_value=1)
+            },
+            hide_index=True,
+            use_container_width=True
+        )
+    else:
+        st.warning("⚠️ ไม่พบข้อมูลเมือง (customer_city)")
 # ==========================================
 # PAGE 5: 🏪 Seller Audit (โค้ดเดิมของคุณ)
 # ==========================================
@@ -797,6 +833,7 @@ elif page == "6. 🔄 Buying Cycle Analysis":
         
     else:
         st.warning("⚠️ ไม่พบข้อมูลวันที่ (order_purchase_timestamp) ไม่สามารถวิเคราะห์ Seasonality ได้")
+
 
 
 

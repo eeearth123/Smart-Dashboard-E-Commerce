@@ -5,7 +5,7 @@ import altair as alt
 import joblib
 import os
 import datetime
-
+from google.cloud import bigquery
 # ==========================================
 # 1. SETUP & CONFIGURATION
 # ==========================================
@@ -34,7 +34,6 @@ st.markdown("""
 
 # ฟังก์ชันดึงข้อมูลจาก BigQuery
 @st.cache_data(ttl=600) # แคชข้อมูล 10 นาที
-from google.cloud import bigquery
 
 def load_bq_data():
     try:
@@ -920,6 +919,7 @@ elif page == "6. 🔄 Buying Cycle Analysis":
             st.info("⚠️ ไม่มีข้อมูลเพียงพอสำหรับสร้าง Heatmap ในหมวดที่เลือก")
     else:
         st.warning("⚠️ ไม่พบข้อมูลวันที่ (order_purchase_timestamp)")
+
 
 
 

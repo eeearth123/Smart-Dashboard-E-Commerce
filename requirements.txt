@@ -10,5 +10,6 @@ scikit-learn==1.6.1
 google-cloud-bigquery
 streamlit-google-auth
 pandas-gbq
-st-bigquery-connection
+streamlit-bigquery-connection
+
 

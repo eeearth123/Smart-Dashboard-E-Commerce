@@ -34,17 +34,20 @@ st.markdown("""
 
 # ฟังก์ชันดึงข้อมูลจาก BigQuery
 @st.cache_data(ttl=600) # แคชข้อมูล 10 นาที
+from google.cloud import bigquery
+
 def load_bq_data():
     try:
-        # 1. สร้าง connection โดยระบุ type ให้ชัดเจน
-        conn = st.connection("bigquery", type="bigquery")
+        # ดึงค่าจาก secrets มาสร้าง Client เอง
+        info = st.secrets["connections"]["bigquery"]["service_account_info"]
+        client = bigquery.Client.from_service_account_info(info)
         
-        # 2. เขียน SQL (อย่าลืมเปลี่ยนชื่อ table ให้ตรงกับใน BigQuery ของคุณ)
-        query = "SELECT * FROM `smart-dashboard-489814.your_dataset.your_table` LIMIT 100"
-        
-        # 3. ดึงข้อมูลออกมาเป็น DataFrame
-        df = conn.query(query)
+        query = "SELECT * FROM `smart-dashboard-489814.olist_db.orders_data`"
+        df = client.query(query).to_dataframe()
         return df
+    except Exception as e:
+        st.error(f"Error: {e}")
+        return None
         
     except Exception as e:
         st.error(f"เกิดข้อผิดพลาดในการโหลดข้อมูล: {e}")
@@ -917,6 +920,7 @@ elif page == "6. 🔄 Buying Cycle Analysis":
             st.info("⚠️ ไม่มีข้อมูลเพียงพอสำหรับสร้าง Heatmap ในหมวดที่เลือก")
     else:
         st.warning("⚠️ ไม่พบข้อมูลวันที่ (order_purchase_timestamp)")
+
 
 
 

@@ -36,13 +36,19 @@ st.markdown("""
 @st.cache_data(ttl=600) # แคชข้อมูล 10 นาที
 def load_bq_data():
     try:
-        conn = st.connection("bigquery")
-        # แก้ไขชื่อ Project.Dataset.Table ให้ตรงกับของคุณ
-        query = "SELECT * FROM `smart-dashboard-489814.olist_db.orders_data`"
+        # 1. สร้าง connection โดยระบุ type ให้ชัดเจน
+        conn = st.connection("bigquery", type="bigquery")
+        
+        # 2. เขียน SQL (อย่าลืมเปลี่ยนชื่อ table ให้ตรงกับใน BigQuery ของคุณ)
+        query = "SELECT * FROM `smart-dashboard-489814.your_dataset.your_table` LIMIT 100"
+        
+        # 3. ดึงข้อมูลออกมาเป็น DataFrame
         df = conn.query(query)
-        return df, None
+        return df
+        
     except Exception as e:
-        return None, f"BigQuery Error: {e}"
+        st.error(f"เกิดข้อผิดพลาดในการโหลดข้อมูล: {e}")
+        return None
 
 # ฟังก์ชันโหลด Model
 @st.cache_resource
@@ -911,6 +917,7 @@ elif page == "6. 🔄 Buying Cycle Analysis":
             st.info("⚠️ ไม่มีข้อมูลเพียงพอสำหรับสร้าง Heatmap ในหมวดที่เลือก")
     else:
         st.warning("⚠️ ไม่พบข้อมูลวันที่ (order_purchase_timestamp)")
+
 
 
 

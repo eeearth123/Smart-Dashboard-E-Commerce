@@ -3,13 +3,11 @@ pandas
 numpy
 altair
 joblib
-flaml
 xgboost
 lightgbm
 scikit-learn==1.6.1
 google-cloud-bigquery
-streamlit-google-auth
 pandas-gbq
-streamlit-bigquery-connection
+pydeck
 
 

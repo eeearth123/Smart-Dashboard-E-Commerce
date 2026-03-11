@@ -45,7 +45,7 @@ def load_bq_data():
         )
         
         # ตรวจสอบชื่อให้ตรงเป๊ะ (พิมพ์เล็ก/ใหญ่มีผลนะครับ)
-        query = "SELECT * FROM `academic-moon-483615-t2.dashboard.input`"
+        query = "SELECT * FROM `academic-moon-483615-t2.Dashboard.input`"
         
         df = client.query(query).to_dataframe()
         return df, None
@@ -919,6 +919,7 @@ elif page == "6. 🔄 Buying Cycle Analysis":
             st.info("⚠️ ไม่มีข้อมูลเพียงพอสำหรับสร้าง Heatmap ในหมวดที่เลือก")
     else:
         st.warning("⚠️ ไม่พบข้อมูลวันที่ (order_purchase_timestamp)")
+
 
 
 

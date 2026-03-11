@@ -33,24 +33,24 @@ st.markdown("""
 # ==========================================
 
 # ฟังก์ชันดึงข้อมูลจาก BigQuery
-@st.cache_data(ttl=600) # แคชข้อมูล 10 นาที
-
+@st.cache_data(ttl=600)
 def load_bq_data():
     try:
-        # ดึงค่าจาก secrets มาสร้าง Client เอง
-        info = st.secrets["connections"]["bigquery"]["service_account_info"]
-        client = bigquery.Client.from_service_account_info(info)
+        creds_info = st.secrets["connections"]["bigquery"]["service_account_info"]
         
+        # ✅ แก้จุดนี้: เพิ่ม location="asia-southeast1" ลงไป
+        client = bigquery.Client.from_service_account_info(
+            creds_info, 
+            location="asia-southeast1" 
+        )
+        
+        # ตรวจสอบชื่อให้ตรงเป๊ะ (พิมพ์เล็ก/ใหญ่มีผลนะครับ)
         query = "SELECT * FROM `academic-moon-483615-t2.dashboard.input`"
-        df = client.query(query).to_dataframe()
-        return df
-    except Exception as e:
-        st.error(f"Error: {e}")
-        return None
         
+        df = client.query(query).to_dataframe()
+        return df, None
     except Exception as e:
-        st.error(f"เกิดข้อผิดพลาดในการโหลดข้อมูล: {e}")
-        return None
+        return None, str(e)
 
 # ฟังก์ชันโหลด Model
 @st.cache_resource
@@ -919,6 +919,7 @@ elif page == "6. 🔄 Buying Cycle Analysis":
             st.info("⚠️ ไม่มีข้อมูลเพียงพอสำหรับสร้าง Heatmap ในหมวดที่เลือก")
     else:
         st.warning("⚠️ ไม่พบข้อมูลวันที่ (order_purchase_timestamp)")
+
 
 
 

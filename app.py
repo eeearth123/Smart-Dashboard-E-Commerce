@@ -104,24 +104,38 @@ def process_features(df):
         else:
             df['delay_days'] = 0
 
-    # 5. cat_median_days (รอบการซื้อ median ต่อหมวดหมู่)
+    # 5. cat_median_days — รอบการซื้อซ้ำต่อหมวด
+    # ⚠️ ไม่ใช้ delivery_days (10 วัน) เพราะ delivery_days ≠ รอบซื้อซ้ำ
+    # ใช้ gap ระหว่าง order ของ customer เดียวกัน, fallback = 180 วัน
     if 'cat_median_days' not in df.columns:
-        if 'product_category_name' in df.columns and 'delivery_days' in df.columns:
-            cat_med = df.groupby('product_category_name')['delivery_days'].median().rename('cat_median_days')
-            df = df.merge(cat_med, on='product_category_name', how='left')
+        if 'product_category_name' in df.columns and 'order_purchase_timestamp' in df.columns and 'customer_unique_id' in df.columns:
+            tmp = df.sort_values(['customer_unique_id', 'product_category_name', 'order_purchase_timestamp'])
+            tmp['prev_ts'] = tmp.groupby(['customer_unique_id', 'product_category_name'])['order_purchase_timestamp'].shift(1)
+            tmp['order_gap'] = (tmp['order_purchase_timestamp'] - tmp['prev_ts']).dt.days
+            valid_gaps = tmp[(tmp['order_gap'] >= 7) & (tmp['order_gap'] <= 730)]
+            if len(valid_gaps) > 10:
+                cat_med = valid_gaps.groupby('product_category_name')['order_gap'].median().rename('cat_median_days')
+                df = df.merge(cat_med, on='product_category_name', how='left')
+            else:
+                df['cat_median_days'] = 180  # ถ้าลูกค้าส่วนใหญ่ซื้อครั้งเดียว → default 180 วัน
         else:
-            df['cat_median_days'] = 90  # ค่า default
-
-    df['cat_median_days'] = df['cat_median_days'].fillna(90)
+            df['cat_median_days'] = 180
+    df['cat_median_days'] = df['cat_median_days'].fillna(180).clip(lower=7)
 
     # 6. lateness_score
+    # ⚠️ KEY FIX: ใช้ max(order_date) ในข้อมูล ไม่ใช่ today
+    # ถ้าใช้ today(2026) กับข้อมูลปี 2018 → days=2800, cat_median=10 → lateness=280 → ทุกคน Lost!
     if 'lateness_score' not in df.columns:
-        today = pd.Timestamp.now()
         if 'order_purchase_timestamp' in df.columns:
-            df['days_since_order'] = (today - df['order_purchase_timestamp']).dt.days
+            ref_date = df['order_purchase_timestamp'].max()  # วันล่าสุดในข้อมูล
+            if 'customer_unique_id' in df.columns:
+                last_order = df.groupby('customer_unique_id')['order_purchase_timestamp'].transform('max')
+                df['days_since_last_order'] = (ref_date - last_order).dt.days
+            else:
+                df['days_since_last_order'] = (ref_date - df['order_purchase_timestamp']).dt.days
         else:
-            df['days_since_order'] = 90
-        df['lateness_score'] = df['days_since_order'] / df['cat_median_days'].replace(0, 1)
+            df['days_since_last_order'] = 90
+        df['lateness_score'] = (df['days_since_last_order'] / df['cat_median_days'].replace(0, 1)).clip(lower=0)
 
     # 7. review_score (ถ้าไม่มีให้ใส่ค่ากลาง)
     if 'review_score' not in df.columns:
@@ -388,7 +402,8 @@ elif page == "3. 🎯 Action Plan":
     st.title("🎯 Action Plan & Simulator")
     st.markdown("### วางแผนกลยุทธ์แก้ปัญหาแบบเจาะจง (Targeted Strategy)")
 
-    all_cats = sorted(list(df['product_category_name'].unique())) if 'product_category_name' in df.columns else []
+    # ✅ FIX: filter NaN ก่อน sorted() กัน TypeError
+    all_cats = sorted([x for x in df['product_category_name'].unique() if pd.notna(x)]) if 'product_category_name' in df.columns else []
     sel_cats_p3 = st.multiselect("หมวดสินค้า (ปล่อยว่าง = ดูภาพรวมทั้งหมด):", all_cats, key="p3_cat_multiselect")
 
     if sel_cats_p3:
@@ -538,7 +553,7 @@ elif page == "4. 🚛 Logistics Insights":
         st.error("❌ ไม่พบข้อมูลรัฐ (customer_state)")
         st.stop()
 
-    all_cats = sorted(list(df['product_category_name'].unique())) if 'product_category_name' in df.columns else []
+    all_cats = sorted([x for x in df['product_category_name'].unique() if pd.notna(x)]) if 'product_category_name' in df.columns else []
     sel_cats_p4 = st.multiselect("📦 กรองหมวดสินค้า:", all_cats, key="p4_cat_filter")
     df_logistics = df[df['product_category_name'].isin(sel_cats_p4)].copy() if sel_cats_p4 else df.copy()
 
@@ -673,7 +688,7 @@ elif page == "5. 🏪 Seller Audit":
         st.error("❌ ไม่พบข้อมูลผู้ขาย (seller_id)")
         st.stop()
 
-    all_cats = sorted(list(df['product_category_name'].unique())) if 'product_category_name' in df.columns else []
+    all_cats = sorted([x for x in df['product_category_name'].unique() if pd.notna(x)]) if 'product_category_name' in df.columns else []
     sel_cats_p5 = st.multiselect("📦 กรองหมวดสินค้า:", all_cats, key="p5_cat_filter")
     df_seller_view = df[df['product_category_name'].isin(sel_cats_p5)].copy() if sel_cats_p5 else df.copy()
 
@@ -747,7 +762,7 @@ elif page == "6. 🔄 Buying Cycle Analysis":
         st.error("❌ ไม่พบข้อมูลรอบการซื้อ (cat_median_days)")
         st.stop()
 
-    all_cats = sorted(list(df['product_category_name'].unique())) if 'product_category_name' in df.columns else []
+    all_cats = sorted([x for x in df['product_category_name'].unique() if pd.notna(x)]) if 'product_category_name' in df.columns else []
     sel_cats_p6 = st.multiselect("📦 เลือกหมวดสินค้า (เปรียบเทียบกับภาพรวม):", all_cats, key="p6_cat_filter")
 
     if sel_cats_p6:

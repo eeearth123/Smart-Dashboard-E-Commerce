@@ -41,7 +41,7 @@ def load_bq_data():
         info = st.secrets["connections"]["bigquery"]["service_account_info"]
         client = bigquery.Client.from_service_account_info(info)
         
-        query = "SELECT * FROM `smart-dashboard-489814.olist_db.orders_data`"
+        query = "SELECT * FROM `academic-moon-483615-t2.olist_db.orders_data`"
         df = client.query(query).to_dataframe()
         return df
     except Exception as e:
@@ -919,6 +919,7 @@ elif page == "6. 🔄 Buying Cycle Analysis":
             st.info("⚠️ ไม่มีข้อมูลเพียงพอสำหรับสร้าง Heatmap ในหมวดที่เลือก")
     else:
         st.warning("⚠️ ไม่พบข้อมูลวันที่ (order_purchase_timestamp)")
+
 
 
 

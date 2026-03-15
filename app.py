@@ -703,9 +703,20 @@ elif page == "4. 🚛 Logistics Insights":
         st.error("❌ ไม่พบข้อมูลรัฐ (customer_state)")
         st.stop()
 
-    all_cats = sorted([x for x in df['product_category_name'].unique() if pd.notna(x)]) if 'product_category_name' in df.columns else []
-    sel_cats_p4 = st.multiselect("📦 กรองหมวดสินค้า:", all_cats, key="p4_cat_filter")
-    df_logistics = df[df['product_category_name'].isin(sel_cats_p4)].copy() if sel_cats_p4 else df.copy()
+    # --- เพิ่มฟิลเตอร์ 2 ตัว (หมวดหมู่ และ สถานะ) ---
+    c1, c2 = st.columns(2)
+    with c1:
+        all_cats = sorted([x for x in df['product_category_name'].unique() if pd.notna(x)]) if 'product_category_name' in df.columns else []
+        sel_cats_p4 = st.multiselect("📦 กรองหมวดสินค้า:", all_cats, key="p4_cat_filter")
+    with c2:
+        risk_opts = ['High Risk', 'Warning (Late > 1.5x)', 'Medium Risk', 'Lost (Late > 3x)', 'Active']
+        sel_status_p4 = st.multiselect("👥 กรองสถานะความเสี่ยง:", risk_opts, key="p4_status_filter")
+
+    df_logistics = df.copy()
+    if sel_cats_p4:
+        df_logistics = df_logistics[df_logistics['product_category_name'].isin(sel_cats_p4)]
+    if sel_status_p4:
+        df_logistics = df_logistics[df_logistics['status'].isin(sel_status_p4)]
 
     brazil_states_coords = {
         'AC': [-9.02,-70.81], 'AL': [-9.57,-36.78], 'AM': [-3.41,-65.85],
@@ -838,9 +849,20 @@ elif page == "5. 🏪 Seller Audit":
         st.error("❌ ไม่พบข้อมูลผู้ขาย (seller_id)")
         st.stop()
 
-    all_cats = sorted([x for x in df['product_category_name'].unique() if pd.notna(x)]) if 'product_category_name' in df.columns else []
-    sel_cats_p5 = st.multiselect("📦 กรองหมวดสินค้า:", all_cats, key="p5_cat_filter")
-    df_seller_view = df[df['product_category_name'].isin(sel_cats_p5)].copy() if sel_cats_p5 else df.copy()
+    # --- เพิ่มฟิลเตอร์ 2 ตัว (หมวดหมู่ และ สถานะ) ---
+    c1, c2 = st.columns(2)
+    with c1:
+        all_cats = sorted([x for x in df['product_category_name'].unique() if pd.notna(x)]) if 'product_category_name' in df.columns else []
+        sel_cats_p5 = st.multiselect("📦 กรองหมวดสินค้า:", all_cats, key="p5_cat_filter")
+    with c2:
+        risk_opts = ['High Risk', 'Warning (Late > 1.5x)', 'Medium Risk', 'Lost (Late > 3x)', 'Active']
+        sel_status_p5 = st.multiselect("👥 กรองสถานะความเสี่ยง:", risk_opts, key="p5_status_filter")
+
+    df_seller_view = df.copy()
+    if sel_cats_p5:
+        df_seller_view = df_seller_view[df_seller_view['product_category_name'].isin(sel_cats_p5)]
+    if sel_status_p5:
+        df_seller_view = df_seller_view[df_seller_view['status'].isin(sel_status_p5)]
 
     agg_dict = {
         'order_purchase_timestamp': 'count',
@@ -906,7 +928,7 @@ elif page == "5. 🏪 Seller Audit":
 # ==========================================
 elif page == "6. 🔄 Buying Cycle Analysis":
     st.title("🔄 Buying Cycle Analysis")
-    st.markdown("วิเคราะห์รอบการซื้อ: **สินค้าหมวดนี้...ลูกค้ากลับมาซื้อซ้ำเร็วแค่ไหน?**")
+    st.markdown("วิเคราะห์รอบการซื้อ: **ลูกค้าใช้เวลานานแค่ไหนในการกลับมาซื้อซ้ำ และมีแนวโน้มอย่างไร?**")
 
     if 'cat_median_days' not in df.columns:
         st.error("❌ ไม่พบข้อมูลรอบการซื้อ (cat_median_days)")
@@ -937,28 +959,42 @@ elif page == "6. 🔄 Buying Cycle Analysis":
     m3.metric("📅 ซื้อซ้ำใน 30 วัน", f"{fast_repeaters:,} คน")
 
     st.markdown("---")
-    st.subheader("📊 เปรียบเทียบพฤติกรรมการซื้อซ้ำ (Repurchase Distribution)")
-    col_focus, col_bench = st.columns(2)
-
-    with col_focus:
-        st.info(f"📍 **{filter_label}** (กลุ่มที่คุณเลือก)")
-        hist_focus = alt.Chart(df_cycle).mark_bar().encode(
-            x=alt.X('cat_median_days', bin=alt.Bin(maxbins=50), title='ระยะเวลาซื้อซ้ำ (วัน)'),
-            y=alt.Y('count()', title='จำนวนลูกค้า'),
-            color=alt.value('#3498db'),
-            tooltip=['count()', alt.Tooltip('cat_median_days', bin=True, title='ช่วงวัน')]
-        ).properties(height=300, title=f"การกระจายตัวของ {filter_label}")
-        st.altair_chart(hist_focus, use_container_width=True)
-
-    with col_bench:
-        st.warning("🏢 **ภาพรวมทั้งบริษัท** (Benchmark)")
-        hist_all = alt.Chart(df).mark_bar().encode(
-            x=alt.X('cat_median_days', bin=alt.Bin(maxbins=50), title='ระยะเวลาซื้อซ้ำ (วัน)'),
-            y=alt.Y('count()', title='จำนวนลูกค้า'),
-            color=alt.value('#95a5a6'),
-            tooltip=['count()', alt.Tooltip('cat_median_days', bin=True, title='ช่วงวัน')]
-        ).properties(height=300, title="Benchmark: ภาพรวมสินค้าทั้งหมด")
-        st.altair_chart(hist_all, use_container_width=True)
+    
+    # --- กราฟเส้นใหม่: Buying Cycle Trend ---
+    st.subheader("📈 แนวโน้มระยะเวลาการกลับมาซื้อซ้ำ (Buying Cycle Trend)")
+    st.markdown("กราฟแสดง **ระยะเวลาเฉลี่ย (วัน)** ที่ลูกค้าใช้ในการกลับมาซื้อซ้ำในแต่ละเดือน (ยิ่งกราฟพุ่งขึ้น แปลว่าลูกค้าทิ้งช่วงการซื้อนานขึ้น = สัญญาณเตือน!)")
+    
+    if 'order_purchase_timestamp' in df_cycle.columns and 'customer_unique_id' in df_cycle.columns:
+        # คำนวณ Order Gap (ระยะห่างระหว่างการซื้อแต่ละครั้ง) ของแต่ละคน
+        tmp = df_cycle.sort_values(['customer_unique_id', 'order_purchase_timestamp'])
+        tmp['prev_ts'] = tmp.groupby('customer_unique_id')['order_purchase_timestamp'].shift(1)
+        tmp['order_gap'] = (tmp['order_purchase_timestamp'] - tmp['prev_ts']).dt.days
+        
+        # กรองเอาเฉพาะ "คนที่มีการซื้อซ้ำ" (มีค่า order_gap)
+        repeaters = tmp[tmp['order_gap'].notna() & (tmp['order_gap'] > 0)].copy()
+        
+        if not repeaters.empty:
+            repeaters['month_year'] = repeaters['order_purchase_timestamp'].dt.to_period('M')
+            trend_gap = repeaters.groupby('month_year')['order_gap'].mean().reset_index()
+            
+            # ตัดข้อมูลเดือนล่าสุดทิ้ง 1 เดือน (กันข้อมูลเดือนปัจจุบันที่ยังไม่จบเดือน)
+            if len(trend_gap) > 1:
+                trend_gap = trend_gap.iloc[:-1]
+                
+            trend_gap['Date'] = pd.to_datetime(trend_gap['month_year'].astype(str))
+            
+            line_chart = alt.Chart(trend_gap).mark_line(point=True, strokeWidth=3).encode(
+                x=alt.X('Date', axis=alt.Axis(format='%b %Y', title='เดือนที่ทำรายการซื้อซ้ำ')),
+                y=alt.Y('order_gap', title='ระยะเวลาซื้อซ้ำเฉลี่ย (วัน)', scale=alt.Scale(zero=False)),
+                color=alt.value('#e67e22'), # สีส้มเตือนภัย
+                tooltip=['Date', alt.Tooltip('order_gap', format='.1f', title='ใช้เวลา (วัน)')]
+            ).properties(height=350)
+            
+            st.altair_chart(line_chart, use_container_width=True)
+        else:
+            st.info("⚠️ ไม่พบข้อมูลลูกค้าที่ซื้อซ้ำในหมวดหมู่นี้ หรือข้อมูลน้อยเกินไปที่จะสร้างกราฟแนวโน้ม")
+    else:
+        st.warning("⚠️ ข้อมูลไม่ครบถ้วน ไม่สามารถคำนวณรอบการซื้อซ้ำได้")
 
     st.markdown("---")
     st.subheader(f"📋 รายละเอียดรายหมวดสินค้า ({filter_label})")

@@ -365,7 +365,6 @@ if page == "1. 📊 Executive Summary":
                 tooltip=['status', alt.Tooltip('Count', format=','), alt.Tooltip('Total_Revenue', format=',.0f')]
             ).properties(height=350)
             st.altair_chart(donut, use_container_width=True)
-
 # ==========================================
 # PAGE 2: 🔍 Customer Detail
 # ==========================================

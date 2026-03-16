@@ -236,20 +236,16 @@ def load_models():
         return model, features, None
     except Exception as e:
         return None, None, str(e)
+
 # ==========================================
 # 5. PREDICT
 # ==========================================
-def predict_churn(df, model, feature_names, threshold, medians):
+def predict_churn(df, model, feature_names, threshold):
     """สร้าง X จาก feature_names แล้ว predict"""
     X = pd.DataFrame(index=df.index)
     for col in feature_names:
-        if col in df.columns:
-            X[col] = df[col]
-        elif medians is not None and col in medians:
-            X[col] = medians[col]
-        else:
-            X[col] = 0
-    X = X.fillna(0)
+        X[col] = df[col] if col in df.columns else 0
+    X = X.fillna(X.median())
 
     if hasattr(model, 'predict_proba'):
         proba = model.predict_proba(X)[:, 1]
@@ -268,7 +264,8 @@ with st.sidebar:
         st.rerun()
 
 df_raw, bq_error = load_bq_data()
-model, feature_names, best_threshold, medians, model_error = load_models()
+model, feature_names, model_error = load_models()
+best_threshold = 0.6
 
 if bq_error:
     st.error(f"⚠️ BigQuery Error: {bq_error}")
@@ -282,7 +279,7 @@ if model_error:
 df = process_features(df_raw)
 
 if model is not None and feature_names:
-    proba, pred = predict_churn(df, model, feature_names, best_threshold, medians)
+    proba, pred = predict_churn(df, model, feature_names, best_threshold)
     df['churn_probability'] = proba
     df['churn_prediction']  = pred
 
@@ -495,18 +492,17 @@ elif page == "3. 🎯 Action Plan":
         "🚚 ค่าส่งแพง","🐌 ส่งช้า","😡 รีวิวแย่","💳 ซื้อแพงจ่ายเต็ม"])
     campaigns = []
 
-    def sim_campaign(df_sim_in, col_override, val, model, feature_names, threshold, medians):
+    def sim_campaign(df_sim_in, col_override, val, model, feature_names, threshold):
         """จำลองแก้ค่า Feature แล้ว Predict ใหม่ → คืน Uplift"""
         old_prob = df_sim_in['churn_probability'].mean()
         if model is None: return 0.30
         sim = df_sim_in.copy()
         if col_override in sim.columns:
             sim[col_override] = val
-            # ถ้า col เกี่ยวกับ review_score ต้องอัปเดต is_low/high ด้วย
             if col_override == 'review_score':
                 sim['is_low_score']  = (sim['review_score'] <= 2).astype(int)
                 sim['is_high_score'] = (sim['review_score'] == 5).astype(int)
-        new_proba, _ = predict_churn(sim, model, feature_names, threshold, medians)
+        new_proba, _ = predict_churn(sim, model, feature_names, threshold)
         return max(old_prob - new_proba.mean(), 0.01)
 
     # TAB 1: ค่าส่งแพง
@@ -519,7 +515,7 @@ elif page == "3. 🎯 Action Plan":
             with c1: cost_h = st.number_input("งบต่อหัว (R$):", value=20, key="c1")
             with c2: mode   = st.radio("ประเมินโอกาส:", ["🤖 AI","✍️ Manual"], key="m1")
             if "AI" in mode:
-                sr = sim_campaign(tgt,'freight_value',0, model,feature_names,best_threshold,medians)
+                sr = sim_campaign(tgt,'freight_value',0, model,feature_names,best_threshold)
                 st.success(f"🤖 Uplift ≈ **{sr*100:.1f}%**")
             else:
                 sr = st.slider("โอกาส (%):", 1,100,30,key="s1")/100
@@ -536,7 +532,7 @@ elif page == "3. 🎯 Action Plan":
             with c1: cost_h = st.number_input("งบต่อหัว (R$):", value=15, key="c2")
             with c2: mode   = st.radio("ประเมินโอกาส:", ["🤖 AI","✍️ Manual"], key="m2")
             if "AI" in mode:
-                sr = sim_campaign(tgt,'delivery_vs_estimated',5, model,feature_names,best_threshold,medians)
+                sr = sim_campaign(tgt,'delivery_vs_estimated',5, model,feature_names,best_threshold)
                 st.success(f"🤖 Uplift ≈ **{sr*100:.1f}%**")
             else:
                 sr = st.slider("โอกาส (%):", 1,100,35,key="s2")/100
@@ -553,7 +549,7 @@ elif page == "3. 🎯 Action Plan":
             with c1: cost_h = st.number_input("งบต่อหัว (R$):", value=30, key="c3")
             with c2: mode   = st.radio("ประเมินโอกาส:", ["🤖 AI","✍️ Manual"], key="m3")
             if "AI" in mode:
-                sr = sim_campaign(tgt,'review_score',5, model,feature_names,best_threshold,medians)
+                sr = sim_campaign(tgt,'review_score',5, model,feature_names,best_threshold)
                 st.success(f"🤖 Uplift ≈ **{sr*100:.1f}%**")
             else:
                 sr = st.slider("โอกาส (%):", 1,100,25,key="s3")/100
@@ -573,7 +569,7 @@ elif page == "3. 🎯 Action Plan":
             with c1: cost_h = st.number_input("งบต่อหัว (R$):", value=10, key="c4")
             with c2: mode   = st.radio("ประเมินโอกาส:", ["🤖 AI","✍️ Manual"], key="m4")
             if "AI" in mode:
-                sr = sim_campaign(tgt,'payment_installments',10, model,feature_names,best_threshold,medians)
+                sr = sim_campaign(tgt,'payment_installments',10, model,feature_names,best_threshold)
                 st.success(f"🤖 Uplift ≈ **{sr*100:.1f}%**")
             else:
                 sr = st.slider("โอกาส (%):", 1,100,20,key="s4")/100

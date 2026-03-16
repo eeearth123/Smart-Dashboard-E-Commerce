@@ -112,20 +112,24 @@ def process_features(df_raw):
 
     # ── 3.5 Payment Features ─────────────────────────────────────────────
     if 'payment_sequential' in df.columns:
-        df['uses_multiple_payments'] = (df['payment_sequential'] > 1).astype(int)
+        df['uses_multiple_payments'] = (
+            df['payment_sequential'].fillna(1) > 1
+        ).astype(int)
     else:
         df['uses_multiple_payments'] = 0
 
     if 'payment_type' in df.columns:
-        df['uses_voucher'] = (df['payment_type'] == 'voucher').astype(int)
+        df['uses_voucher'] = (
+            df['payment_type'].fillna('') == 'voucher'
+        ).astype(int)
     else:
         df['uses_voucher'] = 0
 
     # ── 3.6 Review Score → Binary ─────────────────────────────────────────
     if 'review_score' in df.columns:
         df['review_score']  = pd.to_numeric(df['review_score'], errors='coerce')
-        df['is_low_score']  = (df['review_score'] <= 2).astype(int)
-        df['is_high_score'] = (df['review_score'] == 5).astype(int)
+        df['is_low_score']  = (df['review_score'].fillna(3) <= 2).astype(int)
+        df['is_high_score'] = (df['review_score'].fillna(3) == 5).astype(int)
     else:
         df['review_score']  = 3.0
         df['is_low_score']  = 0
@@ -500,8 +504,8 @@ elif page == "3. 🎯 Action Plan":
         if col_override in sim.columns:
             sim[col_override] = val
             if col_override == 'review_score':
-                sim['is_low_score']  = (sim['review_score'] <= 2).astype(int)
-                sim['is_high_score'] = (sim['review_score'] == 5).astype(int)
+                sim['is_low_score']  = (sim['review_score'].fillna(3) <= 2).astype(int)
+                sim['is_high_score'] = (sim['review_score'].fillna(3) == 5).astype(int)
         new_proba, _ = predict_churn(sim, model, feature_names, threshold)
         return max(old_prob - new_proba.mean(), 0.01)
 

@@ -231,14 +231,11 @@ def process_features(df_raw):
 def load_models():
     d = os.path.dirname(os.path.abspath(__file__))
     try:
-        model     = joblib.load(os.path.join(d, 'olist_churn_model_v4.pkl'))
-        features  = joblib.load(os.path.join(d, 'model_features_v4.pkl'))
-        threshold = joblib.load(os.path.join(d, 'model_threshold_v4.pkl'))
-        medians   = joblib.load(os.path.join(d, 'model_medians_v4.pkl'))
-        return model, features, float(threshold), medians, None
+        model    = joblib.load(os.path.join(d, 'olist_churn_model_v4.pkl'))
+        features = joblib.load(os.path.join(d, 'model_features_v4.pkl'))
+        return model, features, None
     except Exception as e:
-        return None, None, 0.5, None, str(e)
-
+        return None, None, str(e)
 # ==========================================
 # 5. PREDICT
 # ==========================================

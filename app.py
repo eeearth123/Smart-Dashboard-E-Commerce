@@ -317,20 +317,135 @@ st.sidebar.title("✈️ Olist Cockpit")
 st.sidebar.success(f"✅ โหลดข้อมูลแล้ว ({len(df):,} rows)")
 st.sidebar.info(f"🎯 Model Threshold: {best_threshold:.2f}")
 page = st.sidebar.radio("Navigation", [
-    "1. 📊 Executive Summary",
-    "2. 🔍 Customer Detail",
+    "1. 💰 Business Overview",
+    "2. 📊 Churn Overview",
     "3. 🎯 Action Plan",
     "4. 🚛 Logistics Insights",
     "5. 🏪 Seller Audit",
-    "6. 🔄 Buying Cycle Analysis"
+    "6. 🔄 Buying Cycle Analysis",
+    "7. 🔍 Customer Detail",
 ])
 st.sidebar.markdown("---")
 
 # ==========================================
-# PAGE 1: Executive Summary
+# PAGE 1: Business Overview (NEW)
 # ==========================================
-if page == "1. 📊 Executive Summary":
-    st.title("📊 Executive Summary")
+if page == "1. 💰 Business Overview":
+    st.title("💰 Business Overview")
+    st.caption("ภาพรวมรายได้และสุขภาพธุรกิจ — คำนวณจากข้อมูล 180 วันล่าสุด")
+
+    with st.expander("🌪️ กรองข้อมูล", expanded=False):
+        all_cats = sorted(df['product_category_name'].dropna().unique()) \
+                   if 'product_category_name' in df.columns else []
+        sel_cats = st.multiselect("หมวดสินค้า (ว่าง = ทั้งหมด):", all_cats, key="p1_cat")
+
+    df_d = df[df['product_category_name'].isin(sel_cats)].copy() if sel_cats else df.copy()
+    st.markdown("---")
+
+    # ── Section 1: KPI หลัก ───────────────────────────────────────────────
+    total_rev  = df_d['payment_value'].sum() if 'payment_value' in df_d.columns else 0
+    avg_order  = df_d['payment_value'].mean() if 'payment_value' in df_d.columns else 0
+    n_orders   = len(df_d)
+    n_customers= df_d['customer_unique_id'].nunique() if 'customer_unique_id' in df_d.columns else 0
+    clv        = avg_order * df_d.groupby('customer_unique_id').size().mean() \
+                 if 'customer_unique_id' in df_d.columns else avg_order
+
+    # MoM Growth — เปรียบเดือนล่าสุดกับเดือนก่อนหน้า
+    mom_growth = None
+    if 'order_purchase_timestamp' in df_d.columns and not df_d.empty:
+        df_d['_month'] = df_d['order_purchase_timestamp'].dt.to_period('M')
+        monthly_rev    = df_d.groupby('_month')['payment_value'].sum().sort_index()
+        if len(monthly_rev) >= 2:
+            last_m  = monthly_rev.iloc[-1]
+            prev_m  = monthly_rev.iloc[-2]
+            mom_growth = (last_m - prev_m) / prev_m * 100 if prev_m > 0 else 0
+
+    k1,k2,k3,k4 = st.columns(4)
+    k1.metric("💰 Total Revenue",    f"R$ {total_rev:,.0f}")
+    k2.metric("📈 MoM Growth",
+              f"{mom_growth:+.1f}%" if mom_growth is not None else "N/A",
+              delta=f"{mom_growth:+.1f}%" if mom_growth is not None else None)
+    k3.metric("🛒 Avg Order Value",  f"R$ {avg_order:,.0f}")
+    k4.metric("👤 CLV (Estimated)",  f"R$ {clv:,.0f}")
+    st.markdown("---")
+
+    # ── Section 2: Monthly Revenue Trend ──────────────────────────────────
+    st.subheader("📈 Monthly Revenue Trend")
+    if 'order_purchase_timestamp' in df_d.columns and not df_d.empty:
+        rev_trend = df_d.groupby('_month')['payment_value'].sum().reset_index()
+        rev_trend.columns = ['Month','Revenue']
+        rev_trend['Month'] = rev_trend['Month'].dt.to_timestamp()
+        if len(rev_trend) > 1:
+            rev_trend = rev_trend.iloc[:-1]  # ตัดเดือนล่าสุดที่ยังไม่จบ
+
+        # Growth Rate Line
+        rev_trend['Growth'] = rev_trend['Revenue'].pct_change() * 100
+
+        base   = alt.Chart(rev_trend)
+        bars   = base.mark_bar(color='#1E88E5', opacity=0.8).encode(
+            x=alt.X('Month', axis=alt.Axis(format='%b %Y', title='')),
+            y=alt.Y('Revenue', title='Revenue (R$)'),
+            tooltip=['Month', alt.Tooltip('Revenue', format=',.0f')]
+        )
+        line   = base.mark_line(color='#E53935', strokeWidth=2, point=True).encode(
+            x='Month',
+            y=alt.Y('Growth', title='Growth Rate (%)', axis=alt.Axis(titleColor='#E53935')),
+            tooltip=['Month', alt.Tooltip('Growth', format='.1f', title='Growth %')]
+        )
+        chart  = alt.layer(bars, line).resolve_scale(y='independent').properties(height=300)
+        st.altair_chart(chart, use_container_width=True)
+    st.markdown("---")
+
+    # ── Section 3: Top / Bottom Category ─────────────────────────────────
+    st.subheader("🏆 Top 5 / Bottom 5 Category by Revenue")
+    if 'product_category_name' in df_d.columns:
+        cat_rev = df_d.groupby('product_category_name').agg(
+            Revenue=('payment_value','sum'),
+            Orders=('customer_unique_id','count'),
+            Churn_Risk=('churn_probability','mean')
+        ).reset_index().sort_values('Revenue', ascending=False)
+
+        top5    = cat_rev.head(5).copy()
+        bot5    = cat_rev.tail(5).copy()
+
+        ct1, ct2 = st.columns(2)
+        with ct1:
+            st.markdown("**🟢 Top 5 — ทำเงินสูงสุด**")
+            top5_chart = alt.Chart(top5).mark_bar(color='#43A047').encode(
+                x=alt.X('Revenue', title='Revenue (R$)'),
+                y=alt.Y('product_category_name', sort='-x', title=None),
+                tooltip=['product_category_name',
+                         alt.Tooltip('Revenue', format=',.0f'),
+                         alt.Tooltip('Churn_Risk', format='.1%', title='Churn Risk')]
+            ).properties(height=200)
+            st.altair_chart(top5_chart, use_container_width=True)
+            st.dataframe(top5[['product_category_name','Revenue','Orders','Churn_Risk']]
+                         .style.format({'Revenue':'R${:,.0f}','Orders':'{:,}',
+                                        'Churn_Risk':'{:.1%}'}),
+                         hide_index=True, use_container_width=True)
+
+        with ct2:
+            st.markdown("**🔴 Bottom 5 — ทำเงินน้อยสุด**")
+            bot5_chart = alt.Chart(bot5).mark_bar(color='#E53935').encode(
+                x=alt.X('Revenue', title='Revenue (R$)'),
+                y=alt.Y('product_category_name', sort='-x', title=None),
+                tooltip=['product_category_name',
+                         alt.Tooltip('Revenue', format=',.0f'),
+                         alt.Tooltip('Churn_Risk', format='.1%', title='Churn Risk')]
+            ).properties(height=200)
+            st.altair_chart(bot5_chart, use_container_width=True)
+            st.dataframe(bot5[['product_category_name','Revenue','Orders','Churn_Risk']]
+                         .style.format({'Revenue':'R${:,.0f}','Orders':'{:,}',
+                                        'Churn_Risk':'{:.1%}'}),
+                         hide_index=True, use_container_width=True)
+
+        st.info("💡 หมวดที่ทำเงินสูงแต่ Churn Risk สูงด้วย = โอกาสสำคัญที่ต้องรักษาฐานลูกค้า")
+
+# ==========================================
+# PAGE 2: Churn Overview (เดิมคือ Page 1)
+# ==========================================
+elif page == "2. 📊 Churn Overview":
+    st.title("📊 Churn Overview")
 
     with st.expander("ℹ️ วิธีแบ่งกลุ่มลูกค้า"):
         st.markdown("""
@@ -346,21 +461,21 @@ if page == "1. 📊 Executive Summary":
     with st.expander("🌪️ กรองข้อมูล", expanded=False):
         all_cats = sorted(df['product_category_name'].dropna().unique()) \
                    if 'product_category_name' in df.columns else []
-        sel_cats = st.multiselect("หมวดสินค้า (ว่าง = ทั้งหมด):", all_cats, key="p1_cat")
+        sel_cats = st.multiselect("หมวดสินค้า (ว่าง = ทั้งหมด):", all_cats, key="p2_cat")
 
     df_d = df[df['product_category_name'].isin(sel_cats)].copy() if sel_cats else df.copy()
     st.caption(f"กำลังแสดง: **{'ทั้งหมด' if not sel_cats else ', '.join(sel_cats[:3])}**")
     st.markdown("---")
 
-    total  = len(df_d)
+    total   = len(df_d)
     risk_df = df_d[df_d['status'].isin(['High Risk','Warning (Late > 1.5x)'])]
     k1,k2,k3,k4,k5 = st.columns(5)
-    k1.metric("🚨 At-Risk",       f"{len(risk_df)/total*100:.1f}%" if total else "0%")
-    k2.metric("🤖 AI Predicted",  f"{(df_d['churn_probability']>0.5).mean()*100:.1f}%")
-    k3.metric("💸 Revenue at Risk",f"R$ {risk_df['payment_value'].sum():,.0f}")
-    k4.metric("👥 Risk / Total",   f"{len(risk_df):,} / {total:,}")
-    k5.metric("🔄 Avg Cycle",      f"{df_d['cat_median_days'].mean():.0f} วัน"
-                                   if 'cat_median_days' in df_d.columns else "N/A")
+    k1.metric("🚨 At-Risk",        f"{len(risk_df)/total*100:.1f}%" if total else "0%")
+    k2.metric("🤖 AI Predicted",   f"{(df_d['churn_probability'] >= best_threshold).mean()*100:.1f}%")
+    k3.metric("💸 Revenue at Risk", f"R$ {risk_df['payment_value'].sum():,.0f}")
+    k4.metric("👥 Risk / Total",    f"{len(risk_df):,} / {total:,}")
+    k5.metric("🔄 Avg Cycle",       f"{df_d['cat_median_days'].mean():.0f} วัน"
+                                    if 'cat_median_days' in df_d.columns else "N/A")
     st.markdown("---")
 
     c1, c2 = st.columns([2,1])
@@ -373,7 +488,7 @@ if page == "1. 📊 Executive Summary":
                 t = len(grp)
                 if t == 0: continue
                 rule = len(grp[grp['status'].isin(['High Risk','Warning (Late > 1.5x)'])])
-                ai   = (grp['churn_probability'] > 0.5).sum()
+                ai   = (grp['churn_probability'] >= best_threshold).sum()
                 trend_data.append({'Date': str(name),
                                    'Rule-based Risk (%)': rule/t*100,
                                    'AI Predicted Churn (%)': ai/t*100})
@@ -412,66 +527,6 @@ if page == "1. 📊 Executive Summary":
                          alt.Tooltip('Revenue',format=',.0f')]
             ).properties(height=350)
             st.altair_chart(donut, use_container_width=True)
-
-# ==========================================
-# PAGE 2: Customer Detail
-# ==========================================
-elif page == "2. 🔍 Customer Detail":
-    st.title("🔍 Customer Deep Dive")
-
-    with st.expander("🔎 Filters", expanded=True):
-        f1,f2,f3 = st.columns(3)
-        with f1:
-            sel_status = st.multiselect("สถานะ:",
-                ['High Risk','Warning (Late > 1.5x)','Medium Risk','Lost (Late > 3x)','Active'],
-                default=['High Risk','Warning (Late > 1.5x)'])
-        with f2:
-            all_cats = sorted(df['product_category_name'].dropna().unique()) \
-                       if 'product_category_name' in df.columns else []
-            sel_cats = st.multiselect("หมวดสินค้า:", all_cats)
-        with f3:
-            search_id = st.text_input("ค้นหา Customer ID:", "")
-
-    mask = df['status'].isin(sel_status)
-    if sel_cats:   mask = mask & df['product_category_name'].isin(sel_cats)
-    if search_id:  mask = mask & df['customer_unique_id'].str.contains(
-                        search_id, case=False, na=False)
-    filtered = df[mask]
-
-    if 'product_category_name' in df.columns and not filtered.empty:
-        cat_ov   = df.groupby('product_category_name').agg(
-            Total=('customer_unique_id','count'),
-            Cycle=('cat_median_days','mean')).reset_index()
-        cat_risk = filtered.groupby('product_category_name').agg(
-            Risk=('customer_unique_id','count')).reset_index()
-        cat_s    = cat_risk.merge(cat_ov, on='product_category_name', how='left')
-        cat_s['Risk_Pct'] = cat_s['Risk'] / cat_s['Total']
-        cat_s = cat_s.sort_values('Risk', ascending=False)
-
-        cc, ct = st.columns([1.5, 2.5])
-        with cc:
-            st.subheader("📊 Top 10 หมวดเสี่ยง")
-            base   = alt.Chart(cat_s.head(10)).encode(
-                y=alt.Y('product_category_name', sort='-x', title=None))
-            b_tot  = base.mark_bar(color='#f0f2f6').encode(x='Total')
-            b_risk = base.mark_bar(color='#e74c3c').encode(x='Risk')
-            st.altair_chart(b_tot+b_risk, use_container_width=True)
-        with ct:
-            st.subheader("📋 รายละเอียด")
-            st.dataframe(cat_s, use_container_width=True, hide_index=True)
-
-    st.markdown("---")
-    st.subheader(f"📄 รายชื่อลูกค้า ({len(filtered):,} คน)")
-    show = [c for c in ['customer_unique_id','status','churn_probability',
-                        'lateness_score','cat_median_days','payment_value',
-                        'product_category_name'] if c in df.columns]
-    st.dataframe(
-        filtered[show].sort_values('churn_probability', ascending=False),
-        column_config={
-            "churn_probability": st.column_config.ProgressColumn(
-                "Risk", format="%.2f", min_value=0, max_value=1),
-            "lateness_score": st.column_config.NumberColumn("Late", format="%.1fx")
-        }, use_container_width=True)
 
 # ==========================================
 # PAGE 3: Action Plan
@@ -872,3 +927,63 @@ elif page == "6. 🔄 Buying Cycle Analysis":
             ).properties(height=500)
             st.altair_chart(chart, use_container_width=True)
             st.info("💡 สีส้มเข้ม = High Season → เตรียมสต็อกล่วงหน้า")
+
+# ==========================================
+# PAGE 7: Customer Detail (ย้ายมาหน้าสุดท้าย)
+# ==========================================
+elif page == "7. 🔍 Customer Detail":
+    st.title("🔍 Customer Deep Dive")
+
+    with st.expander("🔎 Filters", expanded=True):
+        f1,f2,f3 = st.columns(3)
+        with f1:
+            sel_status = st.multiselect("สถานะ:",
+                ['High Risk','Warning (Late > 1.5x)','Medium Risk','Lost (Late > 3x)','Active'],
+                default=['High Risk','Warning (Late > 1.5x)'])
+        with f2:
+            all_cats = sorted(df['product_category_name'].dropna().unique()) \
+                       if 'product_category_name' in df.columns else []
+            sel_cats = st.multiselect("หมวดสินค้า:", all_cats)
+        with f3:
+            search_id = st.text_input("ค้นหา Customer ID:", "")
+
+    mask = df['status'].isin(sel_status)
+    if sel_cats:   mask = mask & df['product_category_name'].isin(sel_cats)
+    if search_id:  mask = mask & df['customer_unique_id'].str.contains(
+                        search_id, case=False, na=False)
+    filtered = df[mask]
+
+    if 'product_category_name' in df.columns and not filtered.empty:
+        cat_ov   = df.groupby('product_category_name').agg(
+            Total=('customer_unique_id','count'),
+            Cycle=('cat_median_days','mean')).reset_index()
+        cat_risk = filtered.groupby('product_category_name').agg(
+            Risk=('customer_unique_id','count')).reset_index()
+        cat_s    = cat_risk.merge(cat_ov, on='product_category_name', how='left')
+        cat_s['Risk_Pct'] = cat_s['Risk'] / cat_s['Total']
+        cat_s = cat_s.sort_values('Risk', ascending=False)
+
+        cc, ct = st.columns([1.5, 2.5])
+        with cc:
+            st.subheader("📊 Top 10 หมวดเสี่ยง")
+            base   = alt.Chart(cat_s.head(10)).encode(
+                y=alt.Y('product_category_name', sort='-x', title=None))
+            b_tot  = base.mark_bar(color='#f0f2f6').encode(x='Total')
+            b_risk = base.mark_bar(color='#e74c3c').encode(x='Risk')
+            st.altair_chart(b_tot+b_risk, use_container_width=True)
+        with ct:
+            st.subheader("📋 รายละเอียด")
+            st.dataframe(cat_s, use_container_width=True, hide_index=True)
+
+    st.markdown("---")
+    st.subheader(f"📄 รายชื่อลูกค้า ({len(filtered):,} คน)")
+    show = [c for c in ['customer_unique_id','status','churn_probability',
+                        'lateness_score','cat_median_days','payment_value',
+                        'product_category_name'] if c in df.columns]
+    st.dataframe(
+        filtered[show].sort_values('churn_probability', ascending=False),
+        column_config={
+            "churn_probability": st.column_config.ProgressColumn(
+                "Risk", format="%.2f", min_value=0, max_value=1),
+            "lateness_score": st.column_config.NumberColumn("Late", format="%.1fx")
+        }, use_container_width=True)

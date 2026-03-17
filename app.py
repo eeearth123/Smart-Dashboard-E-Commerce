@@ -328,11 +328,11 @@ page = st.sidebar.radio("Navigation", [
 st.sidebar.markdown("---")
 
 # ==========================================
-# PAGE 1: Business Overview (NEW)
+# PAGE 1: Business Overview (UPDATED VERSION)
 # ==========================================
 if page == "1. 💰 Business Overview":
     st.title("💰 Business Overview")
-    st.caption("ภาพรวมรายได้และสุขภาพธุรกิจ — คำนวณจากข้อมูล 180 วันล่าสุด")
+    st.caption("ภาพรวมรายได้และสุขภาพธุรกิจ — วิเคราะห์จากข้อมูลย้อนหลัง")
 
     with st.expander("🌪️ กรองข้อมูล", expanded=False):
         all_cats = sorted(df['product_category_name'].dropna().unique()) \
@@ -343,103 +343,108 @@ if page == "1. 💰 Business Overview":
     st.markdown("---")
 
     # ── Section 1: KPI หลัก ───────────────────────────────────────────────
-    total_rev  = df_d['payment_value'].sum() if 'payment_value' in df_d.columns else 0
-    avg_order  = df_d['payment_value'].mean() if 'payment_value' in df_d.columns else 0
-    n_orders   = len(df_d)
-    n_customers= df_d['customer_unique_id'].nunique() if 'customer_unique_id' in df_d.columns else 0
-    clv        = avg_order * df_d.groupby('customer_unique_id').size().mean() \
-                 if 'customer_unique_id' in df_d.columns else avg_order
+    total_rev   = df_d['payment_value'].sum() if 'payment_value' in df_d.columns else 0
+    avg_order   = df_d['payment_value'].mean() if 'payment_value' in df_d.columns else 0
+    n_customers = df_d['customer_unique_id'].nunique() if 'customer_unique_id' in df_d.columns else 0
+    clv         = avg_order * df_d.groupby('customer_unique_id').size().mean() \
+                  if 'customer_unique_id' in df_d.columns and n_customers > 0 else avg_order
 
-    # MoM Growth — เปรียบเดือนล่าสุดกับเดือนก่อนหน้า
+    # คำนวณ MoM Growth แบบ Robust
     mom_growth = None
     if 'order_purchase_timestamp' in df_d.columns and not df_d.empty:
         df_d['_month'] = df_d['order_purchase_timestamp'].dt.to_period('M')
-        monthly_rev    = df_d.groupby('_month')['payment_value'].sum().sort_index()
-        if len(monthly_rev) >= 2:
-            last_m  = monthly_rev.iloc[-1]
-            prev_m  = monthly_rev.iloc[-2]
-            mom_growth = (last_m - prev_m) / prev_m * 100 if prev_m > 0 else 0
+        all_months = pd.period_range(start=df_d['_month'].min(), end=df_d['_month'].max(), freq='M')
+        monthly_rev_series = df_d.groupby('_month')['payment_value'].sum().reindex(all_months, fill_value=0)
 
-    k1,k2,k3,k4 = st.columns(4)
-    k1.metric("💰 Total Revenue",    f"R$ {total_rev:,.0f}")
-    k2.metric("📈 MoM Growth",
-              f"{mom_growth:+.1f}%" if mom_growth is not None else "N/A",
-              delta=f"{mom_growth:+.1f}%" if mom_growth is not None else None)
-    k3.metric("🛒 Avg Order Value",  f"R$ {avg_order:,.0f}")
-    k4.metric("👤 CLV (Estimated)",  f"R$ {clv:,.0f}")
+        if len(monthly_rev_series) >= 3:
+            last_complete_m = monthly_rev_series.iloc[-2]  # เดือนที่จบไปแล้ว
+            prev_m          = monthly_rev_series.iloc[-3]  # เดือนก่อนหน้า
+            if prev_m > 0:
+                mom_growth = ((last_complete_m - prev_m) / prev_m) * 100
+        elif len(monthly_rev_series) == 2:
+            last_m = monthly_rev_series.iloc[-1]
+            first_m = monthly_rev_series.iloc[-2]
+            if first_m > 0:
+                mom_growth = ((last_m - first_m) / first_m) * 100
+
+    k1, k2, k3, k4 = st.columns(4)
+    k1.metric("💰 Total Revenue", f"R$ {total_rev:,.0f}")
+    if mom_growth is not None:
+        k2.metric("📈 MoM Growth", f"{mom_growth:+.1f}%", delta=f"{mom_growth:+.1f}%")
+    else:
+        k2.metric("📈 MoM Growth", "N/A")
+    k3.metric("🛒 Avg Order Value", f"R$ {avg_order:,.0f}")
+    k4.metric("👤 CLV (Estimated)", f"R$ {clv:,.0f}")
     st.markdown("---")
 
     # ── Section 2: Monthly Revenue Trend ──────────────────────────────────
     st.subheader("📈 Monthly Revenue Trend")
     if 'order_purchase_timestamp' in df_d.columns and not df_d.empty:
-        rev_trend = df_d.groupby('_month')['payment_value'].sum().reset_index()
-        rev_trend.columns = ['Month','Revenue']
-        rev_trend['Month'] = rev_trend['Month'].dt.to_timestamp()
-        if len(rev_trend) > 1:
-            rev_trend = rev_trend.iloc[:-1]  # ตัดเดือนล่าสุดที่ยังไม่จบ
+        # เตรียมข้อมูลรายเดือนแบบ Resample เพื่อให้แกนเวลาต่อเนื่อง
+        rev_trend = df_d.set_index('order_purchase_timestamp')['payment_value'].resample('MS').sum().fillna(0).reset_index()
+        rev_trend.columns = ['Month', 'Revenue']
+        
+        # คำนวณ Growth % สำหรับทำเส้น Line Chart
+        rev_trend['Growth'] = rev_trend['Revenue'].pct_change().replace([np.inf, -np.inf], np.nan) * 100
+        
+        # ตัดเดือนสุดท้ายออกถ้าเป็นข้อมูลที่ยังไม่จบเดือน (ป้องกันกราฟดิ่งลงเหว)
+        plot_df = rev_trend.iloc[:-1] if len(rev_trend) > 1 else rev_trend
 
-        # Growth Rate Line
-        rev_trend['Growth'] = rev_trend['Revenue'].pct_change() * 100
+        base = alt.Chart(plot_df).encode(
+            x=alt.X('Month:T', axis=alt.Axis(format='%b %Y', title='', labelAngle=-45))
+        )
 
-        base   = alt.Chart(rev_trend)
-        bars   = base.mark_bar(color='#1E88E5', opacity=0.8).encode(
-            x=alt.X('Month', axis=alt.Axis(format='%b %Y', title='')),
-            y=alt.Y('Revenue', title='Revenue (R$)'),
-            tooltip=['Month', alt.Tooltip('Revenue', format=',.0f')]
+        bars = base.mark_bar(color='#1E88E5', opacity=0.7).encode(
+            y=alt.Y('Revenue:Q', title='Revenue (R$)', axis=alt.Axis(grid=False)),
+            tooltip=[alt.Tooltip('Month:T', format='%B %Y'), alt.Tooltip('Revenue:Q', format=',.0f')]
         )
-        line   = base.mark_line(color='#E53935', strokeWidth=2, point=True).encode(
-            x='Month',
-            y=alt.Y('Growth', title='Growth Rate (%)', axis=alt.Axis(titleColor='#E53935')),
-            tooltip=['Month', alt.Tooltip('Growth', format='.1f', title='Growth %')]
+
+        line = base.mark_line(color='#E53935', strokeWidth=3, point=alt.OverlayMarkDef(color='#E53935')).encode(
+            y=alt.Y('Growth:Q', title='Growth Rate (%)', axis=alt.Axis(titleColor='#E53935', orient='right')),
+            tooltip=[alt.Tooltip('Month:T', format='%B %Y'), alt.Tooltip('Growth:Q', format='.1f', title='Growth %')]
         )
-        chart  = alt.layer(bars, line).resolve_scale(y='independent').properties(height=300)
+
+        chart = alt.layer(bars, line).resolve_scale(y='independent').properties(height=350)
         st.altair_chart(chart, use_container_width=True)
+    else:
+        st.info("ไม่มีข้อมูลเพียงพอสำหรับการแสดง Trend")
+
     st.markdown("---")
 
     # ── Section 3: Top / Bottom Category ─────────────────────────────────
     st.subheader("🏆 Top 5 / Bottom 5 Category by Revenue")
     if 'product_category_name' in df_d.columns:
         cat_rev = df_d.groupby('product_category_name').agg(
-            Revenue=('payment_value','sum'),
-            Orders=('customer_unique_id','count'),
-            Churn_Risk=('churn_probability','mean')
+            Revenue=('payment_value', 'sum'),
+            Orders=('customer_unique_id', 'count'),
+            Churn_Risk=('churn_probability', 'mean')
         ).reset_index().sort_values('Revenue', ascending=False)
 
-        top5    = cat_rev.head(5).copy()
-        bot5    = cat_rev.tail(5).copy()
+        top5 = cat_rev.head(5).copy()
+        bot5 = cat_rev.tail(5).copy()
 
         ct1, ct2 = st.columns(2)
         with ct1:
             st.markdown("**🟢 Top 5 — ทำเงินสูงสุด**")
             top5_chart = alt.Chart(top5).mark_bar(color='#43A047').encode(
-                x=alt.X('Revenue', title='Revenue (R$)'),
-                y=alt.Y('product_category_name', sort='-x', title=None),
-                tooltip=['product_category_name',
-                         alt.Tooltip('Revenue', format=',.0f'),
-                         alt.Tooltip('Churn_Risk', format='.1%', title='Churn Risk')]
-            ).properties(height=200)
+                x=alt.X('Revenue:Q', title='Revenue (R$)'),
+                y=alt.Y('product_category_name:N', sort='-x', title=None),
+                tooltip=['product_category_name', alt.Tooltip('Revenue', format=',.0f')]
+            ).properties(height=220)
             st.altair_chart(top5_chart, use_container_width=True)
-            st.dataframe(top5[['product_category_name','Revenue','Orders','Churn_Risk']]
-                         .style.format({'Revenue':'R${:,.0f}','Orders':'{:,}',
-                                        'Churn_Risk':'{:.1%}'}),
-                         hide_index=True, use_container_width=True)
+            st.dataframe(top5.style.format({'Revenue': 'R${:,.0f}', 'Churn_Risk': '{:.1%}'}), hide_index=True)
 
         with ct2:
             st.markdown("**🔴 Bottom 5 — ทำเงินน้อยสุด**")
             bot5_chart = alt.Chart(bot5).mark_bar(color='#E53935').encode(
-                x=alt.X('Revenue', title='Revenue (R$)'),
-                y=alt.Y('product_category_name', sort='-x', title=None),
-                tooltip=['product_category_name',
-                         alt.Tooltip('Revenue', format=',.0f'),
-                         alt.Tooltip('Churn_Risk', format='.1%', title='Churn Risk')]
-            ).properties(height=200)
+                x=alt.X('Revenue:Q', title='Revenue (R$)'),
+                y=alt.Y('product_category_name:N', sort='-x', title=None),
+                tooltip=['product_category_name', alt.Tooltip('Revenue', format=',.0f')]
+            ).properties(height=220)
             st.altair_chart(bot5_chart, use_container_width=True)
-            st.dataframe(bot5[['product_category_name','Revenue','Orders','Churn_Risk']]
-                         .style.format({'Revenue':'R${:,.0f}','Orders':'{:,}',
-                                        'Churn_Risk':'{:.1%}'}),
-                         hide_index=True, use_container_width=True)
+            st.dataframe(bot5.style.format({'Revenue': 'R${:,.0f}', 'Churn_Risk': '{:.1%}'}), hide_index=True)
 
-        st.info("💡 หมวดที่ทำเงินสูงแต่ Churn Risk สูงด้วย = โอกาสสำคัญที่ต้องรักษาฐานลูกค้า")
+    st.info("💡 Tip: เน้นจัดการหมวดที่ Revenue สูงแต่ Churn Risk สูงก่อนเพื่อรักษา Market Share")
 
 # ==========================================
 # PAGE 2: Churn Overview (เดิมคือ Page 1)

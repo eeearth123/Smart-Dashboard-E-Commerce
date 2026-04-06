@@ -539,6 +539,7 @@ elif page == "2. 📊 Churn Overview":
 elif page == "3. 🎯 Action Plan":
     st.title("🎯 Action Plan & Simulator")
 
+    # เตรียมข้อมูลพื้นฐาน
     all_cats = sorted(df['product_category_name'].dropna().unique()) \
                if 'product_category_name' in df.columns else []
     sel_cats = st.multiselect("หมวดสินค้า (ว่าง = ทั้งหมด):", all_cats, key="p3_cat")
@@ -548,162 +549,175 @@ elif page == "3. 🎯 Action Plan":
     st.markdown("---")
     st.subheader("💰 Smart Budget Allocator")
     total_budget  = st.number_input("งบประมาณรวม (R$):", min_value=1000, value=50000, step=5000)
-    alloc_box     = st.container()
+    alloc_box      = st.container()
 
     st.markdown("---")
     st.subheader("🎯 แผงควบคุมแคมเปญ")
-    tab1,tab2,tab3,tab4 = st.tabs([
-        "🚚 ค่าส่งแพง","🐌 ส่งช้า","😡 รีวิวแย่","💳 ซื้อแพงจ่ายเต็ม"])
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "🚚 ค่าส่งแพง", "🐌 ส่งช้า", "😡 รีวิวแย่", "💳 ซื้อแพงจ่ายเต็ม"
+    ])
     campaigns = []
 
+    # ฟังก์ชันจำลอง (Simulator)
     def sim_campaign(df_sim_in, col_override, val, model, feature_names, threshold):
-        """จำลองแก้ค่า Feature โดยการหักลบส่วนลด (Discount) แล้ว Predict ใหม่"""
+        """จำลองแก้ค่า Feature โดยการหักลบส่วนลด (Discount) แล้ว Predict ใหม่ → คืน Uplift"""
+        if df_sim_in.empty: return 0.01
+        
         old_prob = df_sim_in['churn_probability'].mean()
         if model is None: return 0.30
-    
+        
         sim = df_sim_in.copy()
-    
+        
         if col_override in sim.columns:
-        # --- กรณีค่าส่ง: ลบออกตามงบต่อหัวที่ตั้งไว้ ---
+            # --- กรณีค่าส่ง: ลบออกตามงบต่อหัวที่ตั้งไว้ ---
             if col_override == 'freight_value':
-                # ค่าส่งใหม่ = ค่าส่งเดิม - งบส่วนลด (val)
                 sim['freight_value'] = sim['freight_value'] - val
-            # ห้ามค่าส่งติดลบ (ต่ำสุดคือ 0)
                 sim['freight_value'] = sim['freight_value'].clip(lower=0)
-            
-            # สำคัญมาก: ต้องคำนวณ freight_ratio ใหม่ด้วย เพราะโมเดลใช้ฟีเจอร์นี้
                 if 'price' in sim.columns:
                     sim['freight_ratio'] = sim['freight_value'] / sim['price']
-        
-        # --- กรณีรีวิว: ยังคงใช้การเซตเป็น 5 ดาว (หรือตามที่ระบุ) ---
-        elif col_override == 'review_score':
-            sim['review_score'] = val
-            sim['is_low_score'] = (sim['review_score'].fillna(3) <= 2).astype(int)
-            sim['is_high_score'] = (sim['review_score'].fillna(3) == 5).astype(int)
-        
-        # --- กรณีอื่นๆ: เช่น งวดผ่อน ให้เซตเป็นค่าใหม่ตามปกติ ---
-        else:
-            sim[col_override] = val
+            
+            # --- กรณีรีวิว: เซตเป็นค่าคะแนนที่ระบุ ---
+            elif col_override == 'review_score':
+                sim['review_score'] = val
+                sim['is_low_score']  = (sim['review_score'].fillna(3) <= 2).astype(int)
+                sim['is_high_score'] = (sim['review_score'].fillna(3) == 5).astype(int)
+            
+            # --- กรณีอื่นๆ: เขียนทับค่าปกติ ---
+            else:
+                sim[col_override] = val
 
-    # ทำนายผลด้วย AI บนข้อมูลที่จำลองส่วนลดแล้ว
         new_proba, _ = predict_churn(sim, model, feature_names, threshold)
-    
-    # คืนค่า Uplift (ส่วนต่างความน่าจะเป็นที่ลดลง)
         return max(old_prob - new_proba.mean(), 0.01)
 
-    # TAB 1: ค่าส่งแพง
-    # TAB 1: ค่าส่งแพง
+    # --- TAB 1: ค่าส่งแพง ---
     with tab1:
-        st.markdown("#### 🚚 แคมเปญส่งฟรี")
-        # ... (โค้ดส่วนอื่นคงเดิม) ...
-        if len(tgt) > 0:
-            c1,c2 = st.columns(2)
+        st.markdown("#### 🚚 แคมเปญส่วนลดค่าส่ง")
+        # แก้ไขจุด Error: ประกาศ tgt ให้ชัดเจนภายใน scope
+        tgt_ship = df_p3[df_p3['freight_ratio'] > 0.2] if 'freight_ratio' in df_p3.columns else pd.DataFrame()
+        st.info(f"👥 ลูกค้าค่าส่ง > 20% ของราคาสินค้า: **{len(tgt_ship):,} คน**")
+        
+        if len(tgt_ship) > 0:
+            c1, c2 = st.columns(2)
             with c1: cost_h = st.number_input("งบต่อหัว (R$):", value=20, key="c1")
-            with c2: mode = st.radio("ประเมินโอกาส:", ["🤖 AI","✍️ Manual"], key="m1")
+            with c2: mode   = st.radio("ประเมินโอกาส:", ["🤖 AI","✍️ Manual"], key="m1")
             
             if "AI" in mode:
-                # แก้ไขตรงนี้: จาก 0 เป็น cost_h
-                sr = sim_campaign(tgt, 'freight_value', cost_h, model, feature_names, best_threshold)
+                sr = sim_campaign(tgt_ship, 'freight_value', cost_h, model, feature_names, best_threshold)
                 st.success(f"🤖 Uplift ≈ **{sr*100:.1f}%**")
             else:
-                sr = st.slider("โอกาส (%):", 1,100,30,key="s1")/100
-            
-            # (ส่วนที่เหลือคงเดิม)
+                sr = st.slider("โอกาส (%):", 1, 100, 30, key="s1") / 100
+                
+            campaigns.append({"name":"🚚 ส่งฟรี (บางส่วน)", "people":len(tgt_ship),
+                               "cost_head":cost_h, "success_rate":sr, "ltv":avg_ltv})
 
-    # TAB 2: ส่งช้า
+    # --- TAB 2: ส่งช้า ---
     with tab2:
         st.markdown("#### 🐌 แคมเปญง้อส่งช้า")
-        tgt = df_p3[df_p3['delay_days'] > 0] if 'delay_days' in df_p3.columns else pd.DataFrame()
-        st.info(f"👥 ลูกค้าที่ได้รับของช้ากว่ากำหนด: **{len(tgt):,} คน**")
-        if len(tgt) > 0:
-            c1,c2 = st.columns(2)
+        tgt_delay = df_p3[df_p3['delay_days'] > 0] if 'delay_days' in df_p3.columns else pd.DataFrame()
+        st.info(f"👥 ลูกค้าที่ได้รับของช้ากว่ากำหนด: **{len(tgt_delay):,} คน**")
+        
+        if len(tgt_delay) > 0:
+            c1, c2 = st.columns(2)
             with c1: cost_h = st.number_input("งบต่อหัว (R$):", value=15, key="c2")
             with c2: mode   = st.radio("ประเมินโอกาส:", ["🤖 AI","✍️ Manual"], key="m2")
+            
             if "AI" in mode:
-                sr = sim_campaign(tgt,'delivery_vs_estimated',5, model,feature_names,best_threshold)
+                sr = sim_campaign(tgt_delay, 'delivery_vs_estimated', 5, model, feature_names, best_threshold)
                 st.success(f"🤖 Uplift ≈ **{sr*100:.1f}%**")
             else:
-                sr = st.slider("โอกาส (%):", 1,100,35,key="s2")/100
-            campaigns.append({"name":"🐌 ง้อส่งช้า","people":len(tgt),
-                               "cost_head":cost_h,"success_rate":sr,"ltv":avg_ltv})
+                sr = st.slider("โอกาส (%):", 1, 100, 35, key="s2") / 100
+                
+            campaigns.append({"name":"🐌 ง้อส่งช้า", "people":len(tgt_delay),
+                               "cost_head":cost_h, "success_rate":sr, "ltv":avg_ltv})
 
-    # TAB 3: รีวิวแย่
+    # --- TAB 3: รีวิวแย่ ---
     with tab3:
         st.markdown("#### 😡 แคมเปญง้อรีวิวแย่")
-        tgt = df_p3[df_p3['review_score'] <= 2] if 'review_score' in df_p3.columns else pd.DataFrame()
-        st.info(f"👥 ลูกค้าให้คะแนน 1-2 ดาว: **{len(tgt):,} คน**")
-        if len(tgt) > 0:
-            c1,c2 = st.columns(2)
+        tgt_review = df_p3[df_p3['review_score'] <= 2] if 'review_score' in df_p3.columns else pd.DataFrame()
+        st.info(f"👥 ลูกค้าให้คะแนน 1-2 ดาว: **{len(tgt_review):,} คน**")
+        
+        if len(tgt_review) > 0:
+            c1, c2 = st.columns(2)
             with c1: cost_h = st.number_input("งบต่อหัว (R$):", value=30, key="c3")
             with c2: mode   = st.radio("ประเมินโอกาส:", ["🤖 AI","✍️ Manual"], key="m3")
+            
             if "AI" in mode:
-                sr = sim_campaign(tgt,'review_score',5, model,feature_names,best_threshold)
+                sr = sim_campaign(tgt_review, 'review_score', 5, model, feature_names, best_threshold)
                 st.success(f"🤖 Uplift ≈ **{sr*100:.1f}%**")
             else:
-                sr = st.slider("โอกาส (%):", 1,100,25,key="s3")/100
-            campaigns.append({"name":"😡 ง้อรีวิวแย่","people":len(tgt),
-                               "cost_head":cost_h,"success_rate":sr,"ltv":avg_ltv})
+                sr = st.slider("โอกาส (%):", 1, 100, 25, key="s3") / 100
+                
+            campaigns.append({"name":"😡 ง้อรีวิวแย่", "people":len(tgt_review),
+                               "cost_head":cost_h, "success_rate":sr, "ltv":avg_ltv})
 
-    # TAB 4: ซื้อแพงจ่ายเต็ม
+    # --- TAB 4: ซื้อแพงจ่ายเต็ม ---
     with tab4:
         st.markdown("#### 💳 แคมเปญดันยอดผ่อน")
         if 'price' in df_p3.columns and 'payment_installments' in df_p3.columns:
-            tgt = df_p3[(df_p3['price'] > 500) & (df_p3['payment_installments'] == 1)]
+            tgt_pay = df_p3[(df_p3['price'] > 500) & (df_p3['payment_installments'] == 1)]
         else:
-            tgt = pd.DataFrame()
-        st.info(f"👥 ลูกค้าซื้อแพง (> R$500) จ่ายงวดเดียว: **{len(tgt):,} คน**")
-        if len(tgt) > 0:
-            c1,c2 = st.columns(2)
+            tgt_pay = pd.DataFrame()
+            
+        st.info(f"👥 ลูกค้าซื้อแพง (> R$500) จ่ายงวดเดียว: **{len(tgt_pay):,} คน**")
+        
+        if len(tgt_pay) > 0:
+            c1, c2 = st.columns(2)
             with c1: cost_h = st.number_input("งบต่อหัว (R$):", value=10, key="c4")
             with c2: mode   = st.radio("ประเมินโอกาส:", ["🤖 AI","✍️ Manual"], key="m4")
+            
             if "AI" in mode:
-                sr = sim_campaign(tgt,'payment_installments',10, model,feature_names,best_threshold)
+                sr = sim_campaign(tgt_pay, 'payment_installments', 10, model, feature_names, best_threshold)
                 st.success(f"🤖 Uplift ≈ **{sr*100:.1f}%**")
             else:
-                sr = st.slider("โอกาส (%):", 1,100,20,key="s4")/100
-            campaigns.append({"name":"💳 ดันยอดผ่อน","people":len(tgt),
-                               "cost_head":cost_h,"success_rate":sr,"ltv":avg_ltv})
+                sr = st.slider("โอกาส (%):", 1, 100, 20, key="s4") / 100
+                
+            campaigns.append({"name":"💳 ดันยอดผ่อน", "people":len(tgt_pay),
+                               "cost_head":cost_h, "success_rate":sr, "ltv":avg_ltv})
 
-    # Allocator
+    # --- Allocator Logic ---
     with alloc_box:
         if campaigns:
             dc = pd.DataFrame(campaigns)
             dc['Total_Cost']      = dc['people'] * dc['cost_head']
             dc['Expected_Revenue']= dc['people'] * dc['success_rate'] * dc['ltv']
-            dc['ROI_Percent']     = ((dc['Expected_Revenue'] - dc['Total_Cost'])
+            dc['ROI_Percent']     = ((dc['Expected_Revenue'] - dc['Total_Cost']) 
                                      / dc['Total_Cost'].replace(0,1) * 100)
+            
             dc = dc.sort_values('ROI_Percent', ascending=False).reset_index(drop=True)
 
             alloc, total_rev, total_saved = 0, 0, 0
             rows = []
+            
             for _, r in dc.iterrows():
                 left = total_budget - alloc
                 if left <= 0:
-                    rows.append({"แคมเปญ":r['name'],"สถานะ":"❌ งบหมด",
-                                 "คน":0,"งบ(R$)":0,"กำไร(R$)":0,"ROI%":r['ROI_Percent']})
+                    rows.append({"แคมเปญ":r['name'], "สถานะ":"❌ งบหมด", 
+                                 "คน":0, "งบ(R$)":0, "กำไร(R$)":0, "ROI%":r['ROI_Percent']})
                     continue
+                
                 spend   = r['Total_Cost'] if left >= r['Total_Cost'] else left
                 covered = int(spend / r['cost_head']) if r['cost_head'] > 0 else 0
                 alloc  += spend
                 rev     = covered * r['success_rate'] * r['ltv']
                 total_rev   += rev
                 total_saved += covered * r['success_rate']
+                
                 status  = "✅ เต็ม" if spend == r['Total_Cost'] else "⚠️ บางส่วน"
-                rows.append({"แคมเปญ":r['name'],"สถานะ":status,
-                             "คน":covered,"งบ(R$)":spend,
-                             "กำไร(R$)":rev-spend,"ROI%":r['ROI_Percent']})
+                rows.append({"แคมเปญ":r['name'], "สถานะ":status, 
+                             "คน":covered, "งบ(R$)":spend, 
+                             "กำไร(R$)":rev-spend, "ROI%":r['ROI_Percent']})
 
-            m1,m2,m3 = st.columns(3)
+            m1, m2, m3 = st.columns(3)
             m1.metric("💰 งบที่จัดสรร",  f"R$ {alloc:,.0f}",   f"จาก R$ {total_budget:,.0f}")
-            m2.metric("👥 คาดดึงกลับ",   f"{int(total_saved):,} คน")
+            m2.metric("👥 คาดดึงกลับ",    f"{int(total_saved):,} คน")
             profit = total_rev - alloc
-            m3.metric("✨ กำไรคาดหวัง",  f"R$ {profit:,.0f}",
+            m3.metric("✨ กำไรคาดหวัง",  f"R$ {profit:,.0f}", 
                       f"+{profit/alloc*100:.1f}% ROI" if alloc > 0 else "0%")
+            
             st.dataframe(pd.DataFrame(rows).style.format({
-                "คน":"{:,.0f}","งบ(R$)":"{:,.0f}",
-                "กำไร(R$)":"{:,.0f}","ROI%":"{:.1f}%"}),
+                "คน":"{:,.0f}", "งบ(R$)":"{:,.0f}", 
+                "กำไร(R$)":"{:,.0f}", "ROI%":"{:.1f}%"}), 
                 use_container_width=True)
-
 # ==========================================
 # PAGE 4: Logistics
 # ==========================================

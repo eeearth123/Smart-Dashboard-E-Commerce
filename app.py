@@ -589,7 +589,7 @@ elif page == "3. 🎯 Action Plan":
     new_proba, _ = predict_churn(sim, model, feature_names, threshold)
     
     # คืนค่า Uplift (ส่วนต่างความน่าจะเป็นที่ลดลง)
-    return max(old_prob - new_proba.mean(), 0.01))
+    return max(old_prob - new_proba.mean(), 0.01)
 
     # TAB 1: ค่าส่งแพง
     # TAB 1: ค่าส่งแพง

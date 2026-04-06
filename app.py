@@ -557,34 +557,58 @@ elif page == "3. 🎯 Action Plan":
     campaigns = []
 
     def sim_campaign(df_sim_in, col_override, val, model, feature_names, threshold):
-        """จำลองแก้ค่า Feature แล้ว Predict ใหม่ → คืน Uplift"""
+        """จำลองแก้ค่า Feature โดยการหักลบส่วนลด (Discount) แล้ว Predict ใหม่"""
         old_prob = df_sim_in['churn_probability'].mean()
         if model is None: return 0.30
+    
         sim = df_sim_in.copy()
+    
         if col_override in sim.columns:
+        # --- กรณีค่าส่ง: ลบออกตามงบต่อหัวที่ตั้งไว้ ---
+            if col_override == 'freight_value':
+            # ค่าส่งใหม่ = ค่าส่งเดิม - งบส่วนลด (val)
+            sim['freight_value'] = sim['freight_value'] - val
+            # ห้ามค่าส่งติดลบ (ต่ำสุดคือ 0)
+            sim['freight_value'] = sim['freight_value'].clip(lower=0)
+            
+            # สำคัญมาก: ต้องคำนวณ freight_ratio ใหม่ด้วย เพราะโมเดลใช้ฟีเจอร์นี้
+                if 'price' in sim.columns:
+                sim['freight_ratio'] = sim['freight_value'] / sim['price']
+        
+        # --- กรณีรีวิว: ยังคงใช้การเซตเป็น 5 ดาว (หรือตามที่ระบุ) ---
+        elif col_override == 'review_score':
+            sim['review_score'] = val
+            sim['is_low_score'] = (sim['review_score'].fillna(3) <= 2).astype(int)
+            sim['is_high_score'] = (sim['review_score'].fillna(3) == 5).astype(int)
+        
+        # --- กรณีอื่นๆ: เช่น งวดผ่อน ให้เซตเป็นค่าใหม่ตามปกติ ---
+        else:
             sim[col_override] = val
-            if col_override == 'review_score':
-                sim['is_low_score']  = (sim['review_score'].fillna(3) <= 2).astype(int)
-                sim['is_high_score'] = (sim['review_score'].fillna(3) == 5).astype(int)
-        new_proba, _ = predict_churn(sim, model, feature_names, threshold)
-        return max(old_prob - new_proba.mean(), 0.01)
 
+    # ทำนายผลด้วย AI บนข้อมูลที่จำลองส่วนลดแล้ว
+    new_proba, _ = predict_churn(sim, model, feature_names, threshold)
+    
+    # คืนค่า Uplift (ส่วนต่างความน่าจะเป็นที่ลดลง)
+    return max(old_prob - new_proba.mean(), 0.01))
+
+    # TAB 1: ค่าส่งแพง
     # TAB 1: ค่าส่งแพง
     with tab1:
         st.markdown("#### 🚚 แคมเปญส่งฟรี")
-        tgt = df_p3[df_p3['freight_ratio'] > 0.2] if 'freight_ratio' in df_p3.columns else pd.DataFrame()
-        st.info(f"👥 ลูกค้าค่าส่ง > 20% ของราคาสินค้า: **{len(tgt):,} คน**")
+        # ... (โค้ดส่วนอื่นคงเดิม) ...
         if len(tgt) > 0:
             c1,c2 = st.columns(2)
             with c1: cost_h = st.number_input("งบต่อหัว (R$):", value=20, key="c1")
-            with c2: mode   = st.radio("ประเมินโอกาส:", ["🤖 AI","✍️ Manual"], key="m1")
+            with c2: mode = st.radio("ประเมินโอกาส:", ["🤖 AI","✍️ Manual"], key="m1")
+            
             if "AI" in mode:
-                sr = sim_campaign(tgt,'freight_value',0, model,feature_names,best_threshold)
+                # แก้ไขตรงนี้: จาก 0 เป็น cost_h
+                sr = sim_campaign(tgt, 'freight_value', cost_h, model, feature_names, best_threshold)
                 st.success(f"🤖 Uplift ≈ **{sr*100:.1f}%**")
             else:
                 sr = st.slider("โอกาส (%):", 1,100,30,key="s1")/100
-            campaigns.append({"name":"🚚 ส่งฟรี","people":len(tgt),
-                               "cost_head":cost_h,"success_rate":sr,"ltv":avg_ltv})
+            
+            # (ส่วนที่เหลือคงเดิม)
 
     # TAB 2: ส่งช้า
     with tab2:

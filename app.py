@@ -573,7 +573,7 @@ elif page == "3. 🎯 Action Plan":
             
             # สำคัญมาก: ต้องคำนวณ freight_ratio ใหม่ด้วย เพราะโมเดลใช้ฟีเจอร์นี้
                 if 'price' in sim.columns:
-                sim['freight_ratio'] = sim['freight_value'] / sim['price']
+                    sim['freight_ratio'] = sim['freight_value'] / sim['price']
         
         # --- กรณีรีวิว: ยังคงใช้การเซตเป็น 5 ดาว (หรือตามที่ระบุ) ---
         elif col_override == 'review_score':

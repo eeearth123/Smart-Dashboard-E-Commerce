@@ -569,7 +569,7 @@ elif page == "3. 🎯 Action Plan":
                 # ค่าส่งใหม่ = ค่าส่งเดิม - งบส่วนลด (val)
                 sim['freight_value'] = sim['freight_value'] - val
             # ห้ามค่าส่งติดลบ (ต่ำสุดคือ 0)
-            sim['freight_value'] = sim['freight_value'].clip(lower=0)
+                sim['freight_value'] = sim['freight_value'].clip(lower=0)
             
             # สำคัญมาก: ต้องคำนวณ freight_ratio ใหม่ด้วย เพราะโมเดลใช้ฟีเจอร์นี้
                 if 'price' in sim.columns:

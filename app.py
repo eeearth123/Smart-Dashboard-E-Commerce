@@ -566,8 +566,8 @@ elif page == "3. 🎯 Action Plan":
         if col_override in sim.columns:
         # --- กรณีค่าส่ง: ลบออกตามงบต่อหัวที่ตั้งไว้ ---
             if col_override == 'freight_value':
-            # ค่าส่งใหม่ = ค่าส่งเดิม - งบส่วนลด (val)
-            sim['freight_value'] = sim['freight_value'] - val
+                # ค่าส่งใหม่ = ค่าส่งเดิม - งบส่วนลด (val)
+                sim['freight_value'] = sim['freight_value'] - val
             # ห้ามค่าส่งติดลบ (ต่ำสุดคือ 0)
             sim['freight_value'] = sim['freight_value'].clip(lower=0)
             

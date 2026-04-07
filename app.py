@@ -459,7 +459,7 @@ elif page == "2. 📊 Churn Overview":
 | 🔴 Lost | Lateness > 3.0 (หายนานเกิน 3 เท่าของรอบปกติ) |
 | 🟥 High Risk | AI Predict > 75% |
 | 🟧 Warning | Lateness > 1.5 |
-| 🟨 Medium Risk | AI Predict 50–75% |
+| 🟨 Medium Risk | AI Predict 40–75% |
 | 🟩 Active | มาตามรอบปกติ + AI เสี่ยงต่ำ |
         """)
 

@@ -481,496 +481,219 @@ elif page == "2. 📊 Churn Overview":
                          alt.Tooltip('Revenue',format=',.0f')]
             ).properties(height=350)
             st.altair_chart(donut, use_container_width=True)
-
 # ==========================================
-# PAGE 4: Logistics Insights
+# PAGE 3: Action Plan & Simulator (Model-Driven Simulation)
 # ==========================================
-elif page == "4. 🚛 Logistics Insights":
-    st.title("🚛 Logistics & Delivery Insights")
-    st.caption("วิเคราะห์ประสิทธิภาพการจัดส่ง และผลกระทบต่อ Churn")
+elif page == "3. 🎯 Action Plan":
+    st.title("🎯 Action Plan & Simulator")
+    st.caption("จำลองผลกระทบแคมเปญโดยแก้ฟีเจอร์ → ทำนายซ้ำ → วัดผลจริงจากโมเดล")
     
-    # ── 4.1 Filters ──────────────────────────────────────────────────────
-    with st.expander("🔍 กรองข้อมูล", expanded=False):
-        f1, f2, f3, f4 = st.columns(4)
+    # ── 3.1 Filter กลุ่มเป้าหมาย ────────────────────────────────────────
+    with st.expander("🎯 กำหนดกลุ่มเป้าหมาย", expanded=True):
+        f1, f2 = st.columns(2)
         
         with f1:
-            all_states = sorted(df['customer_state'].dropna().unique()) \
-                        if 'customer_state' in df.columns else []
-            sel_states = st.multiselect("รัฐ/จังหวัด:", all_states)
+            risk_segments = st.multiselect(
+                "กลุ่มความเสี่ยง:",
+                options=['High Risk', 'Warning (Late > 1.5x)', 'Medium Risk', 'Lost (Late > 3x)'],
+                default=['High Risk', 'Warning (Late > 1.5x)']
+            )
         
         with f2:
             all_cats = sorted(df['product_category_name'].dropna().unique()) \
-                      if 'product_category_name' in df.columns else []
+                       if 'product_category_name' in df.columns else []
             sel_cats = st.multiselect("หมวดสินค้า:", all_cats)
-        
-        with f3:
-            risk_filter = st.multiselect(
-                "กลุ่มความเสี่ยง:",
-                options=['High Risk', 'Warning (Late > 1.5x)', 'Medium Risk', 
-                         'Lost (Late > 3x)', 'Active'],
-                default=['High Risk', 'Warning (Late > 1.5x)', 'Lost (Late > 3x)']
-            )
-        
-        with f4:
-            delay_threshold = st.slider(
-                "ความล่าช้า (วัน):",
-                min_value=0, max_value=30,
-                value=(0, 10)
-            )
     
-    # ── 4.2 Filter Data ──────────────────────────────────────────────────
-    df_log = df.copy()
+    # ── 3.2 Filter Data & Calculate Metrics ──────────────────────────────
+    df_p3 = df.copy()
     
-    if sel_states:
-        df_log = df_log[df_log['customer_state'].isin(sel_states)]
-    
+    if risk_segments:
+        df_p3 = df_p3[df_p3['status'].isin(risk_segments)]
     if sel_cats:
-        df_log = df_log[df_log['product_category_name'].isin(sel_cats)]
+        df_p3 = df_p3[df_p3['product_category_name'].isin(sel_cats)]
     
-    if risk_filter:
-        df_log = df_log[df_log['status'].isin(risk_filter)]
+    avg_ltv = df_p3['payment_value'].mean() if 'payment_value' in df_p3.columns else 150
+    total_revenue_at_risk = df_p3['payment_value'].sum()
     
-    if 'delay_days' in df_log.columns:
-        df_log = df_log[
-            (df_log['delay_days'] >= delay_threshold[0]) &
-            (df_log['delay_days'] <= delay_threshold[1])
-        ]
+    m1, m2, m3 = st.columns(3)
+    m1.metric("👥 กลุ่มเป้าหมาย", f"{len(df_p3):,} คน")
+    m2.metric("💰 รายได้เฉลี่ย/คน", f"R$ {avg_ltv:,.0f}")
+    m3.metric("⚠️ รายได้ที่เสี่ยง", f"R$ {total_revenue_at_risk:,.0f}")
     
-    # ── 4.3 Key Metrics ──────────────────────────────────────────────────
     st.markdown("---")
-    st.subheader("📊 ภาพรวม Logistics Performance")
     
-    # คำนวณ metrics
-    total_orders = len(df_log)
-    avg_delivery_days = df_log['delivery_days'].mean() if 'delivery_days' in df_log.columns else 0
-    median_delivery_days = df_log['delivery_days'].median() if 'delivery_days' in df_log.columns else 0
+    # ── 3.3 Campaign Selection & Mapping ─────────────────────────────────
+    st.subheader("🎁 เลือกประเภทแคมเปญ")
     
-    if 'delay_days' in df_log.columns:
-        late_orders = len(df_log[df_log['delay_days'] > 0])
-        on_time_rate = ((df_log['delay_days'] <= 0).sum() / total_orders * 100) if total_orders > 0 else 0
-        avg_delay = df_log[df_log['delay_days'] > 0]['delay_days'].mean()
-    else:
-        late_orders = 0
-        on_time_rate = 100
-        avg_delay = 0
+    campaigns = {
+        "🚚 ส่งฟรี / ลดค่าส่ง": {"feature": "freight_value", "discount_pct": 100, "cost_base": 15},
+        "💵 ส่วนลดสินค้า 10%": {"feature": "price", "discount_pct": 10, "cost_base": None},
+        "💵 ส่วนลดสินค้า 20%": {"feature": "price", "discount_pct": 20, "cost_base": None},
+        "💳 ผ่อน 0% (6 เดือน)": {"feature": "payment_installments", "discount_pct": 0, "cost_base": 40},
+        "😡 ง้อรีวิวแย่ (ให้คูปอง)": {"feature": "is_low_score", "discount_pct": 0, "cost_base": 25},
+        "🐌 ง้อส่งช้า (ชดเชยค่าส่ง)": {"feature": "delivery_vs_estimated", "discount_pct": 0, "cost_base": 15}
+    }
     
-    if 'delivery_vs_estimated' in df_log.columns:
-        early_deliveries = len(df_log[df_log['delivery_vs_estimated'] > 0])
-        late_deliveries = len(df_log[df_log['delivery_vs_estimated'] < 0])
-    else:
-        early_deliveries = 0
-        late_deliveries = 0
+    selected_campaign = st.selectbox("เลือกแคมเปญ:", options=list(campaigns.keys()))
+    camp_config = campaigns[selected_campaign]
     
-    avg_freight = df_log['freight_value'].mean() if 'freight_value' in df_log.columns else 0
-    avg_freight_ratio = df_log['freight_ratio'].mean() if 'freight_ratio' in df_log.columns else 0
-    
-    # แสดง metrics
-    m1, m2, m3, m4, m5 = st.columns(5)
-    
-    m1.metric("📦 ออเดอร์ทั้งหมด", f"{total_orders:,}")
-    m2.metric("⏱️ ส่งเฉลี่ย", f"{avg_delivery_days:.1f} วัน", 
-              f"Median: {median_delivery_days:.0f} วัน")
-    m3.metric("✅ ส่งตรงเวลา", f"{on_time_rate:.1f}%",
-              "เป้าหมาย: 90%+" if on_time_rate < 90 else "ดีมาก! 🎉")
-    m4.metric("🐌 ล่าช้าเฉลี่ย", f"{avg_delay:.1f} วัน" if late_orders > 0 else "N/A",
-              f"{late_orders:,} ออเดอร์" if late_orders > 0 else "ไม่มี")
-    m5.metric("🚚 ค่าส่งเฉลี่ย", f"R$ {avg_freight:.2f}",
-              f"{avg_freight_ratio:.1%} ของราคา")
-    
-    # ── 4.4 Delivery Performance Trend ───────────────────────────────────
+    # ── 3.4 Budget & Cost Configuration ──────────────────────────────────
     st.markdown("---")
-    st.subheader("📈 Delivery Performance Trend")
+    st.subheader("💰 ตั้งค่างบประมาณ")
     
-    if 'order_purchase_timestamp' in df_log.columns and not df_log.empty:
-        # จัดกลุ่มตามเดือน
-        df_log['_month'] = df_log['order_purchase_timestamp'].dt.to_period('M')
-        
-        monthly_stats = df_log.groupby('_month').agg({
-            'delivery_days': 'mean',
-            'delay_days': lambda x: (x > 0).sum() if 'delay_days' in df_log.columns else 0,
-            'customer_unique_id': 'count'
-        }).reset_index()
-        
-        monthly_stats.columns = ['Month', 'Avg Delivery Days', 'Late Count', 'Total Orders']
-        monthly_stats['On-Time Rate'] = (1 - monthly_stats['Late Count'] / monthly_stats['Total Orders']) * 100
-        monthly_stats['Date'] = monthly_stats['Month'].astype(str)
-        
-        if len(monthly_stats) > 1:
-            # สร้างกราฟ
-            base = alt.Chart(monthly_stats).encode(
-                x=alt.X('Date:T', axis=alt.Axis(format='%b %Y', labelAngle=-45))
-            )
-            
-            # กราฟเส้น: Delivery Days
-            line_delivery = base.mark_line(color='#2E86AB', strokeWidth=3, point=True).encode(
-                y=alt.Y('Avg Delivery Days:Q', title='ระยะเวลาจัดส่ง (วัน)', axis=alt.Axis(titleColor='#2E86AB')),
-                tooltip=['Date', 'Avg Delivery Days', 'Total Orders']
-            )
-            
-            # กราฟแท่ง: On-Time Rate
-            bar_ontime = base.mark_bar(color='#A23B72', opacity=0.7).encode(
-                y=alt.Y('On-Time Rate:Q', title='On-Time Rate (%)', axis=alt.Axis(titleColor='#A23B72', orient='right')),
-                tooltip=['Date', 'On-Time Rate']
-            )
-            
-            # รวมกราฟ
-            chart = alt.layer(line_delivery, bar_ontime).resolve_scale(y='independent').properties(
-                height=350,
-                title='Delivery Performance Over Time'
-            )
-            
-            st.altair_chart(chart, use_container_width=True)
+    c1, c2, c3 = st.columns(3)
+    
+    with c1:
+        total_budget = st.number_input("งบประมาณรวม (R$):", min_value=1000, value=50000, step=5000)
+    
+    with c2:
+        if camp_config["cost_base"] is not None:
+            cost_per_head = st.number_input("ต้นทุนต่อคน (R$):", value=camp_config["cost_base"], min_value=0.0)
         else:
-            st.info("📊 มีข้อมูลไม่เพียงพอสำหรับแสดง Trend")
+            # ส่วนลดสินค้า: คำนวณจาก % ของราคาเฉลี่ย
+            cost_per_head = avg_ltv * (camp_config["discount_pct"] / 100)
+            st.write(f"💡 ต้นทุนต่อคน: R$ {cost_per_head:.0f} ({camp_config['discount_pct']}% ของ R$ {avg_ltv:.0f})")
     
-    # ── 4.5 Delivery Time Distribution ───────────────────────────────────
+    with c3:
+        max_reach = int(total_budget / cost_per_head) if cost_per_head > 0 else 0
+        st.metric("คนสูงสุดที่ครอบคลุม", f"{max_reach:,} คน")
+        st.caption(f"หากเลือกกลุ่ม < {max_reach:,} คน จะใช้งบจริงตามจำนวนคน")
+    
+    # ── 3.5 Simulation Engine (Model-Driven) ─────────────────────────────
     st.markdown("---")
-    st.subheader("📊 Delivery Time Distribution")
     
-    if 'delivery_days' in df_log.columns:
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Histogram: Delivery Days
-            hist_data = df_log['delivery_days'].dropna()
-            
-            fig, ax = plt.subplots(figsize=(8, 5))
-            ax.hist(hist_data, bins=30, color='#2E86AB', edgecolor='white', alpha=0.8)
-            ax.axvline(median_delivery_days, color='red', linestyle='--', linewidth=2, 
-                      label=f'Median: {median_delivery_days:.0f} วัน')
-            ax.axvline(avg_delivery_days, color='orange', linestyle='--', linewidth=2,
-                      label=f'Mean: {avg_delivery_days:.1f} วัน')
-            ax.set_xlabel('ระยะเวลาจัดส่ง (วัน)')
-            ax.set_ylabel('จำนวนออเดอร์')
-            ax.set_title('Distribution of Delivery Days')
-            ax.legend()
-            ax.grid(axis='y', alpha=0.3)
-            
-            st.pyplot(fig)
-        
-        with col2:
-            # Box Plot: Delivery Days by State
-            if 'customer_state' in df_log.columns:
-                state_delivery = df_log.groupby('customer_state')['delivery_days'].median().reset_index()
-                state_delivery = state_delivery.sort_values('delivery_days', ascending=False).head(15)
+    if st.button("🔄 จำลองผลกระทบจากโมเดล (Run Simulation)", type="primary", use_container_width=True):
+        if len(df_p3) == 0:
+            st.error("❌ ไม่มีข้อมูลในกลุ่มเป้าหมายที่เลือก")
+        else:
+            with st.spinner("🤖 กำลังจำลองการเปลี่ยนฟีเจอร์และทำนายซ้ำ..."):
+                # 1. เตรียมข้อมูลเดิม
+                X_orig = df_p3.reindex(columns=feature_names, fill_value=0)
+                prob_orig = model.predict_proba(X_orig)[:, 1]
                 
-                fig2, ax2 = plt.subplots(figsize=(8, 5))
-                ax2.barh(state_delivery['customer_state'], state_delivery['delivery_days'], 
-                        color='#A23B72', edgecolor='white')
-                ax2.set_xlabel('Median Delivery Days')
-                ax2.set_title('Top 15 States - Slowest Delivery')
-                ax2.grid(axis='x', alpha=0.3)
+                # 2. สร้างข้อมูลจำลอง (แก้ฟีเจอร์ตามแคมเปญ)
+                df_sim = df_p3.copy()
                 
-                plt.tight_layout()
-                st.pyplot(fig2)
-    
-    # ── 4.6 Delay Analysis ───────────────────────────────────────────────
-    st.markdown("---")
-    st.subheader("🐌 Delay Analysis")
-    
-    if 'delay_days' in df_log.columns:
-        delay_stats = df_log[df_log['delay_days'] > 0]['delay_days']
-        
-        if len(delay_stats) > 0:
-            d1, d2, d3, d4 = st.columns(4)
-            
-            d1.metric("📉 ออเดอร์ที่ล่าช้า", f"{len(delay_stats):,}",
-                     f"{len(delay_stats)/total_orders*100:.1f}% ของทั้งหมด")
-            d2.metric("⏳ ล่าช้าเฉลี่ย", f"{delay_stats.mean():.1f} วัน")
-            d3.metric("🔴 ล่าช้าสูงสุด", f"{delay_stats.max():.0f} วัน")
-            d4.metric("📊 Median Delay", f"{delay_stats.median():.1f} วัน")
-            
-            # Delay Distribution
-            fig, ax = plt.subplots(figsize=(10, 6))
-            ax.hist(delay_stats, bins=20, color='#E74C3C', edgecolor='white', alpha=0.8)
-            ax.axvline(delay_stats.mean(), color='black', linestyle='--', linewidth=2,
-                      label=f'Mean: {delay_stats.mean():.1f} วัน')
-            ax.set_xlabel('ความล่าช้า (วัน)')
-            ax.set_ylabel('จำนวนออเดอร์')
-            ax.set_title('Delay Distribution (Late Orders Only)')
-            ax.legend()
-            ax.grid(axis='y', alpha=0.3)
-            
-            st.pyplot(fig)
-            
-            # Delay Impact on Churn
-            st.markdown("#### 🔗 ความสัมพันธ์ระหว่าง Delay กับ Churn")
-            
-            df_delay_analysis = df_log.copy()
-            df_delay_analysis['is_late'] = (df_delay_analysis['delay_days'] > 0).astype(int)
-            
-            if 'is_churn' in df_delay_analysis.columns:
-                late_churn_rate = df_delay_analysis[df_delay_analysis['is_late'] == 1]['is_churn'].mean()
-                ontime_churn_rate = df_delay_analysis[df_delay_analysis['is_late'] == 0]['is_churn'].mean()
-                
-                impact_col1, impact_col2 = st.columns(2)
-                
-                impact_col1.metric(
-                    "🔴 Churn Rate (ล่าช้า)",
-                    f"{late_churn_rate:.1%}",
-                    delta=f"+{((late_churn_rate/ontime_churn_rate)-1)*100:.1f}% vs ตรงเวลา"
-                )
-                
-                impact_col2.metric(
-                    "🟢 Churn Rate (ตรงเวลา)",
-                    f"{ontime_churn_rate:.1%}",
-                    delta="Baseline"
-                )
-                
-                if late_churn_rate > ontime_churn_rate:
-                    st.warning(f"""
-                    ⚠️ **ออเดอร์ที่ล่าช้ามี Churn Rate สูงกว่า {late_churn_rate/ontime_churn_rate:.1f} เท่า!**
+                if "ส่งฟรี" in selected_campaign:
+                    if 'freight_value' in df_sim.columns: df_sim['freight_value'] = 0
+                    if 'freight_ratio' in df_sim.columns: df_sim['freight_ratio'] = 0
                     
-                    **แนะนำ:**
-                    • ปรับปรุง logistics ในรัฐที่มีปัญหา
-                    • แจ้งลูกค้าล่วงหน้าหากมีการล่าช้า
-                    • ให้ชดเชย (คูปอง/ส่วนลด) สำหรับออเดอร์ที่ล่าช้า
-                    """)
-    
-    # ── 4.7 Geographic Analysis ──────────────────────────────────────────
-    st.markdown("---")
-    st.subheader("🗺️ Geographic Logistics Performance")
-    
-    if 'customer_state' in df_log.columns:
-        # Brazil coordinates
-        brazil_coords = {
-            'AC': [-9.02, -70.81], 'AL': [-9.57, -36.78], 'AM': [-3.41, -65.85],
-            'AP': [0.90, -52.00], 'BA': [-12.58, -41.70], 'CE': [-5.49, -39.32],
-            'DF': [-15.79, -47.88], 'ES': [-19.18, -40.30], 'GO': [-15.82, -49.84],
-            'MA': [-5.19, -45.16], 'MG': [-19.81, -43.95], 'MS': [-20.77, -54.78],
-            'MT': [-12.96, -56.92], 'PA': [-6.31, -52.46], 'PB': [-7.24, -36.78],
-            'PE': [-8.81, -36.95], 'PI': [-7.71, -42.72], 'PR': [-25.25, -52.02],
-            'RJ': [-22.90, -43.17], 'RN': [-5.40, -36.95], 'RO': [-11.50, -63.58],
-            'RR': [2.73, -62.07], 'RS': [-30.03, -51.22], 'SC': [-27.24, -50.21],
-            'SE': [-10.57, -37.38], 'SP': [-23.55, -46.63], 'TO': [-10.17, -48.33]
-        }
-        
-        # Aggregate by state
-        state_stats = df_log.groupby('customer_state').agg({
-            'delivery_days': 'mean',
-            'delay_days': lambda x: (x > 0).sum() if 'delay_days' in df_log.columns else 0,
-            'freight_value': 'mean',
-            'customer_unique_id': 'count',
-            'churn_probability': 'mean'
-        }).reset_index()
-        
-        state_stats.columns = ['State', 'Avg Delivery Days', 'Late Count', 'Avg Freight', 'Orders', 'Churn Risk']
-        state_stats['On-Time Rate'] = 1 - (state_stats['Late Count'] / state_stats['Orders'])
-        
-        # Add coordinates
-        state_stats['lat'] = state_stats['State'].map(lambda x: brazil_coords.get(x, [0, 0])[0])
-        state_stats['lon'] = state_stats['State'].map(lambda x: brazil_coords.get(x, [0, 0])[1])
-        
-        # Map visualization
-        import pydeck as pdk
-        
-        st.markdown("#### 📍 Logistics Performance by State")
-        
-        view_state = pdk.ViewState(
-            latitude=-14.24,
-            longitude=-51.93,
-            zoom=3.5,
-            pitch=20
-        )
-        
-        # Layer: Delivery performance
-        layer = pdk.Layer(
-            "ScatterplotLayer",
-            state_stats,
-            get_position='[lon, lat]',
-            get_color=[241, 196, 15, 200],
-            get_radius=200000,
-            pickable=True,
-            opacity=0.8,
-            stroked=True,
-            filled=True,
-            radius_min_pixels=5,
-            radius_max_pixels=50
-        )
-        
-        tooltip = {
-            "html": "<b>{State}</b><br/>"
-                    "📦 Orders: {Orders}<br/>"
-                    "⏱️ Avg Delivery: {Avg Delivery Days:.1f} days<br/>"
-                    "🐌 Late: {Late Count}<br/>"
-                    "⚠️ Churn Risk: {Churn Risk:.1%}",
-            "style": {"backgroundColor": "steelblue", "color": "white"}
-        }
-        
-        map_chart = pdk.Deck(
-            layers=[layer],
-            initial_view_state=view_state,
-            tooltip=tooltip,
-            map_provider='carto',
-            map_style='light'
-        )
-        
-        st.pydeck_chart(map_chart)
-        
-        # State ranking table
-        st.markdown("#### 📊 State Performance Ranking")
-        
-        tab1, tab2 = st.tabs(["🐌 ส่งช้าที่สุด", "⚠️ Churn Risk สูงสุด"])
-        
-        with tab1:
-            slow_states = state_stats.nlargest(10, 'Avg Delivery Days')
-            st.dataframe(
-                slow_states[['State', 'Avg Delivery Days', 'Late Count', 'Orders', 'On-Time Rate']],
-                column_config={
-                    "Avg Delivery Days": st.column_config.NumberColumn("Avg Days", format="%.1f"),
-                    "On-Time Rate": st.column_config.ProgressColumn(format="%.1%")
-                },
-                hide_index=True,
-                use_container_width=True
-            )
-        
-        with tab2:
-            risk_states = state_stats.nlargest(10, 'Churn Risk')
-            st.dataframe(
-                risk_states[['State', 'Churn Risk', 'Avg Delivery Days', 'Late Count', 'Orders']],
-                column_config={
-                    "Churn Risk": st.column_config.ProgressColumn(format="%.1%"),
-                    "Avg Delivery Days": st.column_config.NumberColumn("Avg Days", format="%.1f")
-                },
-                hide_index=True,
-                use_container_width=True
-            )
-    
-    # ── 4.8 Freight Analysis ─────────────────────────────────────────────
-    st.markdown("---")
-    st.subheader("💰 Freight Cost Analysis")
-    
-    if 'freight_value' in df_log.columns and 'freight_ratio' in df_log.columns:
-        f1, f2, f3 = st.columns(3)
-        
-        f1.metric("💵 ค่าส่งเฉลี่ย", f"R$ {avg_freight:.2f}")
-        f2.metric("📊 Freight Ratio", f"{avg_freight_ratio:.1%}",
-                 "สูง!" if avg_freight_ratio > 0.2 else "ปกติ")
-        f3.metric("💸 Total Freight Cost", 
-                 f"R$ {df_log['freight_value'].sum():,.0f}")
-        
-        # Freight vs Churn correlation
-        if 'churn_probability' in df_log.columns:
-            high_freight_churn = df_log[df_log['freight_ratio'] > 0.2]['churn_probability'].mean()
-            low_freight_churn = df_log[df_log['freight_ratio'] <= 0.2]['churn_probability'].mean()
-            
-            st.markdown("#### 🔗 Freight Ratio vs Churn Probability")
-            
-            corr_col1, corr_col2 = st.columns(2)
-            
-            corr_col1.metric(
-                "🔴 High Freight (>20%)",
-                f"Churn Prob: {high_freight_churn:.1%}",
-                delta=f"+{((high_freight_churn/low_freight_churn)-1)*100:.1f}% vs ต่ำ"
-            )
-            
-            corr_col2.metric(
-                "🟢 Low Freight (≤20%)",
-                f"Churn Prob: {low_freight_churn:.1%}",
-                delta="Baseline"
-            )
-            
-            if high_freight_churn > low_freight_churn:
-                st.info(f"""
-                💡 **Insight:** ลูกค้าที่มี Freight Ratio สูง (>20%) มีแนวโน้ม Churn สูงกว่า 
-                {high_freight_churn/low_freight_churn:.1f} เท่า
+                elif "ส่วนลดสินค้า" in selected_campaign:
+                    disc = camp_config["discount_pct"] / 100
+                    if 'price' in df_sim.columns: df_sim['price'] = df_sim['price'] * (1 - disc)
+                    if 'freight_ratio' in df_sim.columns and 'freight_value' in df_sim.columns:
+                        df_sim['freight_ratio'] = df_sim['freight_value'] / df_sim['price'].replace(0, 1)
+                        
+                elif "ผ่อน 0%" in selected_campaign:
+                    if 'payment_installments' in df_sim.columns:
+                        df_sim['payment_installments'] = df_sim['payment_installments'].clip(lower=1) * 3
+                        
+                elif "รีวิวแย่" in selected_campaign:
+                    if 'is_low_score' in df_sim.columns: df_sim['is_low_score'] = 0
+                    
+                elif "ส่งช้า" in selected_campaign:
+                    if 'delivery_vs_estimated' in df_sim.columns:
+                        df_sim['delivery_vs_estimated'] = df_sim['delivery_vs_estimated'].clip(lower=-3)
                 
-                **แนะนำ:**
-                • ให้ส่วนลดค่าส่งสำหรับลูกค้ากลุ่มนี้
-                • ปรับปรุง logistics เพื่อลดค่าส่ง
-                • เสนอ Free Shipping เมื่อซื้อครบ
-                """)
-        
-        # Freight distribution
-        fig, ax = plt.subplots(figsize=(10, 5))
-        ax.hist(df_log['freight_ratio'].dropna(), bins=30, color='#27AE60', edgecolor='white', alpha=0.8)
-        ax.axvline(0.2, color='red', linestyle='--', linewidth=2, label='Threshold: 20%')
-        ax.set_xlabel('Freight Ratio')
-        ax.set_ylabel('Count')
-        ax.set_title('Distribution of Freight Ratio')
-        ax.legend()
-        ax.grid(axis='y', alpha=0.3)
-        
-        st.pyplot(fig)
-    
-    # ── 4.9 Actionable Insights ──────────────────────────────────────────
-    st.markdown("---")
-    st.subheader("💡 Actionable Insights & Recommendations")
-    
-    insights = []
-    
-    # Insight 1: Late delivery impact
-    if 'delay_days' in df_log.columns and 'is_churn' in df_log.columns:
-        late_churn = df_log[df_log['delay_days'] > 0]['is_churn'].mean()
-        ontime_churn = df_log[df_log['delay_days'] <= 0]['is_churn'].mean()
-        
-        if late_churn > ontime_churn * 1.2:
-            insights.append({
-                "priority": "🔴 High",
-                "issue": "ออเดอร์ล่าช้ามี Churn Rate สูง",
-                "impact": f"Churn สูงขึ้น {late_churn/ontime_churn:.1f} เท่า",
-                "action": "• ปรับปรุง logistics<br>• แจ้งลูกค้าล่วงหน้า<br>• ให้ชดเชย"
-            })
-    
-    # Insight 2: High freight ratio
-    if 'freight_ratio' in df_log.columns and 'churn_probability' in df_log.columns:
-        high_freight = df_log[df_log['freight_ratio'] > 0.2]['churn_probability'].mean()
-        low_freight = df_log[df_log['freight_ratio'] <= 0.2]['churn_probability'].mean()
-        
-        if high_freight > low_freight * 1.1:
-            insights.append({
-                "priority": "🟠 Medium",
-                "issue": "ค่าส่งสูงสัมพันธ์กับ Churn",
-                "impact": f"Churn Prob. สูงขึ้น {high_freight/low_freight:.1f} เท่า",
-                "action": "• ลดค่าส่ง<br>• Free Shipping threshold<br>• เจรจากับ carrier"
-            })
-    
-    # Insight 3: Slow states
-    if 'customer_state' in df_log.columns and 'delivery_days' in df_log.columns:
-        slow_states = df_log.groupby('customer_state')['delivery_days'].median()
-        if len(slow_states) > 0:
-            slowest = slow_states.idxmax()
-            slowest_days = slow_states.max()
-            
-            if slowest_days > 15:
-                insights.append({
-                    "priority": "🟡 Low",
-                    "issue": f"รัฐ {slowest} ส่งช้ามาก",
-                    "impact": f"เฉลี่ย {slowest_days:.0f} วัน",
-                    "action": "• หา carrier ใหม่<br>• เพิ่ม warehouse<br>• แจ้งลูกค้า"
+                # 3. ทำนายค่าใหม่
+                X_sim = df_sim.reindex(columns=feature_names, fill_value=0)
+                prob_sim = model.predict_proba(X_sim)[:, 1]
+                
+                # 4. คำนวณ Uplift & Success Rate
+                uplift = prob_orig - prob_sim  # บวก = ความเสี่ยงลดลง
+                # เกณฑ์ Success: ความเสี่ยงลดลงอย่างน้อย 8% (0.08)
+                THRESHOLD_SUCCESS = 0.08
+                success_mask = uplift > THRESHOLD_SUCCESS
+                success_rate = success_mask.mean()
+                avg_uplift = uplift.mean()
+                
+                # 5. คำนวณ ROI
+                people_reached = min(max_reach, len(df_p3))
+                people_recovered = int(people_reached * success_rate)
+                actual_cost = people_reached * cost_per_head
+                expected_revenue = people_recovered * avg_ltv
+                profit = expected_revenue - actual_cost
+                roi = (profit / actual_cost * 100) if actual_cost > 0 else 0
+                break_even_rate = cost_per_head / avg_ltv if avg_ltv > 0 else 0
+                
+                # ── 3.6 Display Results ──────────────────────────────────
+                st.success("✅ จำลองเสร็จสิ้น!")
+                
+                # แสดง Uplift Distribution
+                dist_high = (uplift > 0.15).sum()
+                dist_med = ((uplift > 0.08) & (uplift <= 0.15)).sum()
+                dist_low = ((uplift > 0) & (uplift <= 0.08)).sum()
+                dist_none = (uplift <= 0).sum()
+                
+                st.write("**📊 การกระจายตัวของผลตอบสนอง (Uplift Distribution)**")
+                st.bar_chart({
+                    'ตอบสนองสูง (>15%)': dist_high,
+                    'ตอบสนองปานกลาง (8-15%)': dist_med,
+                    'ตอบสนองต่ำ (0-8%)': dist_low,
+                    'ไม่ตอบสนอง/แย่ลง': dist_none
                 })
-    
-    # Display insights
-    if insights:
-        for i, insight in enumerate(insights, 1):
-            with st.container():
-                col1, col2, col3, col4 = st.columns([1, 3, 2, 3])
                 
-                col1.markdown(f"**{insight['priority']}**")
-                col2.markdown(f"**{insight['issue']}**")
-                col3.markdown(f"📊 {insight['impact']}")
-                col4.markdown(f"🔧 {insight['action']}")
+                st.markdown("---")
+                st.subheader("📊 ผลลัพธ์ทางธุรกิจ")
                 
-                if i < len(insights):
-                    st.markdown("---")
+                r1, r2, r3, r4, r5 = st.columns(5)
+                r1.metric("🎯 คนที่ได้รับแคมเปญ", f"{people_reached:,}")
+                r2.metric("✅ ดึงกลับได้ (Success)", f"{people_recovered:,}", f"{success_rate:.1%}")
+                r3.metric("💰 รายได้คาดหวัง", f"R$ {expected_revenue:,.0f}")
+                r4.metric("💵 ต้นทุนจริง", f"R$ {actual_cost:,.0f}")
+                
+                if profit > 0:
+                    r5.metric("📈 กำไรสุทธิ (ROI)", f"R$ {profit:,.0f}", f"+{roi:.1f}%")
+                else:
+                    r5.metric("📉 ขาดทุนสุทธิ (ROI)", f"R$ {profit:,.0f}", f"{roi:.1f}%")
+                
+                # Break-even & Recommendation
+                st.markdown("---")
+                col_a, col_b = st.columns(2)
+                
+                with col_a:
+                    st.info(f"""
+                    📐 **Break-even Analysis**
+                    • ต้นทุนต่อคน: **R$ {cost_per_head:.0f}**
+                    • รายได้เฉลี่ยต่อคน: **R$ {avg_ltv:.0f}**
+                    • **จุดคุ้มทุน:** ต้องมี Success Rate ≥ **{break_even_rate:.1%}**
+                    • **ผลลัพธ์จากโมเดล:** **{success_rate:.1%}** {'✅ คุ้มค่า' if success_rate >= break_even_rate else '⚠️ ยังไม่คุ้ม'}
+                    """)
+                
+                with col_b:
+                    if profit > 0:
+                        st.success(f"""
+                        🎉 **แนะนำ: ดำเนินการได้**
+                        • ROI {roi:.1f}% ถือว่าดีมาก
+                        • สามารถเพิ่มงบหรือขยายกลุ่มเป้าหมายได้
+                        • แคมเปญนี้ตอบโจทย์ Feature Importance หลักของโมเดล
+                        """)
+                    else:
+                        gap = break_even_rate - success_rate
+                        st.error(f"""
+                        ⚠️ **แนะนำ: ปรับปรุงก่อนดำเนินการ**
+                        • ขาดทุนเพราะ Success Rate ({success_rate:.1%}) ต่ำกว่าจุดคุ้มทุน ({break_even_rate:.1%})
+                        • ส่วนต่าง: **{gap:.1%}**
+                        • **วิธีแก้:** 
+                          1. เปลี่ยนแคมเปญเป็น 'ส่งฟรี' (มักได้ Success Rate สูงสุด)
+                          2. ลดต้นทุนต่อคน หรือเพิ่ม LTV
+                          3. เจาะกลุ่มเฉพาะ High Risk + Lateness > 2.0
+                        """)
+                
+                # ── 3.7 Export Target List ───────────────────────────────
+                st.markdown("---")
+                if st.button("📥 Export รายชื่อลูกค้าเป้าหมาย (CSV)"):
+                    export_df = df_p3[['customer_unique_id', 'status', 'churn_probability', 
+                                       'payment_value', 'product_category_name']].copy()
+                    csv = export_df.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        label="⬇️ ดาวน์โหลด CSV",
+                        data=csv,
+                        file_name=f"target_list_{selected_campaign.replace(' ', '_')}.csv",
+                        mime='text/csv'
+                    )
     else:
-        st.success("✅ Logistics performance ดีมาก! ไม่พบปัญหาใหญ่")
-    
-    # ── 4.10 Export Report ───────────────────────────────────────────────
-    st.markdown("---")
-    if st.button("📥 Export Logistics Report (CSV)"):
-        export_data = df_log[[
-            'customer_unique_id', 'order_id', 'delivery_days', 'delay_days',
-            'freight_value', 'freight_ratio', 'churn_probability', 'status'
-        ]].copy()
-        
-        csv = export_data.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="⬇️ ดาวน์โหลด Logistics Report",
-            data=csv,
-            file_name="logistics_analysis.csv",
-            mime='text/csv'
-        )
+        st.info("👆 กดปุ่ม **'จำลองผลกระทบจากโมเดล'** เพื่อคำนวณ Success Rate และ ROI แบบ Real-time")
 # ==========================================
 # PAGE 4: Logistics
 # ==========================================

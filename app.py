@@ -54,13 +54,6 @@ def load_bq_data():
 
 # ==========================================
 # 3. FEATURE ENGINEERING
-#    สร้างทุก Feature จาก columns ที่มีใน BQ
-#    Available: customer_unique_id, customer_id,
-#    order_purchase_timestamp, order_delivered_customer_date,
-#    order_estimated_delivery_date, product_category_name,
-#    price, freight_value, payment_type, payment_installments,
-#    payment_sequential, review_score, has_comment,
-#    seller_id, customer_city, customer_state
 # ==========================================
 def process_features(df_raw):
     df = df_raw.copy()
@@ -72,7 +65,7 @@ def process_features(df_raw):
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors='coerce')
 
-    # ── 3.2 เรียงข้อมูลตาม customer + เวลา (สำคัญมากสำหรับ Shift) ──────
+    # ── 3.2 เรียงข้อมูลตาม customer + เวลา ──────────────────────────────
     if 'order_purchase_timestamp' in df.columns:
         df = df.sort_values(['customer_unique_id', 'order_purchase_timestamp']
                             ).reset_index(drop=True)
@@ -96,7 +89,7 @@ def process_features(df_raw):
     else:
         df['estimated_days'] = np.nan
 
-    # delivery_vs_estimated (บวก = ส่งเร็วกว่า, ลบ = ส่งช้ากว่า)
+    # delivery_vs_estimated
     df['delivery_vs_estimated'] = df['estimated_days'] - df['delivery_days']
 
     # ── 3.4 Price & Freight ───────────────────────────────────────────────
@@ -136,7 +129,6 @@ def process_features(df_raw):
         df['is_high_score'] = 0
 
     # ── 3.7 Purchase Count & Repeat Buyer ─────────────────────────────────
-    # cumcount → purchase_count (นับจาก 1)
     df['purchase_count'] = (
         df.groupby('customer_unique_id').cumcount() + 1
     )
@@ -151,12 +143,10 @@ def process_features(df_raw):
             df['order_purchase_timestamp'] - df['prev_purchase_date']
         ).dt.days
 
-        # Median ของ Repeat Buyers เท่านั้น (ไม่ Impute ด้วย one-time buyer)
         median_gap = df.loc[df['is_repeat_buyer'] == 1,
                             'days_since_last_purchase'].median()
         if pd.isna(median_gap): median_gap = 90.0
 
-        # avg_purchase_gap ต่อ customer
         df['avg_purchase_gap'] = (
             df.groupby('customer_unique_id')['days_since_last_purchase']
             .transform('mean')
@@ -164,7 +154,6 @@ def process_features(df_raw):
         global_avg = df['avg_purchase_gap'].median()
         df['avg_purchase_gap'] = df['avg_purchase_gap'].fillna(global_avg)
 
-        # gap_vs_avg (บวก = มาเร็วกว่าปกติ)
         df['gap_vs_avg'] = df['avg_purchase_gap'] - df['days_since_last_purchase']
         df['days_since_last_purchase'] = df['days_since_last_purchase'].fillna(median_gap)
         df['gap_vs_avg']               = df['gap_vs_avg'].fillna(0)
@@ -180,18 +169,16 @@ def process_features(df_raw):
             df[c] = 0
 
     # ── 3.9 Category Churn Risk ──────────────────────────────────────────
-    # คำนวณชั่วคราวจากค่าเฉลี่ย churn_probability (จะ update หลัง predict)
     if 'cat_churn_risk' not in df.columns:
-        df['cat_churn_risk'] = 0.80   # default ก่อน predict
+        df['cat_churn_risk'] = 0.80
 
-    # ── 3.10 Lateness Score (ใช้ Reference Date = max ในข้อมูล) ─────────
+    # ── 3.10 Lateness Score ──────────────────────────────────────────────
     if 'order_purchase_timestamp' in df.columns:
         ref_date = df['order_purchase_timestamp'].max()
         last_order = df.groupby('customer_unique_id')[
             'order_purchase_timestamp'].transform('max')
         df['days_since_purchase'] = (ref_date - last_order).dt.days
 
-        # cat_median_days จาก Order Gap ภายในกลุ่ม Category
         tmp = df.sort_values(['customer_unique_id','product_category_name',
                               'order_purchase_timestamp'])
         tmp['prev_ts'] = tmp.groupby(
@@ -216,7 +203,7 @@ def process_features(df_raw):
         df['cat_median_days']     = 180
         df['lateness_score']      = 0.5
 
-    # ── 3.11 delay_days (สำหรับแสดงผลใน Dashboard เท่านั้น) ────────────
+    # ── 3.11 delay_days ──────────────────────────────────────────────────
     if 'order_delivered_customer_date' in df.columns and \
        'order_estimated_delivery_date' in df.columns:
         df['delay_days'] = (
@@ -229,14 +216,14 @@ def process_features(df_raw):
     return df
 
 # ==========================================
-# 4. LOAD MODEL
+# 4. LOAD MODEL (แก้ไขชื่อไฟล์)
 # ==========================================
 @st.cache_resource
 def load_models():
     d = os.path.dirname(os.path.abspath(__file__))
     try:
-        model    = joblib.load(os.path.join(d, 'olist_churn_model_v4.pkl'))
-        features = joblib.load(os.path.join(d, 'model_features_v4.pkl'))
+        model    = joblib.load(os.path.join(d, 'olist_churn_model_final (1).pkl'))
+        features = joblib.load(os.path.join(d, 'model_features_final (1).pkl'))
         return model, features, None
     except Exception as e:
         return None, None, str(e)
@@ -245,7 +232,6 @@ def load_models():
 # 5. PREDICT
 # ==========================================
 def predict_churn(df, model, feature_names, threshold):
-    """สร้าง X จาก feature_names แล้ว predict"""
     X = pd.DataFrame(index=df.index)
     for col in feature_names:
         X[col] = df[col] if col in df.columns else 0
@@ -269,7 +255,7 @@ with st.sidebar:
 
 df_raw, bq_error = load_bq_data()
 model, feature_names, model_error = load_models()
-best_threshold = 0.6
+best_threshold = 0.55  # เปลี่ยนเป็น 0.55
 
 if bq_error:
     st.error(f"⚠️ BigQuery Error: {bq_error}")
@@ -287,7 +273,6 @@ if model is not None and feature_names:
     df['churn_probability'] = proba
     df['churn_prediction']  = pred
 
-    # อัปเดต cat_churn_risk หลัง predict แล้ว
     if 'product_category_name' in df.columns:
         cat_risk_map     = df.groupby('product_category_name')['churn_probability'].mean()
         df['cat_churn_risk'] = df['product_category_name'].map(cat_risk_map)
@@ -295,27 +280,36 @@ else:
     df['churn_probability'] = 0.5
     df['churn_prediction']  = 1
 
-# is_churn (label สำหรับ Display)
 df['is_churn'] = df['churn_prediction']
 
-# Status (Rule-based + AI ผสม)
+# ==========================================
+# 8. STATUS CLASSIFICATION (แก้ไข Medium Risk เป็น 0.40-0.75)
+# ==========================================
 def get_status(row):
     prob = row.get('churn_probability', 0)
     late = row.get('lateness_score', 0)
     if late > 3.0:  return 'Lost (Late > 3x)'
     if prob > 0.75: return 'High Risk'
     if late > 1.5:  return 'Warning (Late > 1.5x)'
-    if prob > 0.5:  return 'Medium Risk'
+    if prob >= 0.40:  return 'Medium Risk'  # เปลี่ยนจาก 0.50 เป็น 0.40
     return 'Active'
 
 df['status'] = df.apply(get_status, axis=1)
 
 # ==========================================
-# 8. NAVIGATION
+# 9. NAVIGATION
 # ==========================================
 st.sidebar.title("✈️ Olist Cockpit")
 st.sidebar.success(f"✅ โหลดข้อมูลแล้ว ({len(df):,} rows)")
 st.sidebar.info(f"🎯 Model Threshold: {best_threshold:.2f}")
+st.sidebar.markdown("""
+**📊 Business Rules:**
+- 🔴 Lost: Late > 3.0
+- 🟥 High Risk: AI > 75%
+- 🟧 Warning: Late > 1.5
+- 🟨 Medium Risk: AI 40-75%
+- 🟩 Active: AI < 40%
+""")
 page = st.sidebar.radio("Navigation", [
     "1. 💰 Business Overview",
     "2. 📊 Churn Overview",
@@ -328,7 +322,7 @@ page = st.sidebar.radio("Navigation", [
 st.sidebar.markdown("---")
 
 # ==========================================
-# PAGE 1: Business Overview (UPDATED VERSION)
+# PAGE 1: Business Overview
 # ==========================================
 if page == "1. 💰 Business Overview":
     st.title("💰 Business Overview")
@@ -342,14 +336,12 @@ if page == "1. 💰 Business Overview":
     df_d = df[df['product_category_name'].isin(sel_cats)].copy() if sel_cats else df.copy()
     st.markdown("---")
 
-    # ── Section 1: KPI หลัก ───────────────────────────────────────────────
     total_rev   = df_d['payment_value'].sum() if 'payment_value' in df_d.columns else 0
     avg_order   = df_d['payment_value'].mean() if 'payment_value' in df_d.columns else 0
     n_customers = df_d['customer_unique_id'].nunique() if 'customer_unique_id' in df_d.columns else 0
     clv         = avg_order * df_d.groupby('customer_unique_id').size().mean() \
                   if 'customer_unique_id' in df_d.columns and n_customers > 0 else avg_order
 
-    # คำนวณ MoM Growth แบบ Robust
     mom_growth = None
     if 'order_purchase_timestamp' in df_d.columns and not df_d.empty:
         df_d['_month'] = df_d['order_purchase_timestamp'].dt.to_period('M')
@@ -357,8 +349,8 @@ if page == "1. 💰 Business Overview":
         monthly_rev_series = df_d.groupby('_month')['payment_value'].sum().reindex(all_months, fill_value=0)
 
         if len(monthly_rev_series) >= 3:
-            last_complete_m = monthly_rev_series.iloc[-2]  # เดือนที่จบไปแล้ว
-            prev_m          = monthly_rev_series.iloc[-3]  # เดือนก่อนหน้า
+            last_complete_m = monthly_rev_series.iloc[-2]
+            prev_m          = monthly_rev_series.iloc[-3]
             if prev_m > 0:
                 mom_growth = ((last_complete_m - prev_m) / prev_m) * 100
         elif len(monthly_rev_series) == 2:
@@ -377,17 +369,11 @@ if page == "1. 💰 Business Overview":
     k4.metric("👤 CLV (Estimated)", f"R$ {clv:,.0f}")
     st.markdown("---")
 
-    # ── Section 2: Monthly Revenue Trend ──────────────────────────────────
     st.subheader("📈 Monthly Revenue Trend")
     if 'order_purchase_timestamp' in df_d.columns and not df_d.empty:
-        # เตรียมข้อมูลรายเดือนแบบ Resample เพื่อให้แกนเวลาต่อเนื่อง
         rev_trend = df_d.set_index('order_purchase_timestamp')['payment_value'].resample('MS').sum().fillna(0).reset_index()
         rev_trend.columns = ['Month', 'Revenue']
-        
-        # คำนวณ Growth % สำหรับทำเส้น Line Chart
         rev_trend['Growth'] = rev_trend['Revenue'].pct_change().replace([np.inf, -np.inf], np.nan) * 100
-        
-        # ตัดเดือนสุดท้ายออกถ้าเป็นข้อมูลที่ยังไม่จบเดือน (ป้องกันกราฟดิ่งลงเหว)
         plot_df = rev_trend.iloc[:-1] if len(rev_trend) > 1 else rev_trend
 
         base = alt.Chart(plot_df).encode(
@@ -409,58 +395,21 @@ if page == "1. 💰 Business Overview":
     else:
         st.info("ไม่มีข้อมูลเพียงพอสำหรับการแสดง Trend")
 
-    st.markdown("---")
-
-    # ── Section 3: Top / Bottom Category ─────────────────────────────────
-    st.subheader("🏆 Top 5 / Bottom 5 Category by Revenue")
-    if 'product_category_name' in df_d.columns:
-        cat_rev = df_d.groupby('product_category_name').agg(
-            Revenue=('payment_value', 'sum'),
-            Orders=('customer_unique_id', 'count'),
-            Churn_Risk=('churn_probability', 'mean')
-        ).reset_index().sort_values('Revenue', ascending=False)
-
-        top5 = cat_rev.head(5).copy()
-        bot5 = cat_rev.tail(5).copy()
-
-        ct1, ct2 = st.columns(2)
-        with ct1:
-            st.markdown("**🟢 Top 5 — ทำเงินสูงสุด**")
-            top5_chart = alt.Chart(top5).mark_bar(color='#43A047').encode(
-                x=alt.X('Revenue:Q', title='Revenue (R$)'),
-                y=alt.Y('product_category_name:N', sort='-x', title=None),
-                tooltip=['product_category_name', alt.Tooltip('Revenue', format=',.0f')]
-            ).properties(height=220)
-            st.altair_chart(top5_chart, use_container_width=True)
-            st.dataframe(top5.style.format({'Revenue': 'R${:,.0f}', 'Churn_Risk': '{:.1%}'}), hide_index=True)
-
-        with ct2:
-            st.markdown("**🔴 Bottom 5 — ทำเงินน้อยสุด**")
-            bot5_chart = alt.Chart(bot5).mark_bar(color='#E53935').encode(
-                x=alt.X('Revenue:Q', title='Revenue (R$)'),
-                y=alt.Y('product_category_name:N', sort='-x', title=None),
-                tooltip=['product_category_name', alt.Tooltip('Revenue', format=',.0f')]
-            ).properties(height=220)
-            st.altair_chart(bot5_chart, use_container_width=True)
-            st.dataframe(bot5.style.format({'Revenue': 'R${:,.0f}', 'Churn_Risk': '{:.1%}'}), hide_index=True)
-
-    st.info("💡 Tip: เน้นจัดการหมวดที่ Revenue สูงแต่ Churn Risk สูงก่อนเพื่อรักษา Market Share")
-
 # ==========================================
-# PAGE 2: Churn Overview (เดิมคือ Page 1)
+# PAGE 2: Churn Overview
 # ==========================================
 elif page == "2. 📊 Churn Overview":
     st.title("📊 Churn Overview")
 
-    with st.expander("ℹ️ วิธีแบ่งกลุ่มลูกค้า"):
+    with st.expander("ℹ️ วิธีแบ่งกลุ่มลูกค้า (อัปเดตใหม่)", expanded=True):
         st.markdown("""
 | สถานะ | เงื่อนไข |
 |---|---|
-| 🔴 Lost | Lateness > 3.0 (หายนานเกิน 3 เท่าของรอบปกติ) |
+| 🔴 Lost | Lateness > 3.0 |
 | 🟥 High Risk | AI Predict > 75% |
 | 🟧 Warning | Lateness > 1.5 |
-| 🟨 Medium Risk | AI Predict 40–75% |
-| 🟩 Active | มาตามรอบปกติ + AI เสี่ยงต่ำ |
+| 🟨 **Medium Risk** | **AI Predict 40–75%** (ขยายแล้ว!) |
+| 🟩 Active | AI < 40% + มาตามรอบปกติ |
         """)
 
     with st.expander("🌪️ กรองข้อมูล", expanded=False):
@@ -539,7 +488,6 @@ elif page == "2. 📊 Churn Overview":
 elif page == "3. 🎯 Action Plan":
     st.title("🎯 Action Plan & Simulator")
 
-    # เตรียมข้อมูลพื้นฐาน
     all_cats = sorted(df['product_category_name'].dropna().unique()) \
                if 'product_category_name' in df.columns else []
     sel_cats = st.multiselect("หมวดสินค้า (ว่าง = ทั้งหมด):", all_cats, key="p3_cat")
@@ -558,9 +506,7 @@ elif page == "3. 🎯 Action Plan":
     ])
     campaigns = []
 
-    # ฟังก์ชันจำลอง (Simulator)
     def sim_campaign(df_sim_in, col_override, val, model, feature_names, threshold):
-        """จำลองแก้ค่า Feature โดยการหักลบส่วนลด (Discount) แล้ว Predict ใหม่ → คืน Uplift"""
         if df_sim_in.empty: return 0.01
         
         old_prob = df_sim_in['churn_probability'].mean()
@@ -569,30 +515,25 @@ elif page == "3. 🎯 Action Plan":
         sim = df_sim_in.copy()
         
         if col_override in sim.columns:
-            # --- กรณีค่าส่ง: ลบออกตามงบต่อหัวที่ตั้งไว้ ---
             if col_override == 'freight_value':
                 sim['freight_value'] = sim['freight_value'] - val
                 sim['freight_value'] = sim['freight_value'].clip(lower=0)
                 if 'price' in sim.columns:
                     sim['freight_ratio'] = sim['freight_value'] / sim['price']
             
-            # --- กรณีรีวิว: เซตเป็นค่าคะแนนที่ระบุ ---
             elif col_override == 'review_score':
                 sim['review_score'] = val
                 sim['is_low_score']  = (sim['review_score'].fillna(3) <= 2).astype(int)
                 sim['is_high_score'] = (sim['review_score'].fillna(3) == 5).astype(int)
             
-            # --- กรณีอื่นๆ: เขียนทับค่าปกติ ---
             else:
                 sim[col_override] = val
 
         new_proba, _ = predict_churn(sim, model, feature_names, threshold)
         return max(old_prob - new_proba.mean(), 0.01)
 
-    # --- TAB 1: ค่าส่งแพง ---
     with tab1:
         st.markdown("#### 🚚 แคมเปญส่วนลดค่าส่ง")
-        # แก้ไขจุด Error: ประกาศ tgt ให้ชัดเจนภายใน scope
         tgt_ship = df_p3[df_p3['freight_ratio'] > 0.2] if 'freight_ratio' in df_p3.columns else pd.DataFrame()
         st.info(f"👥 ลูกค้าค่าส่ง > 20% ของราคาสินค้า: **{len(tgt_ship):,} คน**")
         
@@ -610,7 +551,6 @@ elif page == "3. 🎯 Action Plan":
             campaigns.append({"name":"🚚 ส่งฟรี (บางส่วน)", "people":len(tgt_ship),
                                "cost_head":cost_h, "success_rate":sr, "ltv":avg_ltv})
 
-    # --- TAB 2: ส่งช้า ---
     with tab2:
         st.markdown("#### 🐌 แคมเปญง้อส่งช้า")
         tgt_delay = df_p3[df_p3['delay_days'] > 0] if 'delay_days' in df_p3.columns else pd.DataFrame()
@@ -630,7 +570,6 @@ elif page == "3. 🎯 Action Plan":
             campaigns.append({"name":"🐌 ง้อส่งช้า", "people":len(tgt_delay),
                                "cost_head":cost_h, "success_rate":sr, "ltv":avg_ltv})
 
-    # --- TAB 3: รีวิวแย่ ---
     with tab3:
         st.markdown("#### 😡 แคมเปญง้อรีวิวแย่")
         tgt_review = df_p3[df_p3['review_score'] <= 2] if 'review_score' in df_p3.columns else pd.DataFrame()
@@ -650,7 +589,6 @@ elif page == "3. 🎯 Action Plan":
             campaigns.append({"name":"😡 ง้อรีวิวแย่", "people":len(tgt_review),
                                "cost_head":cost_h, "success_rate":sr, "ltv":avg_ltv})
 
-    # --- TAB 4: ซื้อแพงจ่ายเต็ม ---
     with tab4:
         st.markdown("#### 💳 แคมเปญดันยอดผ่อน")
         if 'price' in df_p3.columns and 'payment_installments' in df_p3.columns:
@@ -674,7 +612,6 @@ elif page == "3. 🎯 Action Plan":
             campaigns.append({"name":"💳 ดันยอดผ่อน", "people":len(tgt_pay),
                                "cost_head":cost_h, "success_rate":sr, "ltv":avg_ltv})
 
-    # --- Allocator Logic ---
     with alloc_box:
         if campaigns:
             dc = pd.DataFrame(campaigns)

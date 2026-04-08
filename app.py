@@ -710,9 +710,18 @@ elif page == "4. 🚛 Logistics Insights":
                    if 'product_category_name' in df.columns else []
         sel_c = st.multiselect("📦 หมวดสินค้า:", all_cats, key="p4_cat")
     with c2:
-        sel_s = st.multiselect("👥 สถานะ:",
-            ['High Risk','Warning (Late > 1.5x)','Medium Risk','Lost (Late > 3x)','Active'],
-            key="p4_st")
+        if camp_config["cost_base"] is not None:
+            # ✅ แก้ไข: แปลง cost_base เป็น float ให้ตรงกับ min_value=0.0
+            cost_per_head = st.number_input(
+                "ต้นทุนต่อคน (R$):", 
+                value=float(camp_config["cost_base"]), 
+                min_value=0.0,
+                step=0.5
+            )
+        else:
+            # ส่วนลดสินค้า: คำนวณจาก % ของราคาเฉลี่ย
+            cost_per_head = avg_ltv * (camp_config["discount_pct"] / 100)
+            st.write(f"💡 ต้นทุนต่อคน: R$ {cost_per_head:.0f} ({camp_config['discount_pct']}% ของ R$ {avg_ltv:.0f})")
 
     df_log = df.copy()
     if sel_c: df_log = df_log[df_log['product_category_name'].isin(sel_c)]

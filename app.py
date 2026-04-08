@@ -482,225 +482,283 @@ elif page == "2. 📊 Churn Overview":
             ).properties(height=350)
             st.altair_chart(donut, use_container_width=True)
 # ==========================================
-# PAGE 3: Action Plan & Simulator (Model-Driven Simulation)
+# PAGE 3: 🎯 Action Plan (Model-Driven Simulation)
 # ==========================================
 elif page == "3. 🎯 Action Plan":
     st.title("🎯 Action Plan & Simulator")
-    st.caption("จำลองผลกระทบแคมเปญโดยแก้ฟีเจอร์ → ทำนายซ้ำ → วัดผลจริงจากโมเดล")
-    
-    # ── 3.1 Filter กลุ่มเป้าหมาย ────────────────────────────────────────
+    st.caption("จำลองผลกระทบโดยเปลี่ยนฟีเจอร์ → ทำนายซ้ำด้วยโมเดล → วัด Uplift จริง")
+ 
+    # ── Filter กลุ่มเป้าหมาย ─────────────────────────────────────────────
     with st.expander("🎯 กำหนดกลุ่มเป้าหมาย", expanded=True):
         f1, f2 = st.columns(2)
-        
         with f1:
             risk_segments = st.multiselect(
                 "กลุ่มความเสี่ยง:",
-                options=['High Risk', 'Warning (Late > 1.5x)', 'Medium Risk', 'Lost (Late > 3x)'],
+                ['High Risk', 'Warning (Late > 1.5x)', 'Medium Risk', 'Lost (Late > 3x)'],
                 default=['High Risk', 'Warning (Late > 1.5x)']
             )
-        
         with f2:
-            all_cats = sorted(df['product_category_name'].dropna().unique()) \
+            all_cats = sorted([x for x in df['product_category_name'].unique() if pd.notna(x)]) \
                        if 'product_category_name' in df.columns else []
-            sel_cats = st.multiselect("หมวดสินค้า:", all_cats)
-    
-    # ── 3.2 Filter Data & Calculate Metrics ──────────────────────────────
+            sel_cats_p3 = st.multiselect("หมวดสินค้า (ว่าง = ทุกหมวด):", all_cats, key="p3_cat_multiselect")
+ 
     df_p3 = df.copy()
-    
     if risk_segments:
         df_p3 = df_p3[df_p3['status'].isin(risk_segments)]
-    if sel_cats:
-        df_p3 = df_p3[df_p3['product_category_name'].isin(sel_cats)]
-    
-    avg_ltv = df_p3['payment_value'].mean() if 'payment_value' in df_p3.columns else 150
-    total_revenue_at_risk = df_p3['payment_value'].sum()
-    
-    m1, m2, m3 = st.columns(3)
-    m1.metric("👥 กลุ่มเป้าหมาย", f"{len(df_p3):,} คน")
-    m2.metric("💰 รายได้เฉลี่ย/คน", f"R$ {avg_ltv:,.0f}")
-    m3.metric("⚠️ รายได้ที่เสี่ยง", f"R$ {total_revenue_at_risk:,.0f}")
-    
+    if sel_cats_p3:
+        df_p3 = df_p3[df_p3['product_category_name'].isin(sel_cats_p3)]
+ 
+    filter_msg = f"กลุ่ม: {', '.join(risk_segments[:2])}{'...' if len(risk_segments)>2 else ''}" \
+                 if risk_segments else "ภาพรวมทุกกลุ่ม"
+    total_pop = len(df_p3)
+    avg_ltv   = float(df_p3['payment_value'].mean()) if 'payment_value' in df_p3.columns else 150.0
+ 
+    c1, c2, c3 = st.columns([2, 1, 1])
+    with c1: st.info(f"📊 กำลังวิเคราะห์: **{filter_msg}**")
+    with c2: st.metric("👥 กลุ่มเป้าหมาย", f"{total_pop:,} คน")
+    with c3: st.metric("💰 LTV เฉลี่ย/คน", f"R$ {avg_ltv:,.0f}")
     st.markdown("---")
-    
-    # ── 3.3 Campaign Selection & Mapping ─────────────────────────────────
-    st.subheader("🎁 เลือกประเภทแคมเปญ")
-    
-    campaigns = {
-        "🚚 ส่งฟรี / ลดค่าส่ง": {"feature": "freight_value", "discount_pct": 100, "cost_base": 15},
-        "💵 ส่วนลดสินค้า 10%": {"feature": "price", "discount_pct": 10, "cost_base": None},
-        "💵 ส่วนลดสินค้า 20%": {"feature": "price", "discount_pct": 20, "cost_base": None},
-        "💳 ผ่อน 0% (6 เดือน)": {"feature": "payment_installments", "discount_pct": 0, "cost_base": 40},
-        "😡 ง้อรีวิวแย่ (ให้คูปอง)": {"feature": "is_low_score", "discount_pct": 0, "cost_base": 25},
-        "🐌 ง้อส่งช้า (ชดเชยค่าส่ง)": {"feature": "delivery_vs_estimated", "discount_pct": 0, "cost_base": 15}
-    }
-    
-    selected_campaign = st.selectbox("เลือกแคมเปญ:", options=list(campaigns.keys()))
-    camp_config = campaigns[selected_campaign]
-    
-    # ── 3.4 Budget & Cost Configuration ──────────────────────────────────
-    st.markdown("---")
-    st.subheader("💰 ตั้งค่างบประมาณ")
-    
-    c1, c2, c3 = st.columns(3)
-    
-    with c1:
-        total_budget = st.number_input("งบประมาณรวม (R$):", min_value=1000, value=50000, step=5000)
-    
-    with c2:
-        if camp_config["cost_base"] is not None:
-            # ✅ แก้ไขถาวร: บังคับทุกค่าเป็น float ให้ตรงกัน
-            cost_per_head = st.number_input(
-                "ต้นทุนต่อคน (R$):",
-                value=float(camp_config["cost_base"]),
-                min_value=0.0,
-                max_value=500.0,
-                step=0.5
+ 
+    # ── Helper: Simulate feature change → re-predict → calc ROI ──────────
+    def run_simulation(target_df, feature_changes: dict, cost_per_head: float,
+                       tab_key: str, rec_text: str, strategy_name: str):
+        """
+        feature_changes = {'col': ('set', value) | ('multiply', factor) | ('clip_upper', val)}
+        """
+        n_target    = len(target_df)
+        pct_problem = (n_target / total_pop) * 100 if total_pop > 0 else 0
+ 
+        c_prob, c_sol, c_res = st.columns([1, 1.3, 1])
+ 
+        # ── คอลัมน์ซ้าย: ขนาดปัญหา ───────────────────────────────────────
+        with c_prob:
+            st.info(f"**📉 ปัญหา:** พบ {n_target:,} คน\n({pct_problem:.1f}% ของกลุ่มนี้)")
+            st.progress(min(pct_problem / 100, 1.0))
+            st.caption("แถบสีแสดงสัดส่วนคนที่มีปัญหา")
+ 
+            # แสดงค่าเฉลี่ย features ของกลุ่มนี้
+            if not target_df.empty:
+                st.markdown("**📋 Feature เฉลี่ย:**")
+                for col in list(feature_changes.keys())[:3]:
+                    if col in target_df.columns:
+                        st.caption(f"• {col}: {target_df[col].mean():.2f}")
+ 
+        # ── คอลัมน์กลาง: ตั้งค่าแคมเปญ ───────────────────────────────────
+        with c_sol:
+            st.markdown(f"**🛠️ วิธีแก้ไข: {strategy_name}**")
+            st.write(rec_text)
+            st.markdown("---")
+ 
+            cost = st.number_input(
+                "งบต่อหัว (R$)", value=float(cost_per_head),
+                min_value=0.0, max_value=500.0, step=0.5,
+                key=f"cost_{tab_key}"
+            )
+ 
+            # Break-even rate ที่ต้องการ
+            break_even_rate = cost / avg_ltv if avg_ltv > 0 else 0
+            st.caption(f"📐 จุดคุ้มทุน: ต้องสำเร็จ ≥ **{break_even_rate:.1%}**")
+ 
+            # ถ้าไม่มีโมเดล → ใช้ slider เหมือนเดิม
+            if model is None or not feature_names:
+                max_pot = 15
+                realistic = min(max_pot, 10) if cost >= 15 else min(max_pot, 5)
+                st.markdown(f"**🤖 AI Prediction:** `{realistic}%`")
+                st.caption("(โมเดลไม่พร้อม → ใช้ค่าประมาณ)")
+                lift = st.slider("ปรับค่าคาดการณ์ความสำเร็จ (%)", 1, 100, realistic, key=f"lift_{tab_key}")
+                sim_success_rate = lift / 100
+                sim_mode = "manual"
+            else:
+                sim_mode = "model"
+                lift = None  # จะใช้โมเดลคำนวณ
+ 
+        # ── คอลัมน์ขวา: ผลลัพธ์ ──────────────────────────────────────────
+        with c_res:
+            with st.spinner("⚡ โมเดลกำลังจำลอง..."):
+                time.sleep(0.3)
+ 
+                if sim_mode == "model" and not target_df.empty:
+                    # 1. ทำนายค่าเดิม
+                    X_orig = target_df.reindex(columns=feature_names, fill_value=0)
+                    prob_orig = model.predict_proba(X_orig)[:, 1]
+ 
+                    # 2. แก้ features ตามแคมเปญ
+                    df_sim = target_df.copy()
+                    for col, (op, val) in feature_changes.items():
+                        if col in df_sim.columns:
+                            if op == 'set':       df_sim[col] = val
+                            elif op == 'multiply': df_sim[col] = df_sim[col] * val
+                            elif op == 'clip_upper': df_sim[col] = df_sim[col].clip(upper=val)
+                            elif op == 'add':      df_sim[col] = df_sim[col] + val
+ 
+                    # recalc derived features
+                    if 'freight_value' in df_sim.columns and 'price' in df_sim.columns:
+                        df_sim['freight_ratio'] = (
+                            df_sim['freight_value'] / df_sim['price'].replace(0, np.nan)
+                        ).fillna(0)
+ 
+                    # 3. ทำนายค่าใหม่
+                    X_sim = df_sim.reindex(columns=feature_names, fill_value=0)
+                    prob_sim = model.predict_proba(X_sim)[:, 1]
+ 
+                    # 4. Uplift = ความเสี่ยงที่ลดลง (บวก = ดีขึ้น)
+                    uplift_arr  = prob_orig - prob_sim
+                    THRESHOLD   = 0.08  # ลด risk ≥ 8% ถือว่าสำเร็จ
+                    success_mask = uplift_arr > THRESHOLD
+                    sim_success_rate = success_mask.mean()
+                    avg_uplift  = uplift_arr.mean()
+ 
+                    # แสดง uplift distribution
+                    dist = {
+                        "ตอบสนองสูง\n(>15%)":       int((uplift_arr > 0.15).sum()),
+                        "ตอบสนองปานกลาง\n(8–15%)":  int(((uplift_arr > 0.08) & (uplift_arr <= 0.15)).sum()),
+                        "ตอบสนองต่ำ\n(0–8%)":       int(((uplift_arr > 0) & (uplift_arr <= 0.08)).sum()),
+                        "ไม่ตอบสนอง":                int((uplift_arr <= 0).sum()),
+                    }
+                    dist_df = pd.DataFrame({"กลุ่ม": dist.keys(), "จำนวน": dist.values()})
+                    bar_chart = alt.Chart(dist_df).mark_bar().encode(
+                        x=alt.X("กลุ่ม", sort=None, axis=alt.Axis(labelAngle=0)),
+                        y=alt.Y("จำนวน"),
+                        color=alt.Color("กลุ่ม", scale=alt.Scale(
+                            domain=list(dist.keys()),
+                            range=["#2ecc71","#f1c40f","#e67e22","#95a5a6"]
+                        ), legend=None),
+                        tooltip=["กลุ่ม","จำนวน"]
+                    ).properties(height=160, title="📊 Uplift Distribution")
+                    st.altair_chart(bar_chart, use_container_width=True)
+ 
+                else:
+                    sim_success_rate = lift / 100 if lift else 0.1
+                    avg_uplift = sim_success_rate * 0.15
+ 
+                # ── คำนวณ ROI ─────────────────────────────────────────────
+                budget        = n_target * cost
+                saved_users   = int(n_target * sim_success_rate)
+                revenue       = saved_users * avg_ltv
+                profit        = revenue - budget
+                roi           = (profit / budget * 100) if budget > 0 else 0
+                break_even_rate_final = cost / avg_ltv if avg_ltv > 0 else 0
+ 
+                st.markdown("**🚀 ผลลัพธ์**")
+                st.metric("🤖 Success Rate (โมเดล)", f"{sim_success_rate:.1%}",
+                          delta=f"จุดคุ้มทุน {break_even_rate_final:.1%}")
+                st.metric("👥 ดึงลูกค้าคืน", f"{saved_users:,} คน")
+                st.metric("💸 งบประมาณ",    f"R$ {budget:,.0f}")
+ 
+                if profit > 0:
+                    st.metric("📈 กำไรสุทธิ (ROI)", f"R$ {profit:,.0f}", f"+{roi:.1f}%")
+                    st.success("✅ **คุ้มค่าการลงทุน!**")
+                else:
+                    st.metric("📉 ขาดทุนสุทธิ", f"R$ {profit:,.0f}", f"{roi:.1f}%")
+                    # ── แสดงว่าต้องสำเร็จกี่ % ถึงจะกำไร ────────────────
+                    need_rate = break_even_rate_final
+                    gap       = need_rate - sim_success_rate
+                    st.error(
+                        f"⚠️ **ขาดทุน!**\n\n"
+                        f"ต้องการ Success Rate: **{need_rate:.1%}**\n"
+                        f"ได้จริง: **{sim_success_rate:.1%}**\n"
+                        f"ขาดอีก: **{gap:.1%}**"
+                    )
+                    # แนะนำงบที่ทำให้คุ้มทุนพอดี
+                    max_cost_breakeven = avg_ltv * sim_success_rate
+                    st.caption(
+                        f"💡 ลดงบต่อหัวเหลือ **R$ {max_cost_breakeven:.0f}** เพื่อเริ่มกำไร"
+                    )
+ 
+    # ── TABS ─────────────────────────────────────────────────────────────
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "🚚 1. ส่งฟรี / ลดค่าส่ง",
+        "💵 2. ส่วนลดสินค้า",
+        "❤️ 3. ง้อลูกค้าส่งช้า",
+        "🛍️ 4. ขายพ่วง / Cross-sell"
+    ])
+ 
+    # ── Tab 1: ส่งฟรี ────────────────────────────────────────────────────
+    with tab1:
+        st.subheader("🚚 กลุ่มค่าส่งแพงเกินรับไหว (Freight Pain)")
+        if 'freight_ratio' in df_p3.columns:
+            target_t1   = df_p3[df_p3['freight_ratio'] > 0.2].copy()
+            avg_freight = float(target_t1['freight_value'].mean()) \
+                          if (not target_t1.empty and 'freight_value' in target_t1.columns) else 15.0
+            run_simulation(
+                target_df     = target_t1,
+                feature_changes = {
+                    'freight_value': ('set', 0),
+                    'freight_ratio': ('set', 0),
+                },
+                cost_per_head  = avg_freight,
+                tab_key        = "tab1",
+                strategy_name  = "ส่งฟรี (Free Shipping)",
+                rec_text       = f"ลูกค้าลังเลเพราะค่าส่งแพง (เฉลี่ย R$ {avg_freight:.0f})\n\n"
+                                 f"👉 **Action:** ตั้ง `freight_value = 0` แล้วให้โมเดลทำนายซ้ำ\n"
+                                 f"ดูว่า churn probability ลดลงแค่ไหน"
             )
         else:
-            # กรณีส่วนลดสินค้า: คำนวณจาก % (ได้ float อยู่แล้ว)
-            cost_per_head = avg_ltv * (camp_config["discount_pct"] / 100)
-            st.write(f"💡 ต้นทุนต่อคน: R$ {cost_per_head:.0f} ({camp_config['discount_pct']}% ของ R$ {avg_ltv:.0f})")
-    
-    with c3:
-        max_reach = int(total_budget / cost_per_head) if cost_per_head > 0 else 0
-        st.metric("คนสูงสุดที่ครอบคลุม", f"{max_reach:,} คน")
-        st.caption(f"หากเลือกกลุ่ม < {max_reach:,} คน จะใช้งบจริงตามจำนวนคน")
-    
-    # ── 3.5 Simulation Engine (Model-Driven) ─────────────────────────────
-    st.markdown("---")
-    
-    if st.button("🔄 จำลองผลกระทบจากโมเดล (Run Simulation)", type="primary", use_container_width=True):
-        if len(df_p3) == 0:
-            st.error("❌ ไม่มีข้อมูลในกลุ่มเป้าหมายที่เลือก")
+            st.error("ไม่พบข้อมูล freight_ratio")
+ 
+    # ── Tab 2: ส่วนลดสินค้า ─────────────────────────────────────────────
+    with tab2:
+        st.subheader("💵 กลุ่มเสี่ยง Churn (Price Sensitivity)")
+        disc_pct = st.radio("เลือก % ส่วนลด:", [10, 20], horizontal=True, key="disc_pct_t2")
+        if 'price' in df_p3.columns:
+            target_t2 = df_p3[df_p3['churn_probability'] > 0.5].copy()
+            disc_cost = float(avg_ltv * disc_pct / 100)
+            run_simulation(
+                target_df     = target_t2,
+                feature_changes = {
+                    'price':         ('multiply', 1 - disc_pct/100),
+                    'payment_value': ('multiply', 1 - disc_pct/100),
+                },
+                cost_per_head  = disc_cost,
+                tab_key        = "tab2",
+                strategy_name  = f"ส่วนลดสินค้า {disc_pct}%",
+                rec_text       = f"ลด `price` ลง {disc_pct}% แล้วให้โมเดลทำนายซ้ำ\n\n"
+                                 f"👉 **Action:** เสนอ Coupon {disc_pct}% เฉพาะลูกค้า churn_prob > 50%"
+            )
         else:
-            with st.spinner("🤖 กำลังจำลองการเปลี่ยนฟีเจอร์และทำนายซ้ำ..."):
-                # 1. เตรียมข้อมูลเดิม
-                X_orig = df_p3.reindex(columns=feature_names, fill_value=0)
-                prob_orig = model.predict_proba(X_orig)[:, 1]
-                
-                # 2. สร้างข้อมูลจำลอง (แก้ฟีเจอร์ตามแคมเปญ)
-                df_sim = df_p3.copy()
-                
-                if "ส่งฟรี" in selected_campaign:
-                    if 'freight_value' in df_sim.columns: df_sim['freight_value'] = 0
-                    if 'freight_ratio' in df_sim.columns: df_sim['freight_ratio'] = 0
-                    
-                elif "ส่วนลดสินค้า" in selected_campaign:
-                    disc = camp_config["discount_pct"] / 100
-                    if 'price' in df_sim.columns: df_sim['price'] = df_sim['price'] * (1 - disc)
-                    if 'freight_ratio' in df_sim.columns and 'freight_value' in df_sim.columns:
-                        df_sim['freight_ratio'] = df_sim['freight_value'] / df_sim['price'].replace(0, 1)
-                        
-                elif "ผ่อน 0%" in selected_campaign:
-                    if 'payment_installments' in df_sim.columns:
-                        df_sim['payment_installments'] = df_sim['payment_installments'].clip(lower=1) * 3
-                        
-                elif "รีวิวแย่" in selected_campaign:
-                    if 'is_low_score' in df_sim.columns: df_sim['is_low_score'] = 0
-                    
-                elif "ส่งช้า" in selected_campaign:
-                    if 'delivery_vs_estimated' in df_sim.columns:
-                        df_sim['delivery_vs_estimated'] = df_sim['delivery_vs_estimated'].clip(lower=-3)
-                
-                # 3. ทำนายค่าใหม่
-                X_sim = df_sim.reindex(columns=feature_names, fill_value=0)
-                prob_sim = model.predict_proba(X_sim)[:, 1]
-                
-                # 4. คำนวณ Uplift & Success Rate
-                uplift = prob_orig - prob_sim  # บวก = ความเสี่ยงลดลง
-                # เกณฑ์ Success: ความเสี่ยงลดลงอย่างน้อย 8% (0.08)
-                THRESHOLD_SUCCESS = 0.08
-                success_mask = uplift > THRESHOLD_SUCCESS
-                success_rate = success_mask.mean()
-                avg_uplift = uplift.mean()
-                
-                # 5. คำนวณ ROI
-                people_reached = min(max_reach, len(df_p3))
-                people_recovered = int(people_reached * success_rate)
-                actual_cost = people_reached * cost_per_head
-                expected_revenue = people_recovered * avg_ltv
-                profit = expected_revenue - actual_cost
-                roi = (profit / actual_cost * 100) if actual_cost > 0 else 0
-                break_even_rate = cost_per_head / avg_ltv if avg_ltv > 0 else 0
-                
-                # ── 3.6 Display Results ──────────────────────────────────
-                st.success("✅ จำลองเสร็จสิ้น!")
-                
-                # แสดง Uplift Distribution
-                dist_high = (uplift > 0.15).sum()
-                dist_med = ((uplift > 0.08) & (uplift <= 0.15)).sum()
-                dist_low = ((uplift > 0) & (uplift <= 0.08)).sum()
-                dist_none = (uplift <= 0).sum()
-                
-                st.write("**📊 การกระจายตัวของผลตอบสนอง (Uplift Distribution)**")
-                st.bar_chart({
-                    'ตอบสนองสูง (>15%)': dist_high,
-                    'ตอบสนองปานกลาง (8-15%)': dist_med,
-                    'ตอบสนองต่ำ (0-8%)': dist_low,
-                    'ไม่ตอบสนอง/แย่ลง': dist_none
-                })
-                
-                st.markdown("---")
-                st.subheader("📊 ผลลัพธ์ทางธุรกิจ")
-                
-                r1, r2, r3, r4, r5 = st.columns(5)
-                r1.metric("🎯 คนที่ได้รับแคมเปญ", f"{people_reached:,}")
-                r2.metric("✅ ดึงกลับได้ (Success)", f"{people_recovered:,}", f"{success_rate:.1%}")
-                r3.metric("💰 รายได้คาดหวัง", f"R$ {expected_revenue:,.0f}")
-                r4.metric("💵 ต้นทุนจริง", f"R$ {actual_cost:,.0f}")
-                
-                if profit > 0:
-                    r5.metric("📈 กำไรสุทธิ (ROI)", f"R$ {profit:,.0f}", f"+{roi:.1f}%")
-                else:
-                    r5.metric("📉 ขาดทุนสุทธิ (ROI)", f"R$ {profit:,.0f}", f"{roi:.1f}%")
-                
-                # Break-even & Recommendation
-                st.markdown("---")
-                col_a, col_b = st.columns(2)
-                
-                with col_a:
-                    st.info(f"""
-                    📐 **Break-even Analysis**
-                    • ต้นทุนต่อคน: **R$ {cost_per_head:.0f}**
-                    • รายได้เฉลี่ยต่อคน: **R$ {avg_ltv:.0f}**
-                    • **จุดคุ้มทุน:** ต้องมี Success Rate ≥ **{break_even_rate:.1%}**
-                    • **ผลลัพธ์จากโมเดล:** **{success_rate:.1%}** {'✅ คุ้มค่า' if success_rate >= break_even_rate else '⚠️ ยังไม่คุ้ม'}
-                    """)
-                
-                with col_b:
-                    if profit > 0:
-                        st.success(f"""
-                        🎉 **แนะนำ: ดำเนินการได้**
-                        • ROI {roi:.1f}% ถือว่าดีมาก
-                        • สามารถเพิ่มงบหรือขยายกลุ่มเป้าหมายได้
-                        • แคมเปญนี้ตอบโจทย์ Feature Importance หลักของโมเดล
-                        """)
-                    else:
-                        gap = break_even_rate - success_rate
-                        st.error(f"""
-                        ⚠️ **แนะนำ: ปรับปรุงก่อนดำเนินการ**
-                        • ขาดทุนเพราะ Success Rate ({success_rate:.1%}) ต่ำกว่าจุดคุ้มทุน ({break_even_rate:.1%})
-                        • ส่วนต่าง: **{gap:.1%}**
-                        • **วิธีแก้:** 
-                          1. เปลี่ยนแคมเปญเป็น 'ส่งฟรี' (มักได้ Success Rate สูงสุด)
-                          2. ลดต้นทุนต่อคน หรือเพิ่ม LTV
-                          3. เจาะกลุ่มเฉพาะ High Risk + Lateness > 2.0
-                        """)
-                
-                # ── 3.7 Export Target List ───────────────────────────────
-                st.markdown("---")
-                if st.button("📥 Export รายชื่อลูกค้าเป้าหมาย (CSV)"):
-                    export_df = df_p3[['customer_unique_id', 'status', 'churn_probability', 
-                                       'payment_value', 'product_category_name']].copy()
-                    csv = export_df.to_csv(index=False).encode('utf-8')
-                    st.download_button(
-                        label="⬇️ ดาวน์โหลด CSV",
-                        data=csv,
-                        file_name=f"target_list_{selected_campaign.replace(' ', '_')}.csv",
-                        mime='text/csv'
-                    )
-    else:
-        st.info("👆 กดปุ่ม **'จำลองผลกระทบจากโมเดล'** เพื่อคำนวณ Success Rate และ ROI แบบ Real-time")
+            st.error("ไม่พบข้อมูล price")
+ 
+    # ── Tab 3: ง้อส่งช้า ────────────────────────────────────────────────
+    with tab3:
+        st.subheader("❤️ กลุ่มโดนเท / ของส่งช้า (Delay Recovery)")
+        if 'delay_days' in df_p3.columns:
+            target_t3 = df_p3[df_p3['delay_days'] > 0].copy()
+            run_simulation(
+                target_df     = target_t3,
+                feature_changes = {
+                    'delay_days':            ('set', 0),
+                    'delivery_vs_estimated': ('clip_upper', 0),
+                },
+                cost_per_head  = 15.0,
+                tab_key        = "tab3",
+                strategy_name  = "SMS ขอโทษ + คูปองชดเชย",
+                rec_text       = "ตั้ง `delay_days = 0` (สมมติว่าปัญหาได้รับการแก้ไข)\n\n"
+                                 "👉 **Action:** ส่ง SMS ขอโทษทันที + แนบ Coupon ส่วนลดพิเศษ\n"
+                                 "โมเดลจะบอกว่า churn risk ลดลงแค่ไหน"
+            )
+        else:
+            st.error("ไม่พบข้อมูล delay_days")
+ 
+    # ── Tab 4: Cross-sell ────────────────────────────────────────────────
+    with tab4:
+        st.subheader("🛍️ กลุ่มซื้อหมวดเสี่ยง Churn สูง (High-Risk Category)")
+        if 'cat_churn_risk' in df_p3.columns:
+            target_t4 = df_p3[df_p3['cat_churn_risk'] > 0.8].copy()
+            run_simulation(
+                target_df     = target_t4,
+                feature_changes = {
+                    'cat_churn_risk': ('multiply', 0.6),   # สมมติว่า cross-sell ลด cat risk ลง 40%
+                    'payment_installments': ('add', 2),     # ผ่อนได้นานขึ้น
+                },
+                cost_per_head  = 10.0,
+                tab_key        = "tab4",
+                strategy_name  = "Cross-sell + ผ่อนได้นานขึ้น",
+                rec_text       = "ลด `cat_churn_risk` ลง 40% (จาก cross-sell หมวดซื้อซ้ำ)\n\n"
+                                 "👉 **Action:** ยิงแอดสินค้า Housewares ที่ต้องซื้อซ้ำ\n"
+                                 "+ เพิ่ม installments เพื่อลดภาระต่อครั้ง"
+            )
+        else:
+            st.error("ไม่พบข้อมูล cat_churn_risk")
 # ==========================================
 # PAGE 4: Logistics
 # ==========================================

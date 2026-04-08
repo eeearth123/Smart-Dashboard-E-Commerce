@@ -548,9 +548,16 @@ elif page == "3. 🎯 Action Plan":
     
     with c2:
         if camp_config["cost_base"] is not None:
-            cost_per_head = st.number_input("ต้นทุนต่อคน (R$):", value=camp_config["cost_base"], min_value=0.0)
+            # ✅ แก้ไขถาวร: บังคับทุกค่าเป็น float ให้ตรงกัน
+            cost_per_head = st.number_input(
+                "ต้นทุนต่อคน (R$):",
+                value=float(camp_config["cost_base"]),
+                min_value=0.0,
+                max_value=500.0,
+                step=0.5
+            )
         else:
-            # ส่วนลดสินค้า: คำนวณจาก % ของราคาเฉลี่ย
+            # กรณีส่วนลดสินค้า: คำนวณจาก % (ได้ float อยู่แล้ว)
             cost_per_head = avg_ltv * (camp_config["discount_pct"] / 100)
             st.write(f"💡 ต้นทุนต่อคน: R$ {cost_per_head:.0f} ({camp_config['discount_pct']}% ของ R$ {avg_ltv:.0f})")
     

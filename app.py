@@ -483,178 +483,440 @@ elif page == "2. 📊 Churn Overview":
             st.altair_chart(donut, use_container_width=True)
 
 # ==========================================
-# PAGE 3: Action Plan
+# PAGE 3: Action Plan & Simulator (ฉบับสมบูรณ์)
 # ==========================================
 elif page == "3. 🎯 Action Plan":
     st.title("🎯 Action Plan & Simulator")
-
-    all_cats = sorted(df['product_category_name'].dropna().unique()) \
-               if 'product_category_name' in df.columns else []
-    sel_cats = st.multiselect("หมวดสินค้า (ว่าง = ทั้งหมด):", all_cats, key="p3_cat")
-    df_p3    = df[df['product_category_name'].isin(sel_cats)].copy() if sel_cats else df.copy()
-    avg_ltv  = df_p3['payment_value'].mean() if 'payment_value' in df_p3.columns else 150
-
+    st.caption("วางแผนแคมเปญดึงลูกค้ากลับ พร้อมคำนวณ ROI แบบ Real-time")
+    
+    # ── 3.1 Sidebar Filters ──────────────────────────────────────────────
+    with st.expander("🎯 กำหนดกลุ่มเป้าหมาย", expanded=True):
+        f1, f2, f3, f4 = st.columns(4)
+        
+        with f1:
+            # เลือก Risk Segment
+            risk_segments = st.multiselect(
+                "กลุ่มความเสี่ยง:",
+                options=['High Risk', 'Warning (Late > 1.5x)', 'Medium Risk', 
+                         'Lost (Late > 3x)', 'Active'],
+                default=['High Risk', 'Warning (Late > 1.5x)']
+            )
+        
+        with f2:
+            # เลือกหมวดสินค้า
+            all_cats = sorted(df['product_category_name'].dropna().unique()) \
+                       if 'product_category_name' in df.columns else []
+            sel_cats = st.multiselect("หมวดสินค้า:", all_cats)
+        
+        with f3:
+            # กรองตาม Churn Probability
+            prob_range = st.slider(
+                "Churn Probability:",
+                min_value=0.0, max_value=1.0,
+                value=(0.4, 1.0),
+                step=0.05
+            )
+        
+        with f4:
+            # กรองตาม Lateness Score
+            late_range = st.slider(
+                "Lateness Score:",
+                min_value=0.0, max_value=5.0,
+                value=(0.0, 3.0),
+                step=0.5
+            )
+    
+    # ── 3.2 Filter Data ──────────────────────────────────────────────────
+    df_p3 = df.copy()
+    
+    if risk_segments:
+        df_p3 = df_p3[df_p3['status'].isin(risk_segments)]
+    
+    if sel_cats:
+        df_p3 = df_p3[df_p3['product_category_name'].isin(sel_cats)]
+    
+    if prob_range:
+        df_p3 = df_p3[
+            (df_p3['churn_probability'] >= prob_range[0]) &
+            (df_p3['churn_probability'] <= prob_range[1])
+        ]
+    
+    if 'lateness_score' in df_p3.columns:
+        df_p3 = df_p3[
+            (df_p3['lateness_score'] >= late_range[0]) &
+            (df_p3['lateness_score'] <= late_range[1])
+        ]
+    
+    # คำนวณรายได้เฉลี่ย (เปลี่ยนแปลงตาม Filter)
+    avg_ltv = df_p3['payment_value'].mean() if 'payment_value' in df_p3.columns else 150
+    total_revenue_at_risk = df_p3['payment_value'].sum()
+    avg_churn_prob = df_p3['churn_probability'].mean()
+    
+    # แสดง Metrics
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("👥 กลุ่มเป้าหมาย", f"{len(df_p3):,} คน")
+    m2.metric("💰 รายได้เฉลี่ย/คน", f"R$ {avg_ltv:,.0f}")
+    m3.metric("⚠️ รายได้ที่เสี่ยง", f"R$ {total_revenue_at_risk:,.0f}")
+    m4.metric("📊 Churn Prob. เฉลี่ย", f"{avg_churn_prob:.1%}")
+    
     st.markdown("---")
-    st.subheader("💰 Smart Budget Allocator")
-    total_budget  = st.number_input("งบประมาณรวม (R$):", min_value=1000, value=50000, step=5000)
-    alloc_box      = st.container()
-
+    
+    # ── 3.3 Campaign Selection ───────────────────────────────────────────
+    st.subheader("🎁 เลือกประเภทแคมเปญ")
+    
+    campaign_options = {
+        "🚚 ส่งฟรี / ลดค่าส่ง": {
+            "desc": "ลดหรือยกเว้นค่าส่ง (เหมาะกับ freight_value สูง)",
+            "icon": "🚚",
+            "feature": "freight_value"
+        },
+        "💵 ส่วนลดสินค้า (%)": {
+            "desc": "ลดราคาเป็นเปอร์เซ็นต์ (เหมาะกับ price สูง)",
+            "icon": "💵",
+            "feature": "price"
+        },
+        "🎁 คูปองส่วนลด (R$)": {
+            "desc": "ให้คูปองมูลค่าคงที่",
+            "icon": "🎁",
+            "feature": "general"
+        },
+        "💳 ผ่อน 0%": {
+            "desc": "ดอกเบี้ย 0% นาน 3-6 เดือน (เหมาะกับของแพง)",
+            "icon": "💳",
+            "feature": "payment_installments"
+        },
+        "😡 ง้อรีวิวแย่": {
+            "desc": "แคมเปญพิเศษสำหรับลูกค้าให้ 1-2 ดาว",
+            "icon": "😡",
+            "feature": "is_low_score"
+        },
+        "🐌 ง้อส่งช้า": {
+            "desc": "ขอโทษลูกค้าที่ได้รับของช้า",
+            "icon": "🐌",
+            "feature": "delivery_vs_estimated"
+        },
+        "🔄 ดึงลูกค้าซื้อห่าง": {
+            "desc": "กระตุ้นลูกค้าที่ซื้อช้ากว่าปกติ",
+            "icon": "🔄",
+            "feature": "gap_vs_avg_real"
+        },
+        "⭐ แต้มสะสม 2x": {
+            "desc": "รับแต้มคูณ 2 สำหรับออเดอร์นี้",
+            "icon": "⭐",
+            "feature": "general"
+        },
+        "🎂 ของขวัญวันเกิด": {
+            "desc": "ส่วนลดพิเศษเดือนเกิด",
+            "icon": "🎂",
+            "feature": "general"
+        }
+    }
+    
+    selected_campaign = st.selectbox(
+        "เลือกแคมเปญ:",
+        options=list(campaign_options.keys()),
+        format_func=lambda x: f"{campaign_options[x]['icon']} {x}"
+    )
+    
+    # แสดงคำอธิบายแคมเปญ
+    st.info(f"**{campaign_options[selected_campaign]['icon']} {selected_campaign}**  \n"
+            f"{campaign_options[selected_campaign]['desc']}  \n"
+            f"🎯 Feature หลัก: `{campaign_options[selected_campaign]['feature']}`")
+    
+    # ── 3.4 Campaign Configuration ───────────────────────────────────────
     st.markdown("---")
-    st.subheader("🎯 แผงควบคุมแคมเปญ")
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "🚚 ค่าส่งแพง", "🐌 ส่งช้า", "😡 รีวิวแย่", "💳 ซื้อแพงจ่ายเต็ม"
-    ])
-    campaigns = []
-
-    def sim_campaign(df_sim_in, col_override, val, model, feature_names, threshold):
-        if df_sim_in.empty: return 0.01
-        
-        old_prob = df_sim_in['churn_probability'].mean()
-        if model is None: return 0.30
-        
-        sim = df_sim_in.copy()
-        
-        if col_override in sim.columns:
-            if col_override == 'freight_value':
-                sim['freight_value'] = sim['freight_value'] - val
-                sim['freight_value'] = sim['freight_value'].clip(lower=0)
-                if 'price' in sim.columns:
-                    sim['freight_ratio'] = sim['freight_value'] / sim['price']
-            
-            elif col_override == 'review_score':
-                sim['review_score'] = val
-                sim['is_low_score']  = (sim['review_score'].fillna(3) <= 2).astype(int)
-                sim['is_high_score'] = (sim['review_score'].fillna(3) == 5).astype(int)
-            
-            else:
-                sim[col_override] = val
-
-        new_proba, _ = predict_churn(sim, model, feature_names, threshold)
-        return max(old_prob - new_proba.mean(), 0.01)
-
-    with tab1:
-        st.markdown("#### 🚚 แคมเปญส่วนลดค่าส่ง")
-        tgt_ship = df_p3[df_p3['freight_ratio'] > 0.2] if 'freight_ratio' in df_p3.columns else pd.DataFrame()
-        st.info(f"👥 ลูกค้าค่าส่ง > 20% ของราคาสินค้า: **{len(tgt_ship):,} คน**")
-        
-        if len(tgt_ship) > 0:
-            c1, c2 = st.columns(2)
-            with c1: cost_h = st.number_input("งบต่อหัว (R$):", value=20, key="c1")
-            with c2: mode   = st.radio("ประเมินโอกาส:", ["🤖 AI","✍️ Manual"], key="m1")
-            
-            if "AI" in mode:
-                sr = sim_campaign(tgt_ship, 'freight_value', cost_h, model, feature_names, best_threshold)
-                st.success(f"🤖 Uplift ≈ **{sr*100:.1f}%**")
-            else:
-                sr = st.slider("โอกาส (%):", 1, 100, 30, key="s1") / 100
-                
-            campaigns.append({"name":"🚚 ส่งฟรี (บางส่วน)", "people":len(tgt_ship),
-                               "cost_head":cost_h, "success_rate":sr, "ltv":avg_ltv})
-
-    with tab2:
-        st.markdown("#### 🐌 แคมเปญง้อส่งช้า")
-        tgt_delay = df_p3[df_p3['delay_days'] > 0] if 'delay_days' in df_p3.columns else pd.DataFrame()
-        st.info(f"👥 ลูกค้าที่ได้รับของช้ากว่ากำหนด: **{len(tgt_delay):,} คน**")
-        
-        if len(tgt_delay) > 0:
-            c1, c2 = st.columns(2)
-            with c1: cost_h = st.number_input("งบต่อหัว (R$):", value=15, key="c2")
-            with c2: mode   = st.radio("ประเมินโอกาส:", ["🤖 AI","✍️ Manual"], key="m2")
-            
-            if "AI" in mode:
-                sr = sim_campaign(tgt_delay, 'delivery_vs_estimated', 5, model, feature_names, best_threshold)
-                st.success(f"🤖 Uplift ≈ **{sr*100:.1f}%**")
-            else:
-                sr = st.slider("โอกาส (%):", 1, 100, 35, key="s2") / 100
-                
-            campaigns.append({"name":"🐌 ง้อส่งช้า", "people":len(tgt_delay),
-                               "cost_head":cost_h, "success_rate":sr, "ltv":avg_ltv})
-
-    with tab3:
-        st.markdown("#### 😡 แคมเปญง้อรีวิวแย่")
-        tgt_review = df_p3[df_p3['review_score'] <= 2] if 'review_score' in df_p3.columns else pd.DataFrame()
-        st.info(f"👥 ลูกค้าให้คะแนน 1-2 ดาว: **{len(tgt_review):,} คน**")
-        
-        if len(tgt_review) > 0:
-            c1, c2 = st.columns(2)
-            with c1: cost_h = st.number_input("งบต่อหัว (R$):", value=30, key="c3")
-            with c2: mode   = st.radio("ประเมินโอกาส:", ["🤖 AI","✍️ Manual"], key="m3")
-            
-            if "AI" in mode:
-                sr = sim_campaign(tgt_review, 'review_score', 5, model, feature_names, best_threshold)
-                st.success(f"🤖 Uplift ≈ **{sr*100:.1f}%**")
-            else:
-                sr = st.slider("โอกาส (%):", 1, 100, 25, key="s3") / 100
-                
-            campaigns.append({"name":"😡 ง้อรีวิวแย่", "people":len(tgt_review),
-                               "cost_head":cost_h, "success_rate":sr, "ltv":avg_ltv})
-
-    with tab4:
-        st.markdown("#### 💳 แคมเปญดันยอดผ่อน")
-        if 'price' in df_p3.columns and 'payment_installments' in df_p3.columns:
-            tgt_pay = df_p3[(df_p3['price'] > 500) & (df_p3['payment_installments'] == 1)]
+    st.subheader("⚙️ ตั้งค่าแคมเปญ")
+    
+    c1, c2, c3, c4 = st.columns(4)
+    
+    with c1:
+        budget = st.number_input(
+            "💰 งบประมาณรวม (R$):",
+            min_value=1000,
+            value=50000,
+            step=5000,
+            help="งบประมาณทั้งหมดสำหรับแคมเปญนี้"
+        )
+    
+    with c2:
+        # ค่าต่อหัวจะเปลี่ยนไปตามประเภทแคมเปญ
+        if "ส่งฟรี" in selected_campaign:
+            cost_per_head = st.number_input(
+                "🚚 ค่าส่งเฉลี่ยที่บริษัทจ่าย (R$):",
+                value=15.0,
+                min_value=0.0,
+                step=1.0
+            )
+        elif "ส่วนลดสินค้า" in selected_campaign:
+            discount_pct = st.slider(
+                "💵 ส่วนลด (%):",
+                min_value=5,
+                max_value=50,
+                value=10,
+                step=5
+            )
+            cost_per_head = avg_ltv * (discount_pct / 100)
+            st.write(f"💡 ต้นทุนต่อคน: **R$ {cost_per_head:.0f}**")
+        elif "คูปอง" in selected_campaign:
+            cost_per_head = st.number_input(
+                "🎁 มูลค่าคูปอง (R$):",
+                value=20.0,
+                min_value=0.0,
+                step=5.0
+            )
+        elif "ผ่อน 0%" in selected_campaign:
+            cost_per_head = st.number_input(
+                "💳 ดอกเบี้ยที่บริษัทจ่ายให้ (R$):",
+                value=50.0,
+                min_value=0.0,
+                step=10.0
+            )
+        elif "รีวิวแย่" in selected_campaign:
+            cost_per_head = st.number_input(
+                "😡 งบต่อหัว (R$):",
+                value=30.0,
+                min_value=0.0,
+                step=5.0
+            )
+        elif "ส่งช้า" in selected_campaign:
+            cost_per_head = st.number_input(
+                "🐌 งบต่อหัว (R$):",
+                value=15.0,
+                min_value=0.0,
+                step=5.0
+            )
         else:
-            tgt_pay = pd.DataFrame()
-            
-        st.info(f"👥 ลูกค้าซื้อแพง (> R$500) จ่ายงวดเดียว: **{len(tgt_pay):,} คน**")
+            cost_per_head = st.number_input(
+                "💰 งบต่อหัว (R$):",
+                value=10.0,
+                min_value=0.0,
+                step=5.0
+            )
+    
+    with c3:
+        # AI-assisted Success Rate
+        st.write("**🤖 AI แนะนำ Success Rate:**")
         
-        if len(tgt_pay) > 0:
-            c1, c2 = st.columns(2)
-            with c1: cost_h = st.number_input("งบต่อหัว (R$):", value=10, key="c4")
-            with c2: mode   = st.radio("ประเมินโอกาส:", ["🤖 AI","✍️ Manual"], key="m4")
+        # คำนวณ Success Rate จากโมเดล
+        base_rate = 1 - avg_churn_prob  # ยิ่งเสี่ยงสูง ยิ่งดึงกลับยาก
+        
+        # ปรับตามประเภทแคมเปญ
+        if "ส่งฟรี" in selected_campaign:
+            ai_rate = min(0.6, base_rate + 0.25)  # ส่งฟรีได้ผลดี
+        elif "ส่วนลดสินค้า" in selected_campaign and discount_pct >= 20:
+            ai_rate = min(0.5, base_rate + 0.20)  # ส่วนลดมากได้ผลดี
+        elif "รีวิวแย่" in selected_campaign:
+            ai_rate = min(0.4, base_rate + 0.15)  # ง้อรีวิวได้ผลปานกลาง
+        else:
+            ai_rate = min(0.35, base_rate + 0.10)  # ทั่วไป
+        
+        st.metric("AI Estimate", f"{ai_rate:.0%}")
+        
+        success_rate = st.slider(
+            "📊 โอกาสสำเร็จ (%):",
+            min_value=1,
+            max_value=100,
+            value=int(ai_rate * 100),
+            step=5
+        ) / 100
+    
+    with c4:
+        st.write("**📈 ตัวชี้วัด:**")
+        max_people = int(budget / cost_per_head) if cost_per_head > 0 else 0
+        st.metric("คนสูงสุดที่ได้", f"{max_people:,} คน")
+        st.metric("งบต่อคน", f"R$ {cost_per_head:.0f}")
+    
+    # ── 3.5 ROI Calculator ───────────────────────────────────────────────
+    st.markdown("---")
+    st.subheader("📊 ผลลัพธ์ที่คาดหวัง")
+    
+    # คำนวณ
+    people_reached = min(max_people, len(df_p3))
+    people_recovered = int(people_reached * success_rate)
+    expected_revenue = people_recovered * avg_ltv
+    total_cost = people_reached * cost_per_head
+    profit = expected_revenue - total_cost
+    roi = (profit / total_cost * 100) if total_cost > 0 else 0
+    
+    # Break-even analysis
+    break_even_rate = total_cost / (people_reached * avg_ltv) if people_reached > 0 and avg_ltv > 0 else 0
+    
+    # แสดงผล
+    r1, r2, r3, r4, r5 = st.columns(5)
+    
+    r1.metric("🎯 คนที่ได้รับแคมเปญ", f"{people_reached:,}")
+    r2.metric("✅ ดึงกลับได้", f"{people_recovered:,} ({success_rate:.0%})")
+    r3.metric("💰 รายได้คาดหวัง", f"R$ {expected_revenue:,.0f}")
+    r4.metric("💵 ต้นทุนรวม", f"R$ {total_cost:,.0f}")
+    
+    if profit > 0:
+        r5.metric("📈 กำไรสุทธิ (ROI)", f"R$ {profit:,.0f}", f"+{roi:.1f}%")
+    else:
+        r5.metric("📉 ขาดทุนสุทธิ (ROI)", f"R$ {profit:,.0f}", f"{roi:.1f}%")
+    
+    # ── 3.6 Recommendation & Alerts ──────────────────────────────────────
+    st.markdown("---")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("🎯 การวิเคราะห์")
+        
+        if roi < 0:
+            st.error(f"""
+            ⚠️ **แคมเปญนี้ขาดทุน!**
             
-            if "AI" in mode:
-                sr = sim_campaign(tgt_pay, 'payment_installments', 10, model, feature_names, best_threshold)
-                st.success(f"🤖 Uplift ≈ **{sr*100:.1f}%**")
-            else:
-                sr = st.slider("โอกาส (%):", 1, 100, 20, key="s4") / 100
-                
-            campaigns.append({"name":"💳 ดันยอดผ่อน", "people":len(tgt_pay),
-                               "cost_head":cost_h, "success_rate":sr, "ltv":avg_ltv})
-
-    with alloc_box:
-        if campaigns:
-            dc = pd.DataFrame(campaigns)
-            dc['Total_Cost']      = dc['people'] * dc['cost_head']
-            dc['Expected_Revenue']= dc['people'] * dc['success_rate'] * dc['ltv']
-            dc['ROI_Percent']     = ((dc['Expected_Revenue'] - dc['Total_Cost']) 
-                                     / dc['Total_Cost'].replace(0,1) * 100)
+            **สาเหตุ:**
+            • ต้นทุนต่อหัว (R$ {cost_per_head:.0f}) สูงเกินไป
+            • Success Rate ({success_rate:.0%}) ต่ำเกินไป
+            • รายได้เฉลี่ย (R$ {avg_ltv:.0f}) ไม่คุ้มกับต้นทุน
             
-            dc = dc.sort_values('ROI_Percent', ascending=False).reset_index(drop=True)
-
-            alloc, total_rev, total_saved = 0, 0, 0
-            rows = []
+            **💡 แนะนำ:**
+            1. ลดต้นทุนต่อหัว → เลือกกลุ่มเป้าหมายแคบลง
+            2. เพิ่ม Success Rate → ปรับแรงจูงใจ (ส่วนลดมากขึ้น)
+            3. เลือกแคมเปญอื่น → เช่น ส่งฟรี (ต้นทุนต่ำกว่า)
+            4. เพิ่มรายได้เฉลี่ย → Upsell/Cross-sell
+            """)
+        elif roi < 50:
+            st.warning(f"""
+            ⚠️ **แคมเปญนี้กำไรต่ำ (ROI {roi:.1f}%)**
             
-            for _, r in dc.iterrows():
-                left = total_budget - alloc
-                if left <= 0:
-                    rows.append({"แคมเปญ":r['name'], "สถานะ":"❌ งบหมด", 
-                                 "คน":0, "งบ(R$)":0, "กำไร(R$)":0, "ROI%":r['ROI_Percent']})
-                    continue
-                
-                spend   = r['Total_Cost'] if left >= r['Total_Cost'] else left
-                covered = int(spend / r['cost_head']) if r['cost_head'] > 0 else 0
-                alloc  += spend
-                rev     = covered * r['success_rate'] * r['ltv']
-                total_rev   += rev
-                total_saved += covered * r['success_rate']
-                
-                status  = "✅ เต็ม" if spend == r['Total_Cost'] else "⚠️ บางส่วน"
-                rows.append({"แคมเปญ":r['name'], "สถานะ":status, 
-                             "คน":covered, "งบ(R$)":spend, 
-                             "กำไร(R$)":rev-spend, "ROI%":r['ROI_Percent']})
-
-            m1, m2, m3 = st.columns(3)
-            m1.metric("💰 งบที่จัดสรร",  f"R$ {alloc:,.0f}",   f"จาก R$ {total_budget:,.0f}")
-            m2.metric("👥 คาดดึงกลับ",    f"{int(total_saved):,} คน")
-            profit = total_rev - alloc
-            m3.metric("✨ กำไรคาดหวัง",  f"R$ {profit:,.0f}", 
-                      f"+{profit/alloc*100:.1f}% ROI" if alloc > 0 else "0%")
+            **💡 แนะนำ:**
+            • ลองปรับ Success Rate ให้สูงขึ้น
+            • ลดงบประมาณ → โฟกัสเฉพาะ High Risk
+            • เพิ่มมูลค่าต่อออเดอร์ (AOV)
+            """)
+        elif roi < 100:
+            st.info(f"""
+            ✅ **แคมเปญนี้กำไรดี (ROI {roi:.1f}%)**
             
-            st.dataframe(pd.DataFrame(rows).style.format({
-                "คน":"{:,.0f}", "งบ(R$)":"{:,.0f}", 
-                "กำไร(R$)":"{:,.0f}", "ROI%":"{:.1f}%"}), 
-                use_container_width=True)
+            **💡 แนะนำ:**
+            • สามารถเพิ่มงบประมาณได้
+            • ขยายกลุ่มเป้าหมาย
+            • ทดสอบ A/B กับแคมเปญอื่น
+            """)
+        else:
+            st.success(f"""
+            🎉 **แคมเปญนี้คุ้มค่ามาก! (ROI {roi:.1f}%)**
+            
+            **💡 แนะนำ:**
+            • เพิ่มงบประมาณให้เต็มที่
+            • ขยายกลุ่มเป้าหมาย
+            • ทำแคมเปญต่อเนื่อง
+            """)
+    
+    with col2:
+        st.subheader("📈 Break-even Analysis")
+        
+        st.write(f"""
+        **จุดคุ้มทุน:**
+        • ต้องมี Success Rate ≥ **{break_even_rate:.1%}** จึงจะคุ้มทุน
+        • ปัจจุบันตั้งไว้ที่: **{success_rate:.0%}**
+        • ส่วนต่าง: **{success_rate - break_even_rate:+.1%}**
+        
+        **ความไวของ ROI:**
+        • ถ้า Success Rate +5% → ROI = **{((people_reached * (success_rate+0.05) * avg_ltv) - total_cost) / total_cost * 100:.1f}%**
+        • ถ้า Success Rate -5% → ROI = **{((people_reached * (success_rate-0.05) * avg_ltv) - total_cost) / total_cost * 100:.1f}%**
+        """)
+        
+        # Progress bar
+        st.progress(min(max(success_rate, 0), 1.0))
+        st.caption(f"Success Rate: {success_rate:.0%}")
+    
+    # ── 3.7 Target List Preview ──────────────────────────────────────────
+    st.markdown("---")
+    st.subheader("📋 รายชื่อลูกค้าเป้าหมาย (Top 20)")
+    
+    # เรียงตาม Priority Score
+    df_p3['priority_score'] = (
+        df_p3['churn_probability'] * 0.5 +
+        (df_p3['payment_value'] / df_p3['payment_value'].max()) * 0.3 +
+        (1 / (1 + df_p3.get('lateness_score', 1))) * 0.2
+    )
+    
+    top_targets = df_p3.nlargest(20, 'priority_score')
+    
+    display_cols = ['customer_unique_id', 'status', 'churn_probability', 
+                    'payment_value', 'product_category_name', 'lateness_score']
+    display_cols = [c for c in display_cols if c in top_targets.columns]
+    
+    st.dataframe(
+        top_targets[display_cols],
+        column_config={
+            "churn_probability": st.column_config.ProgressColumn(
+                "Churn Risk", format="%.2f", min_value=0, max_value=1
+            ),
+            "payment_value": st.column_config.NumberColumn(
+                "Revenue", format="R$%.0f"
+            ),
+            "lateness_score": st.column_config.NumberColumn(
+                "Lateness", format="%.1fx"
+            )
+        },
+        hide_index=True,
+        use_container_width=True
+    )
+    
+    # ── 3.8 Export & Save ────────────────────────────────────────────────
+    st.markdown("---")
+    c1, c2, c3 = st.columns(3)
+    
+    with c1:
+        if st.button("📥 Export รายชื่อลูกค้า (CSV)", use_container_width=True):
+            csv = df_p3.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="⬇️ ดาวน์โหลด CSV",
+                data=csv,
+                file_name=f"churn_campaign_{selected_campaign.replace(' ', '_')}.csv",
+                mime='text/csv',
+                use_container_width=True
+            )
+    
+    with c2:
+        if st.button("💾 บันทึกแผน (JSON)", use_container_width=True):
+            plan_data = {
+                'campaign': selected_campaign,
+                'budget': budget,
+                'cost_per_head': cost_per_head,
+                'success_rate': success_rate,
+                'target_count': len(df_p3),
+                'expected_revenue': expected_revenue,
+                'roi': roi,
+                'timestamp': pd.Timestamp.now().isoformat()
+            }
+            import json
+            json_data = json.dumps(plan_data, indent=2, default=str)
+            st.download_button(
+                label="⬇️ ดาวน์โหลด JSON",
+                data=json_data,
+                file_name=f"campaign_plan_{selected_campaign.replace(' ', '_')}.json",
+                mime='application/json',
+                use_container_width=True
+            )
+    
+    with c3:
+        if st.button("📊 สร้างรายงาน PDF", use_container_width=True):
+            st.info("🚧 กำลังพัฒนา...")
+    
+    # ── 3.9 Campaign History (ถ้ามี) ─────────────────────────────────────
+    if 'campaign_history' not in st.session_state:
+        st.session_state.campaign_history = []
+    
+    if st.button("➕ บันทึกแคมเปญนี้"):
+        st.session_state.campaign_history.append({
+            'date': pd.Timestamp.now(),
+            'campaign': selected_campaign,
+            'budget': budget,
+            'roi': roi,
+            'people': people_reached
+        })
+        st.success("✅ บันทึกแล้ว!")
+    
+    if len(st.session_state.campaign_history) > 0:
+        st.markdown("---")
+        st.subheader("📜 ประวัติแคมเปญ")
+        hist_df = pd.DataFrame(st.session_state.campaign_history)
+        st.dataframe(hist_df, use_container_width=True)
 # ==========================================
 # PAGE 4: Logistics
 # ==========================================

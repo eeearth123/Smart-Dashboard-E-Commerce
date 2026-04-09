@@ -299,9 +299,9 @@ page = st.sidebar.radio("Navigation", [
     "1. 💰 Business Overview",
     "2. 📊 Churn Overview",
     "3. 🎯 Action Plan",
-    "4. 🚛 Logistics Insights",
-    "5. 🏪 Seller Audit",
-    "6. 🔄 Buying Cycle Analysis",
+    "4. 🔄 Buying Cycle Analysis",
+    "5. 🚛 Logistics Insights",
+    "6. 🏪 Seller Audit",
     "7. 🔍 Customer Detail",
 ])
 st.sidebar.markdown("---")
@@ -343,12 +343,11 @@ if page == "1. 💰 Business Overview":
             last_m, first_m = monthly_rev.iloc[-1], monthly_rev.iloc[-2]
             if first_m > 0: mom_growth = (last_m - first_m) / first_m * 100
 
-    k1, k2, k3, k4 = st.columns(4)
+    k1, k2, k3 = st.columns(3)
     k1.metric("💰 Total Revenue",   f"R$ {total_rev:,.0f}")
     k2.metric("📈 MoM Growth",      f"{mom_growth:+.1f}%" if mom_growth is not None else "N/A",
               delta=f"{mom_growth:+.1f}%" if mom_growth is not None else None)
     k3.metric("🛒 Avg Order Value", f"R$ {avg_order:,.0f}")
-    k4.metric("👤 CLV (Est.)",      f"R$ {clv:,.0f}")
     st.markdown("---")
 
     st.subheader("📈 Monthly Revenue Trend")
@@ -376,6 +375,58 @@ if page == "1. 💰 Business Overview":
                         .properties(height=350), use_container_width=True)
     else:
         st.info("ไม่มีข้อมูลเพียงพอ")
+
+    # ── หมวดสินค้าขายดี ────────────────────────────────────────────────
+    st.markdown("---")
+    st.subheader("🏆 หมวดสินค้าขายดี (Top Categories)")
+    if 'product_category_name' in df_d.columns and not df_d.empty:
+        cat_sales = df_d.groupby('product_category_name').agg(
+            revenue=('payment_value', 'sum'),
+            orders=('payment_value', 'count'),
+            avg_order=('payment_value', 'mean'),
+            churn_risk=('churn_probability', 'mean')
+        ).reset_index().sort_values('revenue', ascending=False)
+
+        col_chart, col_table = st.columns([1.5, 2])
+
+        with col_chart:
+            top20 = cat_sales.head(20)
+            bar_cat = alt.Chart(top20).mark_bar().encode(
+                x=alt.X('revenue:Q', title='Revenue (R$)'),
+                y=alt.Y('product_category_name:N', sort='-x', title=None),
+                color=alt.Color('churn_risk:Q',
+                    scale=alt.Scale(domain=[0.3, 0.9], range=['#2ecc71', '#e74c3c']),
+                    title='Churn Risk'),
+                tooltip=[
+                    alt.Tooltip('product_category_name', title='หมวด'),
+                    alt.Tooltip('revenue', format=',.0f', title='Revenue (R$)'),
+                    alt.Tooltip('orders', format=',', title='จำนวน Orders'),
+                    alt.Tooltip('churn_risk', format='.1%', title='Churn Risk'),
+                ]
+            ).properties(height=500, title='Top 20 หมวดสินค้า (สีแดง = Churn Risk สูง)')
+            st.altair_chart(bar_cat, use_container_width=True)
+
+        with col_table:
+            st.markdown("**📋 รายละเอียดทุกหมวด**")
+            st.dataframe(
+                cat_sales.rename(columns={
+                    'product_category_name': 'หมวดสินค้า',
+                    'revenue':   'Revenue (R$)',
+                    'orders':    'Orders',
+                    'avg_order': 'Avg Order (R$)',
+                    'churn_risk':'Churn Risk'
+                }),
+                column_config={
+                    'Revenue (R$)':    st.column_config.NumberColumn(format='R$ %.0f'),
+                    'Orders':          st.column_config.NumberColumn(format='%,d'),
+                    'Avg Order (R$)':  st.column_config.NumberColumn(format='R$ %.0f'),
+                    'Churn Risk':      st.column_config.ProgressColumn(
+                        format='%.2f', min_value=0, max_value=1),
+                },
+                use_container_width=True,
+                hide_index=True,
+                height=500
+            )
 
 # ==========================================
 # PAGE 2: Churn Overview
@@ -709,7 +760,7 @@ elif page == "3. 🎯 Action Plan":
 # ==========================================
 # PAGE 4: Logistics Insights
 # ==========================================
-elif page == "4. 🚛 Logistics Insights":
+elif page == "5. 🚛 Logistics Insights":
     import pydeck as pdk
     st.title("🚛 Logistics Insights")
 
@@ -823,7 +874,7 @@ elif page == "4. 🚛 Logistics Insights":
 # ==========================================
 # PAGE 5: Seller Audit
 # ==========================================
-elif page == "5. 🏪 Seller Audit":
+elif page == "6. 🏪 Seller Audit":
     st.title("🏪 Seller Audit")
 
     if 'seller_id' not in df.columns:
@@ -879,7 +930,7 @@ elif page == "5. 🏪 Seller Audit":
 # ==========================================
 # PAGE 6: Buying Cycle
 # ==========================================
-elif page == "6. 🔄 Buying Cycle Analysis":
+elif page == "4. 🔄 Buying Cycle Analysis":
     st.title("🔄 Buying Cycle Analysis")
 
     sel_c  = st.multiselect("📦 หมวดสินค้า:", safe_cats(df), key="p6c")

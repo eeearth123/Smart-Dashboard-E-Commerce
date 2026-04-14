@@ -1,5 +1,3 @@
-# Smart-Dashboard-E-Commerce
- Transforming Data into Opportunities with AI-Driven
 # 🛒 Olist Customer Churn Prediction — From Model to Production Dashboard
 
 [![Python](https://img.shields.io/badge/Python-3.10-blue)]()

@@ -1,122 +1,413 @@
-# 🛒 Olist Customer Churn Prediction — From Model to Production Dashboard
+# 📊 Dashboard Guide — Olist Churn Intelligence Platform
 
-[![Python](https://img.shields.io/badge/Python-3.10-blue)]()
-[![LightGBM](https://img.shields.io/badge/Model-LightGBM-orange)]()
-[![Streamlit](https://img.shields.io/badge/Dashboard-Streamlit-red)]()
-[![BigQuery](https://img.shields.io/badge/Data-BigQuery-4285F4)]()
-
-## Overview
-
-End-to-end churn prediction pipeline built on the Brazilian e-commerce 
-dataset (Olist). The model is trained offline with AutoML, then served 
-live through a Streamlit dashboard connected to BigQuery.
-
-**Macro F1: 0.6784 | Threshold: 0.55 | Algorithm: LightGBM**
+> **Streamlit Cloud** · **Google BigQuery** · **LightGBM AI Model**  
+> ระบบวิเคราะห์ลูกค้าเสี่ยง Churn แบบ Real-time พร้อมจำลอง ROI แคมเปญก่อนใช้งบจริง
 
 ---
 
-## Architecture: Model → Dashboard
+## 📋 สารบัญ
 
-```
-BigQuery (45,786 rows)
-       │
-       ▼
-process_features()          ← Feature engineering at load time
-  ├─ delivery_days          (order_delivered - order_purchased)
-  ├─ delivery_vs_estimated  (estimated - actual delivery)
-  ├─ freight_ratio          (freight_value / price)
-  ├─ avg_purchase_gap       (median days between repeat orders)
-  ├─ gap_real / gap_vs_avg  (repeat-buyer behavior signals)
-  ├─ first_purchase_late    (first impression signal)
-  ├─ first_purchase_bad_review
-  └─ is_extremely_late
-       │
-       ▼
-lgbm_model.predict_proba()  ← 15 features, threshold = 0.55
-       │
-       ▼
-churn_probability + status  ← Rule-based segmentation overlay
-  ├─ Lost        (lateness_score > 3.0)
-  ├─ High Risk   (AI prob > 0.75)
-  ├─ Warning     (lateness > 1.5)
-  ├─ Medium Risk (AI prob 0.40–0.75)
-  └─ Active
-       │
-       ▼
-Streamlit Dashboard (7 pages)
-  ├─ Business Overview    — Revenue trend, top categories
-  ├─ Churn Overview       — Rule vs AI comparison trend
-  ├─ Action Plan          — Model-driven campaign simulator
-  ├─ Buying Cycle         — Repurchase gap analysis
-  ├─ Logistics Insights   — State-level delivery map (pydeck)
-  ├─ Seller Audit         — Per-seller churn attribution
-  └─ Customer Detail      — Individual drill-down
-```
+| หน้า | ชื่อ | จุดประสงค์หลัก |
+|------|------|----------------|
+| [1](#1--business-overview) | 💰 Business Overview | ภาพรวมรายได้และหมวดสินค้า |
+| [2](#2--churn-overview) | 📊 Churn Overview | ภาพรวมความเสี่ยง Churn ทั้งบริษัท |
+| [3](#3--action-plan--roi-simulator) | 🎯 Action Plan | จำลองแคมเปญและคำนวณ ROI |
+| [4](#4--buying-cycle-analysis) | 🔄 Buying Cycle | วิเคราะห์รอบการซื้อซ้ำต่อหมวดสินค้า |
+| [5](#5--logistics-insights) | 🚛 Logistics | แผนที่วิเคราะห์การส่งของรายรัฐ |
+| [6](#6--seller-audit) | 🏪 Seller Audit | จัดอันดับร้านค้าตามความเสี่ยง |
+| [7](#7--customer-detail) | 🔍 Customer Detail | ค้นหาลูกค้ารายคน |
 
 ---
 
-## Key Feature: Model-Driven Campaign Simulator (Page 3)
+## 1 · 💰 Business Overview
 
-The Action Plan page simulates campaign ROI by **modifying feature 
-values and re-running predict_proba()** — not by using a fixed lift 
-assumption.
+### 📐 Layout Guide — แต่ละส่วนของหน้านี้คืออะไร
 
-```python
-# Example: "What if we offer free shipping?"
-df_sim['freight_value'] = 0      # simulate the campaign
-df_sim['freight_ratio'] = 0
-prob_sim = model.predict_proba(X_sim)[:, 1]
-
-uplift = prob_orig - prob_sim    # positive = risk reduced
-success_rate = (uplift > 0.08).mean()
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  FILTER BAR — กรองหมวดสินค้า (ว่าง = ดูภาพรวมทั้งหมด)          │
+├──────────────┬──────────────┬──────────────────────────────────│
+│  💰 Revenue  │  📈 MoM      │  🛒 Avg Order                    │
+│  รายได้รวม   │  Growth %    │  ค่าเฉลี่ยต่อออเดอร์              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  📈 Revenue Trend + Growth Rate                                  │
+│  Bar = ยอดรายได้รายเดือน                                         │
+│  Line = % การเติบโต MoM (แกนขวา)                                │
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  🏆 Top Categories Bar Chart          📋 รายละเอียดตาราง         │
+│  สีแท่ง = Churn Risk (เขียว→แดง)    Revenue, Orders,           │
+│  ยิ่งแดง = หมวดนั้นมีคนหนีมาก        Avg Order, Churn Risk      │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-This gives a data-grounded success rate rather than a manual estimate,
-making ROI calculation directly tied to the model's learned behavior.
+> 📸 **ใส่รูป annotated screenshot ตรงนี้**  
+> `![Business Overview Layout](docs/images/p1_annotated.png)`
 
 ---
 
-## Feature Importance (Top 5)
+### 📸 Dashboard — ผลลัพธ์จริง
 
-| Rank | Feature               | Importance |
-|------|-----------------------|------------|
-| 1    | freight_value         | 19.6%      |
-| 2    | price                 | 18.8%      |
-| 3    | freight_ratio         | 11.7%      |
-| 4    | delivery_vs_estimated | 9.6%       |
-| 5    | payment_installments  | 8.6%       |
-
-→ ~50% of churn is driven by **price + freight**
-→ ~18% by **delivery timing**
-→ Informs which campaigns have highest expected uplift
+> `![Business Overview Dashboard](docs/images/p1_dashboard.png)`
 
 ---
 
-## Model Performance
+### 💡 Insights ที่ได้จากหน้านี้
 
-| Threshold | Macro F1 | Churn Recall | Stay Recall |
-|-----------|----------|--------------|-------------|
-| 0.50      | 0.6742   | 82.5%        | 56.5%       |
-| **0.55**  | **0.6583** | **78.1%**  | **60.9%**   |
-| 0.60      | 0.6093   | 67.8%        | 67.2%       |
+| Insight | ประโยชน์ต่อธุรกิจ |
+|---------|-----------------|
+| **MoM Growth** แสดงเดือนที่รายได้ตก | ระบุช่วงที่ควรเร่งแคมเปญ ก่อนยอดหล่น |
+| **สีแท่งหมวดสินค้า** บอก Churn Risk | รู้ทันทีว่าหมวดไหนทำเงินมากแต่ลูกค้าหนีด้วย ต้องระวังเป็นพิเศษ |
+| **Avg Order Value** ต่อหมวด | วางราคา bundle หรือ upsell ได้ตรงกลุ่ม |
 
-Threshold 0.55 selected: balances catching churners (78%) 
-while limiting false positives on retain-spend.
+> **ตัวอย่าง insight จากข้อมูล Olist:**  
+> หมวด `Health & Beauty` มียอดขายสูงเป็นอันดับต้น แต่ Churn Risk สูงกว่าค่าเฉลี่ย  
+> → ควรออก loyalty program เฉพาะหมวดนี้
 
 ---
 
-## Stack
+## 2 · 📊 Churn Overview
 
-- **Model**: LightGBM via AutoML (flaml), 5-fold CV, macro F1
-- **Data**: Google BigQuery (`asia-southeast1`)
-- **Dashboard**: Streamlit Cloud
-- **Viz**: Altair, Pydeck
-- **Serving**: `model.predict_proba()` called on every page load
-
-## Files
+### 📐 Layout Guide
 
 ```
-app.py                              ← Streamlit dashboard (7 pages)
-olist_churn_model_final (1).pkl     ← Trained LightGBM model
-model_features_final (1).pkl        ← Feature name list (15 features)
+┌─────────────────────────────────────────────────────────────────┐
+│  FILTER BAR — กรองหมวดสินค้า                                    │
+│                                                                  │
+│  🚨 At-Risk %  │  🤖 AI Predicted  │  💸 Rev at Risk  │  👥 ...  │
+│  สัดส่วนเสี่ยง  │  เปอร์เซ็นต์ AI   │  รายได้ที่เสี่ยงหาย│         │
+├──────────────────────────────────┬──────────────────────────────┤
+│                                  │                              │
+│  📈 Churn Risk Trend             │  🍩 Revenue by Risk          │
+│  เส้นส้ม = Rule-based %          │  Donut Chart แบ่งสัดส่วน     │
+│  เส้นม่วง = AI Predicted %       │  ตามสถานะของลูกค้า           │
+│  เห็นว่าทั้งสองเส้นไปทิศทางเดียวกัน│  สี = ระดับความเสี่ยง       │
+│  หรือ AI จับได้เร็วกว่า rule ไหม  │                              │
+│                                  │                              │
+└──────────────────────────────────┴──────────────────────────────┘
 ```
+
+> `![Churn Overview Layout](docs/images/p2_annotated.png)`
+
+---
+
+### 📸 Dashboard — ผลลัพธ์จริง
+
+> `![Churn Overview Dashboard](docs/images/p2_dashboard.png)`
+
+---
+
+### 💡 Insights ที่ได้จากหน้านี้
+
+| Insight | ประโยชน์ต่อธุรกิจ |
+|---------|-----------------|
+| **Trend 2 เส้น** เปรียบเทียบ Rule vs AI | เห็นว่า AI จับสัญญาณล่วงหน้าก่อน rule-based หรือไม่ |
+| **Revenue at Risk** คือยอดที่กำลังจะหาย | ตอบ CFO ได้ทันทีว่า "ถ้าไม่ทำอะไร จะเสียเงินเท่าไหร่" |
+| **Donut chart** แสดงสัดส่วน 5 กลุ่ม | วางงบ retention ได้ถูกกลุ่ม ไม่หว่านเท่ากันทุกคน |
+
+> **การแบ่งกลุ่ม (5 ระดับ):**
+> ```
+> 🔴 Lost         — หายนานเกิน 3x รอบซื้อปกติ
+> 🟥 High Risk    — AI ทำนาย > 75%
+> 🟧 Warning      — ช้ากว่ารอบปกติ 1.5x
+> 🟨 Medium Risk  — AI ทำนาย 40–75%
+> 🟩 Active       — ปกติดี
+> ```
+
+---
+
+## 3 · 🎯 Action Plan & ROI Simulator
+
+> **หน้าที่แตกต่างจาก dashboard ทั่วไปที่สุด**  
+> ไม่ใช่แค่บอกว่า "ใครเสี่ยง" แต่จำลองให้เห็นว่า **"ถ้าทำแคมเปญนี้ จะกำไรหรือขาดทุน"** ก่อนใช้เงินจริง
+
+### 📐 Layout Guide
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  TARGET SELECTOR                                                 │
+│  กลุ่มความเสี่ยง [High Risk ▾]    หมวดสินค้า [ทั้งหมด ▾]        │
+│  👥 กลุ่มเป้าหมาย: X คน           💰 LTV เฉลี่ย: R$ XXX          │
+├─────────────────────────────────────────────────────────────────┤
+│  CAMPAIGN TABS                                                   │
+│  🚚 ส่งฟรี  │  💵 ส่วนลด  │  ❤️ ง้อส่งช้า  │  🛍️ Cross-sell   │
+├────────────────┬──────────────────────┬────────────────────────┤
+│ 📉 ปัญหา       │ 🛠️ ตั้งค่าแคมเปญ      │ 🚀 ผลลัพธ์              │
+│                │                      │                        │
+│ พบ X คน        │ งบต่อหัว: [   ]      │ Success Rate: XX%      │
+│ X% ของกลุ่ม    │ จุดคุ้มทุน: XX%      │ ดึงลูกค้าคืน: X คน    │
+│                │                      │ งบประมาณ: R$ X         │
+│ Feature เฉลี่ย │ ← โมเดลเปลี่ยน       │ กำไร/ขาดทุน: R$ X      │
+│ • freight: XX  │   feature ให้ดู      │                        │
+│ • ratio: XX    │   uplift จริง        │ 📊 Uplift Distribution  │
+│                │                      │ [██░░░░]               │
+└────────────────┴──────────────────────┴────────────────────────┘
+```
+
+> `![Action Plan Layout](docs/images/p3_annotated.png)`
+
+---
+
+### 📸 Dashboard — เปรียบเทียบ "ยิงหมด" vs "โฟกัสกลุ่ม"
+
+**กรณีที่ 1: ยิงหมด — ไม่กรองกลุ่ม (45,791 คน)**
+
+> `![Action Plan Untargeted](docs/images/p3_untargeted.png)`
+
+**กรณีที่ 2: โฟกัสกลุ่ม — High Risk เท่านั้น (5,363 คน)**
+
+> `![Action Plan Focused](docs/images/p3_focused.png)`
+
+---
+
+### 💡 Insights ที่ได้จากหน้านี้
+
+#### ผลเปรียบเทียบ Free Shipping Campaign
+
+| ตัวชี้วัด | ยิงหมด 45,791 คน | โฟกัส High Risk 5,363 คน |
+|-----------|-----------------|--------------------------|
+| Success Rate | 24.7% | **46.4%** |
+| จุดคุ้มทุนที่ต้องการ | 23.8% | 13.5% |
+| งบที่ต้องใช้ | R$ 905,649 | **R$ 25,112** |
+| ROI | +3.4% | **+266.6%** |
+| ความเสี่ยง | สูงมาก (margin บาง) | ต่ำมาก |
+
+> ✅ **สรุป:** แคมเปญเดียวกัน งบต่อหัวเท่ากัน แต่โฟกัสกลุ่มถูกคน  
+> ใช้งบน้อยกว่า **97%** ได้ ROI มากกว่า **78 เท่า**
+
+---
+
+#### วิธีที่โมเดลคำนวณ Uplift
+
+```
+1. นำ feature ปัจจุบันของกลุ่มเป้าหมายไปทำนาย
+   prob_original = model.predict_proba(X_original)
+
+2. จำลองผลของแคมเปญโดยเปลี่ยน feature
+   เช่น Free Shipping → freight_value = 0
+
+3. ทำนายซ้ำด้วย feature ใหม่
+   prob_simulated = model.predict_proba(X_simulated)
+
+4. วัด uplift จริงจากโมเดล
+   uplift = prob_original - prob_simulated
+   success = (uplift > 0.08)  ← ลด risk ≥ 8% ถือว่าตอบสนอง
+
+5. คำนวณ ROI
+   revenue  = success_count × LTV_avg
+   profit   = revenue - (n_target × cost_per_head)
+   ROI      = profit / budget × 100
+```
+
+> ⚠️ **หมายเหตุ:** นี่คือการประมาณแบบ correlational ไม่ใช่ causal inference  
+> ใช้เป็นตัวช่วยตัดสินใจทิศทาง ไม่ใช่ตัวเลขรับประกัน
+
+---
+
+## 4 · 🔄 Buying Cycle Analysis
+
+### 📐 Layout Guide
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  FILTER — เลือกหมวดสินค้า (เปรียบเทียบกับภาพรวม)               │
+│                                                                  │
+│  ⏱️ รอบซื้อเฉลี่ย    🐢 ความล่าช้า     📅 ซื้อซ้ำใน 30 วัน     │
+├──────────────────────┬──────────────────────────────────────────┤
+│  📊 Repurchase Dist. │  📊 Benchmark (ภาพรวมทั้งบริษัท)         │
+│  Histogram ของหมวดที่ │  เปรียบเทียบให้เห็นว่าหมวดที่เลือก      │
+│  เลือก               │  ซื้อเร็วหรือช้ากว่า baseline             │
+├─────────────────────────────────────────────────────────────────┤
+│  📋 ตารางรายหมวด: รอบซื้อ, ความล่าช้า, Churn Risk              │
+├─────────────────────────────────────────────────────────────────┤
+│  📅 Seasonal Heatmap — เดือนไหนแต่ละหมวดขายดี                  │
+│  สีส้มเข้ม = High Season → เตรียมสต็อกล่วงหน้า                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+> `![Buying Cycle Layout](docs/images/p4_annotated.png)`
+
+---
+
+### 📸 Dashboard — ผลลัพธ์จริง
+
+> `![Buying Cycle Dashboard](docs/images/p4_dashboard.png)`
+
+---
+
+### 💡 Insights ที่ได้จากหน้านี้
+
+| Insight | ประโยชน์ต่อธุรกิจ |
+|---------|-----------------|
+| **รอบซื้อต่อหมวด** เช่น Beauty = 45 วัน | ตั้ง reminder ส่ง push notification ก่อน 45 วัน |
+| **Lateness Score > 1** หมายถึงเริ่มช้ากว่าปกติ | ระบุหมวดที่ลูกค้าเริ่มห่างก่อนที่จะ churn จริง |
+| **Seasonal Heatmap** | วางแผน stock และ campaign ได้ล่วงหน้า ไม่ใช่รอปัญหาก่อน |
+
+---
+
+## 5 · 🚛 Logistics Insights
+
+### 📐 Layout Guide
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  FILTER — หมวดสินค้า + สถานะลูกค้า                              │
+│                                                                  │
+│  💰 ยอดเงิน   🚚 ส่งเฉลี่ย (วัน)    ⚠️ ส่งช้า (ครั้ง)           │
+├──────────────────────────────────┬──────────────────────────────┤
+│                                  │  🚨 Top Issues               │
+│  🗺️ แผนที่บราซิล                  │  ตารางรัฐที่มีปัญหา          │
+│  วงกลม = ยอดเงิน (ขนาด)          │  เรียงตาม: ส่งช้า หรือ Risk  │
+│  สีวงกลม = Churn Risk            │                              │
+│  🔴 > 0.8  🟡 > 0.5  🟢 ต่ำ       │  กด zoom รัฐ ดูเจาะจงได้    │
+│                                  │                              │
+├─────────────────────────────────────────────────────────────────┤
+│  🏙️ City Drill-down — Top 50 เมืองที่ส่งช้ามากสุด               │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+> `![Logistics Layout](docs/images/p5_annotated.png)`
+
+---
+
+### 📸 Dashboard — ผลลัพธ์จริง
+
+> `![Logistics Dashboard](docs/images/p5_dashboard.png)`
+
+---
+
+### 💡 Insights ที่ได้จากหน้านี้
+
+| Insight | ประโยชน์ต่อธุรกิจ |
+|---------|-----------------|
+| **รัฐที่สีแดงและวงกลมใหญ่** | รายได้สูงแต่ลูกค้าเสี่ยงหนี → ปัญหา logistics ส่งผลต่อ retention |
+| **ส่งช้า vs Churn Risk** | เห็นว่า delivery delay มีความสัมพันธ์กับ churn ในรัฐนั้นจริงไหม |
+| **City drill-down** | ระบุเมืองที่ควรเปลี่ยน carrier หรือเพิ่ม warehouse |
+
+---
+
+## 6 · 🏪 Seller Audit
+
+### 📐 Layout Guide
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  FILTER — หมวดสินค้า + สถานะลูกค้า                              │
+│                                                                  │
+│  🏪 ร้านค้า   💸 ยอดขายรวม    ⭐ รีวิวเฉลี่ย    🚚 ส่งเฉลี่ย     │
+├──────────────────┬──────────────────────────────────────────────┤
+│  ⚙️ Sort By       │  📋 ตารางร้านค้าทั้งหมด                      │
+│  • ความเสี่ยงสูง  │  Progress bar = Churn Risk                  │
+│  • ส่งช้า         │  เรียงตาม sort ที่เลือก                      │
+│  • คะแนนต่ำ      │  สามารถ scroll ดูได้ทุกร้าน                  │
+│  • ยอดขาย        │                                              │
+│  • ปริมาณ        │                                              │
+└──────────────────┴──────────────────────────────────────────────┘
+```
+
+> `![Seller Audit Layout](docs/images/p6_annotated.png)`
+
+---
+
+### 📸 Dashboard — ผลลัพธ์จริง
+
+> `![Seller Audit Dashboard](docs/images/p6_dashboard.png)`
+
+---
+
+### 💡 Insights ที่ได้จากหน้านี้
+
+| Insight | ประโยชน์ต่อธุรกิจ |
+|---------|-----------------|
+| **ร้านที่ Churn Risk สูง + ยอดขายสูง** | ลูกค้าซื้อจากร้านนี้แล้วหาย ต้องคุยกับ seller เรื่อง quality |
+| **ร้านที่ส่งช้าสุด** | negotiate SLA ใหม่หรือ deprioritize seller นั้น |
+| **ร้านที่คะแนนต่ำ** | แจ้งเตือนหรือ suspend ก่อนสร้างความเสียหายต่อ brand |
+
+---
+
+## 7 · 🔍 Customer Detail
+
+### 📐 Layout Guide
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  FILTERS                                                         │
+│  สถานะ [High Risk ▾]    หมวดสินค้า [   ]    ค้นหา ID [      ]  │
+├──────────────────────────┬──────────────────────────────────────┤
+│  📊 Top 10 หมวดเสี่ยง    │  📋 ตารางรายละเอียด                  │
+│  แท่งแดง = จำนวน Risk    │                                      │
+│  แท่งเทา = จำนวนทั้งหมด  │                                      │
+├─────────────────────────────────────────────────────────────────┤
+│  📄 รายชื่อลูกค้า (เรียงจากความเสี่ยงสูงสุด)                    │
+│  Progress bar = Risk Score    Late Score = XX x                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+> `![Customer Detail Layout](docs/images/p7_annotated.png)`
+
+---
+
+### 📸 Dashboard — ผลลัพธ์จริง
+
+> `![Customer Detail Dashboard](docs/images/p7_dashboard.png)`
+
+---
+
+### 💡 Insights ที่ได้จากหน้านี้
+
+| Insight | ประโยชน์ต่อธุรกิจ |
+|---------|-----------------|
+| **ค้นหา customer ID** | CRM team ดู score รายคนก่อน call ได้ทันที |
+| **Late Score** บอกว่าช้ากว่ารอบปกติกี่เท่า | ลูกค้าที่ Late > 2x และ Risk สูง คือ urgent case |
+| **Export รายชื่อ** | นำไปใช้ใน Email / SMS campaign โดยตรง |
+
+---
+
+## 🔧 วิธีใช้งาน
+
+### ข้อมูลที่ต้องเตรียม (ขั้นต่ำ)
+
+| คอลัมน์ | ประเภท | ตัวอย่าง |
+|---------|--------|---------|
+| `customer_unique_id` | string | `abc123` |
+| `order_purchase_timestamp` | datetime | `2024-01-15 10:30:00` |
+| `payment_value` | float | `125.90` |
+| `product_category_name` | string | `Health & Beauty` |
+
+### คอลัมน์เสริม (ทำให้แม่นยำขึ้น)
+
+| คอลัมน์ | ประโยชน์ |
+|---------|---------|
+| `freight_value` | ใช้ใน Action Plan Tab ส่งฟรี |
+| `review_score` | ใช้ใน SHAP analysis |
+| `seller_id` | ใช้ใน Seller Audit |
+| `customer_state` | ใช้ใน Logistics Map |
+
+---
+
+## 📁 วิธีเพิ่มรูปภาพ
+
+```
+repo/
+└── docs/
+    ├── DASHBOARD.md         ← ไฟล์นี้
+    ├── MODEL.md
+    └── images/
+        ├── p1_annotated.png
+        ├── p1_dashboard.png
+        ├── p2_annotated.png
+        ├── p2_dashboard.png
+        ├── p3_annotated.png
+        ├── p3_untargeted.png
+        ├── p3_focused.png
+        └── ...
+```
+
+> **วิธีสร้าง annotated image:** ถ่าย screenshot → เปิดใน Canva หรือ Figma → วาด box + label แต่ละส่วน → export เป็น PNG
+
+---
+
+*สำหรับรายละเอียดโมเดล, features, และ SHAP analysis → ดูที่ [MODEL.md](MODEL.md)*

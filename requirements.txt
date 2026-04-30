@@ -10,5 +10,7 @@ google-cloud-bigquery
 pandas-gbq
 pydeck
 flaml
-
+google-auth
+db-dtypes
+pyarrow
 

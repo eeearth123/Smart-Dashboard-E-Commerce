@@ -24,4 +24,4 @@
 ### 📐 Layout Guide — แต่ละส่วนของหน้านี้คืออะไร
 
 
-![Business Overview Layout](Docs/images/p1_annotated.png)
+![Business Overview Layout](Docs/images/p1annotated.png)

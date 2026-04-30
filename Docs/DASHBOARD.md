@@ -22,3 +22,5 @@
 ## 1 · 💰 Business Overview
  
 ### 📐 Layout Guide — แต่ละส่วนของหน้านี้คืออะไร
+
+`![Business Overview Layout](docs/images/p1_annotated.png)`

@@ -1,3 +1,7 @@
+# ============================================================
+# app.py — Entry point (แก้ที่นี่น้อยมาก)
+# ทุก logic อยู่ในโฟลเดอร์ย่อย
+# ============================================================
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -98,7 +102,7 @@ with st.sidebar:
 # ============================================================
 page_map = {
     t("page_business"):  lambda: p1.render(df),
-    t("page_churn"):     lambda: p2.render(df),
+    t("page_churn"):     lambda: p2.render(df, t, BEST_THRESHOLD),
     t("page_action"):    lambda: p3.render(df, model, feature_names),
     t("page_cycle"):     lambda: p4.render(df),
     t("page_logistics"): lambda: p5.render(df),

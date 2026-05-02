@@ -19,11 +19,9 @@ def render(df: pd.DataFrame) -> None:
     dfd = df[df["product_category_name"].isin(sel_cats)].copy() if sel_cats else df.copy()
     st.markdown("---")
 
-    # ── KPI metrics ───────────────────────────────────────────
-    total_rev   = dfd["payment_value"].sum() if "payment_value" in dfd.columns else 0
-    avg_order   = dfd["payment_value"].mean() if "payment_value" in dfd.columns else 0
-    n_customers = dfd["customer_unique_id"].nunique() if "customer_unique_id" in dfd.columns else 0
-
+    # ── KPI row 1: Revenue ────────────────────────────────────
+    total_rev = dfd["payment_value"].sum() if "payment_value" in dfd.columns else 0
+    avg_order = dfd["payment_value"].mean() if "payment_value" in dfd.columns else 0
     mom_growth = _calc_mom_growth(dfd)
 
     k1, k2, k3 = st.columns(3)
@@ -34,6 +32,31 @@ def render(df: pd.DataFrame) -> None:
         delta=f"{mom_growth:+.1f}%" if mom_growth is not None else None,
     )
     k3.metric(t("p1_aov"), f"R$ {avg_order:,.0f}")
+
+    # ── KPI row 2: Customer ───────────────────────────────────
+    st.markdown("")
+    n_total   = dfd["customer_unique_id"].nunique() if "customer_unique_id" in dfd.columns else 0
+    n_repeat  = 0
+    if "customer_unique_id" in dfd.columns and "purchase_count" in dfd.columns:
+        # repeat = customer ที่มีอย่างน้อย 2 orders
+        repeat_ids = dfd[dfd["purchase_count"] >= 2]["customer_unique_id"].nunique()
+        n_repeat   = repeat_ids
+    elif "customer_unique_id" in dfd.columns:
+        counts     = dfd.groupby("customer_unique_id").size()
+        n_repeat   = (counts >= 2).sum()
+
+    pct_repeat = n_repeat / n_total * 100 if n_total > 0 else 0
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("👥 ลูกค้าทั้งหมด",       f"{n_total:,} คน")
+    c2.metric("🔄 ลูกค้าที่กลับมาซื้อซ้ำ",
+              f"{n_repeat:,} คน",
+              f"{pct_repeat:.1f}% ของทั้งหมด")
+    c3.metric("🛒 ซื้อครั้งเดียว",
+              f"{n_total - n_repeat:,} คน",
+              f"{100 - pct_repeat:.1f}% ของทั้งหมด",
+              delta_color="inverse")
+
     st.markdown("---")
 
     # ── Revenue trend ─────────────────────────────────────────
@@ -46,15 +69,17 @@ def render(df: pd.DataFrame) -> None:
     _render_top_categories(dfd)
 
 
-# ── Private helpers ───────────────────────────────────────────
-
-def _calc_mom_growth(dfd: pd.DataFrame):
+def _calc_mom_growth(dfd):
     if "order_purchase_timestamp" not in dfd.columns or dfd.empty:
         return None
     dfd = dfd.copy()
-    dfd["_month"]   = dfd["order_purchase_timestamp"].dt.to_period("M")
-    all_months      = pd.period_range(start=dfd["_month"].min(), end=dfd["_month"].max(), freq="M")
-    monthly_rev     = dfd.groupby("_month")["payment_value"].sum().reindex(all_months, fill_value=0)
+    dfd["_month"] = dfd["order_purchase_timestamp"].dt.to_period("M")
+    all_months    = pd.period_range(
+        start=dfd["_month"].min(), end=dfd["_month"].max(), freq="M"
+    )
+    monthly_rev = (
+        dfd.groupby("_month")["payment_value"].sum().reindex(all_months, fill_value=0)
+    )
     if len(monthly_rev) >= 3:
         last_m, prev_m = monthly_rev.iloc[-2], monthly_rev.iloc[-3]
         return (last_m - prev_m) / prev_m * 100 if prev_m > 0 else None
@@ -64,17 +89,19 @@ def _calc_mom_growth(dfd: pd.DataFrame):
     return None
 
 
-def _render_revenue_trend(dfd: pd.DataFrame) -> None:
+def _render_revenue_trend(dfd):
     if "order_purchase_timestamp" not in dfd.columns or dfd.empty:
         st.info(t("no_data"))
         return
-
     rev_trend = (
         dfd.set_index("order_purchase_timestamp")["payment_value"]
         .resample("MS").sum().fillna(0).reset_index()
     )
     rev_trend.columns = ["Month", "Revenue"]
-    rev_trend["Growth"] = rev_trend["Revenue"].pct_change().replace([np.inf, -np.inf], np.nan) * 100
+    rev_trend["Growth"] = (
+        rev_trend["Revenue"].pct_change()
+        .replace([np.inf, -np.inf], np.nan) * 100
+    )
     plot_df = rev_trend.iloc[:-1] if len(rev_trend) > 1 else rev_trend
 
     base = alt.Chart(plot_df).encode(
@@ -82,11 +109,21 @@ def _render_revenue_trend(dfd: pd.DataFrame) -> None:
     )
     bars = base.mark_bar(color="#1E88E5", opacity=0.7).encode(
         y=alt.Y("Revenue:Q", title="Revenue (R$)", axis=alt.Axis(grid=False)),
-        tooltip=[alt.Tooltip("Month:T", format="%B %Y"), alt.Tooltip("Revenue:Q", format=",.0f")],
+        tooltip=[
+            alt.Tooltip("Month:T", format="%B %Y"),
+            alt.Tooltip("Revenue:Q", format=",.0f"),
+        ],
     )
-    line = base.mark_line(color="#E53935", strokeWidth=3, point=alt.OverlayMarkDef(color="#E53935")).encode(
-        y=alt.Y("Growth:Q", title="Growth (%)", axis=alt.Axis(titleColor="#E53935", orient="right")),
-        tooltip=[alt.Tooltip("Month:T", format="%B %Y"), alt.Tooltip("Growth:Q", format=".1f", title="Growth %")],
+    line = base.mark_line(
+        color="#E53935", strokeWidth=3,
+        point=alt.OverlayMarkDef(color="#E53935")
+    ).encode(
+        y=alt.Y("Growth:Q", title="Growth (%)",
+                axis=alt.Axis(titleColor="#E53935", orient="right")),
+        tooltip=[
+            alt.Tooltip("Month:T", format="%B %Y"),
+            alt.Tooltip("Growth:Q", format=".1f", title="Growth %"),
+        ],
     )
     st.altair_chart(
         alt.layer(bars, line).resolve_scale(y="independent").properties(height=350),
@@ -94,10 +131,9 @@ def _render_revenue_trend(dfd: pd.DataFrame) -> None:
     )
 
 
-def _render_top_categories(dfd: pd.DataFrame) -> None:
+def _render_top_categories(dfd):
     if "product_category_name" not in dfd.columns or dfd.empty:
         return
-
     cat_sales = (
         dfd.groupby("product_category_name")
         .agg(
@@ -109,14 +145,11 @@ def _render_top_categories(dfd: pd.DataFrame) -> None:
         .reset_index()
         .sort_values("revenue", ascending=False)
     )
-
     col_chart, col_table = st.columns([1.5, 2])
-
     with col_chart:
         top20 = cat_sales.head(20)
         chart = (
-            alt.Chart(top20)
-            .mark_bar()
+            alt.Chart(top20).mark_bar()
             .encode(
                 x=alt.X("revenue:Q", title="Revenue (R$)"),
                 y=alt.Y("product_category_name:N", sort="-x", title=None),
@@ -135,7 +168,6 @@ def _render_top_categories(dfd: pd.DataFrame) -> None:
             .properties(height=500, title=t("p1_chart_title"))
         )
         st.altair_chart(chart, use_container_width=True)
-
     with col_table:
         st.markdown(t("p1_table_hdr"))
         st.dataframe(
@@ -150,7 +182,9 @@ def _render_top_categories(dfd: pd.DataFrame) -> None:
                 t("p1_col_rev"):    st.column_config.NumberColumn(format="R$ %.0f"),
                 t("p1_col_orders"): st.column_config.NumberColumn(format="%,d"),
                 t("p1_col_avg"):    st.column_config.NumberColumn(format="R$ %.0f"),
-                t("p1_col_churn"):  st.column_config.ProgressColumn(format="%.2f", min_value=0, max_value=1),
+                t("p1_col_churn"):  st.column_config.ProgressColumn(
+                    format="%.2f", min_value=0, max_value=1
+                ),
             },
             use_container_width=True,
             hide_index=True,

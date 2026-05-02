@@ -69,7 +69,7 @@ else:
 df["is_churn"] = df["churn_prediction"]
 df["status"]   = df.apply(assign_status, axis=1)
 
-# ── Sidebar: info + navigation ────────────────────────────────
+# ── Sidebar: info + navigation (ไม่มี Business Rules แล้ว) ───
 PAGE_LABELS = [
     t("page_business"),
     t("page_churn"),
@@ -84,11 +84,7 @@ with st.sidebar:
     st.title(t("app_title"))
     st.success(t("data_loaded", n=f"{len(df):,}"))
     st.info(t("model_threshold", v=f"{BEST_THRESHOLD:.2f}"))
-    st.markdown(t("business_rules"))
-    for rule_key in ["rule_lost","rule_high","rule_warning","rule_medium","rule_active"]:
-        st.markdown(f"- {t(rule_key)}")
 
-    # ใช้ index เพื่อ avoid key mismatch เมื่อเปลี่ยนภาษา
     page_idx = st.radio(
         t("navigation"),
         options=range(len(PAGE_LABELS)),

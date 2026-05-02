@@ -1,6 +1,5 @@
 # ============================================================
-# app.py — Entry point (แก้ที่นี่น้อยมาก)
-# ทุก logic อยู่ในโฟลเดอร์ย่อย
+# app.py — Entry point
 # ============================================================
 import warnings
 warnings.filterwarnings("ignore")
@@ -40,16 +39,18 @@ import pages.p6_seller    as p6
 import pages.p7_customer  as p7
 
 # ============================================================
-# SIDEBAR
+# SIDEBAR — Refresh + Language
 # ============================================================
-render_lang_toggle()   # ปุ่มเลือกภาษา
+render_lang_toggle()
 
 with st.sidebar:
     if st.button(t("refresh_data")):
         st.cache_data.clear()
         st.rerun()
 
-# ── Load data ─────────────────────────────────────────────────
+# ============================================================
+# LOAD DATA
+# ============================================================
 df_raw, bq_error = load_bq_data()
 model, feature_names, model_error = load_model()
 
@@ -66,9 +67,8 @@ if model is not None and feature_names:
     proba, pred = predict_churn(df, model, feature_names, BEST_THRESHOLD)
     df["churn_probability"] = proba
     df["churn_prediction"]  = pred
-    # อัปเดต cat_churn_risk หลัง predict
     if "product_category_name" in df.columns:
-        cat_risk_map = df.groupby("product_category_name")["churn_probability"].mean()
+        cat_risk_map     = df.groupby("product_category_name")["churn_probability"].mean()
         df["cat_churn_risk"] = df["product_category_name"].map(cat_risk_map)
 else:
     df["churn_probability"] = 0.5
@@ -77,16 +77,19 @@ else:
 df["is_churn"] = df["churn_prediction"]
 df["status"]   = df.apply(assign_status, axis=1)
 
-# ── Sidebar info ──────────────────────────────────────────────
+# ============================================================
+# SIDEBAR — Navigation
+# ============================================================
 with st.sidebar:
     st.title(t("app_title"))
     st.success(t("data_loaded", n=f"{len(df):,}"))
     st.info(t("model_threshold", v=f"{BEST_THRESHOLD:.2f}"))
     st.markdown(t("business_rules"))
-    for rule_key in ["rule_lost", "rule_high", "rule_warning", "rule_medium", "rule_active"]:
+    for rule_key in ["rule_lost","rule_high","rule_warning","rule_medium","rule_active"]:
         st.markdown(f"- {t(rule_key)}")
 
-    page = st.radio(t("navigation"), [
+    # ── Pages list ────────────────────────────────────────────
+    PAGES = [
         t("page_business"),
         t("page_churn"),
         t("page_action"),
@@ -94,16 +97,40 @@ with st.sidebar:
         t("page_logistics"),
         t("page_seller"),
         t("page_customer"),
-    ])
+    ]
+
+    # ── รับ page request จากหน้าอื่น (เช่น CTA button ใน p2) ─
+    # .pop() ล้างค่าหลังอ่านเพื่อไม่ให้ redirect ซ้ำทุก rerun
+    requested_page = st.session_state.pop("active_page", None)
+
+    if requested_page and requested_page in PAGES:
+        default_idx = PAGES.index(requested_page)
+    else:
+        default_idx = st.session_state.get("main_nav_idx", 0)
+
+    page = st.radio(
+        t("navigation"),
+        PAGES,
+        index=default_idx,      # ← ต้องส่ง index ไม่ใช่ value
+        key="main_nav",
+    )
+
+    # เก็บ index ปัจจุบันไว้ใช้รอบถัดไป
+    st.session_state["main_nav_idx"] = PAGES.index(page)
+
     st.markdown("---")
 
 # ============================================================
-# ROUTER — เลือกหน้าตาม page ที่เลือก
+# ROUTER
 # ============================================================
 page_map = {
     t("page_business"):  lambda: p1.render(df),
     t("page_churn"):     lambda: p2.render(df, t, BEST_THRESHOLD),
-    t("page_action"):    lambda: p3.render(df, model, feature_names),
+    t("page_action"):    lambda: p3.render(
+                                    df, t,
+                                    model=model,
+                                    feature_names=feature_names,
+                                    threshold=BEST_THRESHOLD),
     t("page_cycle"):     lambda: p4.render(df),
     t("page_logistics"): lambda: p5.render(df),
     t("page_seller"):    lambda: p6.render(df),

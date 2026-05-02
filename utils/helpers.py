@@ -77,3 +77,7 @@ def status_display_options(t_func) -> tuple[list, dict, dict]:
     to_internal = {v: k for k, v in to_display.items()}
     display_list = list(to_display.values())
     return display_list, to_internal, to_display
+
+MATRIX_GROUPS    # dict ชื่อ 4 กลุ่ม
+MATRIX_GROUP_LIST  # list สำหรับ multiselect
+assign_matrix_group(df, threshold)  # ฟังก์ชันสร้างคอลัมน์ matrix_group

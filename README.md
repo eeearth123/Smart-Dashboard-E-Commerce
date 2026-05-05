@@ -117,5 +117,42 @@ That's why we used:
 - ✅ **Campaign simulation with clear ROI**
 
 > **A model is only as good as your ability to explain it.**
+---
+
+## 📚 Deep Dive Documentation
+
+For technical details and implementation insights, explore our comprehensive documentation:
+
+### 🔍 [Docs/MODEL.md](Docs/MODEL.md) — Model Performance & Technical Details
+
+Deep dive into the machine learning pipeline:
+
+- **Model Architecture**: LightGBM configuration, hyperparameter tuning via FLAML
+- **Evaluation Metrics**: Detailed breakdown of Accuracy, Macro F1, Precision-Recall curves
+- **Class Imbalance Handling**: Sample weighting strategy & threshold optimization (0.55)
+- **SHAP Interpretability**: Feature importance analysis, dependence plots, and business insights
+- **Key Finding**: `is_first_purchase` as the strongest predictor (98% of churners were first-time buyers)
+- **Probability Calibration**: Ensuring reliable uplift estimation for simulation
+- **Reproducibility**: Code snippets, random seeds, and data preprocessing steps
+
+### 📈 [Docs/DASHBOARD.md](Docs/DASHBOARD.md) — Dashboard Walkthrough & Business Insights
+
+Explore the 7-page Streamlit dashboard built for stakeholder decision-making:
+
+- **Page 1: Business Overview** — KPIs, revenue trends, churn rate by segment
+- **Page 2: Churn Overview** — Risk distribution, cohort analysis, retention metrics
+- **Page 3: Action Plan Simulator** — Interactive what-if campaign testing with ROI calculator
+- **Page 4: Logistics Map** — Pydeck visualization of delivery performance by region
+- **Page 5: Seller Audit** — Vendor performance scoring and risk flagging
+- **Page 6: Buying Cycle Analysis** — Customer journey mapping and repeat purchase patterns
+- **Page 7: Customer Detail** — Drill-down view for individual customer profiling
+
+**Key Insights Extracted**:
+- First-time buyers represent 98% of predicted churners → prioritize post-purchase engagement
+- 62.7% of churners left 5-star reviews → satisfaction ≠ retention; need proactive outreach
+- High-risk customers in profitable categories yield 3.2x higher ROI when targeted
+- Free shipping intervention works best for customers with `freight_value > R$30` and `order_delay > 3 days`
+
+### 🗂️ Folder Structure
 
 

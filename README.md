@@ -118,17 +118,4 @@ That's why we used:
 
 > **A model is only as good as your ability to explain it.**
 
----
 
-## 🚀 Quick Start
-
-```bash
-# Clone the repository
-git clone https://github.com/eeearth123/Smart-Dashboard-E-Commerce
-cd Smart-Dashboard-E-Commerce
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run the dashboard
-streamlit run app.py

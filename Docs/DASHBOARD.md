@@ -4,10 +4,6 @@
 > **Model:** LightGBM · Macro F1 = 0.6784 · Threshold = 0.55
 
 ---
-
-
-```
-
 ---
 
 ## 🗺️ Flow การใช้งาน
@@ -458,28 +454,6 @@ CRM → บันทึกผลการติดต่อ → BigQuery → ว
 | `lateness_score` | Days Overdue | บอก urgency ให้ Sales |
 | `product_category_name` | Last Purchase Category | ช่วย Sales pitch ตรงหมวด |
 | `payment_value` | Customer LTV | prioritize high-value customers |
-
----
-
-## 📂 Checklist รูปที่ต้องมีทั้งหมด
-
-| ไฟล์ | สถานะ | หมายเหตุ |
-|------|--------|---------|
-| `p1_layout.png` | ✅ มีแล้ว | ไฟล์ `e368254f...png` |
-| `p1_dashboard.png` | ❌ ยังไม่มี | ถ่าย screenshot Streamlit |
-| `p2_layout.png` | ✅ มีแล้ว | ยังไม่ได้ upload — ใส่ตรงนี้ |
-| `p2_dashboard.png` | ❌ ยังไม่มี | ถ่าย screenshot Streamlit |
-| `p3_layout.png` | ✅ มีแล้ว | ไฟล์ `ChatGPT_Image_Apr_30...png` |
-| `p3_untargeted.png` | ❌ ยังไม่มี | screenshot ตอนยิงหมด (45K คน) |
-| `p3_focused.png` | ❌ ยังไม่มี | screenshot ตอนโฟกัส High Risk |
-| `p4_layout.png` | ✅ มีแล้ว | ไฟล์ `103d0090...png` |
-| `p4_dashboard.png` | ❌ ยังไม่มี | ถ่าย screenshot Streamlit |
-| `p5_layout.png` | ✅ มีแล้ว | ไฟล์ `1fc397e1...png` |
-| `p5_dashboard.png` | ❌ ยังไม่มี | ถ่าย screenshot Streamlit |
-| `p6_layout.png` | ✅ มีแล้ว | ไฟล์ `464787ac...png` |
-| `p6_dashboard.png` | ❌ ยังไม่มี | ถ่าย screenshot Streamlit |
-| `p7_layout.png` | ❌ ยังไม่มี | annotate หน้า Customer Detail |
-| `p7_dashboard.png` | ❌ ยังไม่มี | ถ่าย screenshot Streamlit |
 
 ---
 

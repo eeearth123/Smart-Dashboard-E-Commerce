@@ -5,28 +5,7 @@
 
 ---
 
-## 📁 โครงสร้างไฟล์รูปภาพ
 
-```
-docs/
-├── DASHBOARD.md
-├── MODEL.md
-└── images/
-    ├── p1_layout.png        ← annotated layout guide
-    ├── p1_dashboard.png     ← screenshot จริงจาก Streamlit
-    ├── p2_layout.png
-    ├── p2_dashboard.png
-    ├── p3_layout.png
-    ├── p3_untargeted.png    ← screenshot ยิงหมด 45K คน
-    ├── p3_focused.png       ← screenshot โฟกัส High Risk
-    ├── p4_layout.png
-    ├── p4_dashboard.png
-    ├── p5_layout.png
-    ├── p5_dashboard.png
-    ├── p6_layout.png
-    ├── p6_dashboard.png
-    ├── p7_layout.png
-    └── p7_dashboard.png
 ```
 
 ---

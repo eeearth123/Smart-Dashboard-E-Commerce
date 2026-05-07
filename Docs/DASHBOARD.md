@@ -4,7 +4,6 @@
 > **Model:** LightGBM · Macro F1 = 0.6784 · Threshold = 0.55
 
 ---
----
 
 ## 🗺️ Flow การใช้งาน
 

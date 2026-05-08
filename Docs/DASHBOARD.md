@@ -41,16 +41,7 @@
 
 ## 1 · 💰 Business Overview
 
-### 📐 Layout Guide
-
-> 📸 `docs/images/p1_layout.png`
-> *(ไฟล์ที่มีแล้ว: `e368254f-cdd3-468e-9926-4e2bcee70d06.png`)*
-
-![Business Overview Layout](images/p1_layout.png)
-
 ### 📸 Dashboard จริง
-
-> 📸 `docs/images/p1_dashboard.png` *(ถ่าย screenshot จาก Streamlit)*
 
 ![Business Overview](images/p1_dashboard.png)
 
@@ -86,16 +77,7 @@
 > **หน้านี้ออกแบบใหม่** — เพิ่ม 2×2 AI×Rule Matrix และ
 > Per-group Behaviour Analysis เพื่อให้เห็นภาพรวมก่อนไปหน้า Action Plan
 
-### 📐 Layout Guide
-
-> 📸 `docs/images/p2_layout.png`
-> *(ไฟล์มีแล้วแต่ยังไม่ได้ upload — ใส่ไฟล์ annotated ของ p2 ที่นี่)*
-
-![Churn Overview Layout](images/p2_layout.png)
-
 ### 📸 Dashboard จริง
-
-> 📸 `docs/images/p2_dashboard.png` *(ถ่าย screenshot จาก Streamlit)*
 
 ![Churn Overview Dashboard](images/p2_dashboard.png)
 
@@ -174,17 +156,7 @@ Rule: OK        │  🔍 EARLY WARNING   │  ✅ ACTIVE             │
 
 ## 3 · 🎯 Action Plan & ROI Simulator
 
-### 📐 Layout Guide
-
-> 📸 `docs/images/p3_layout.png`
-> *(ไฟล์ที่มีแล้ว: `ChatGPT_Image_Apr_30__2026__10_32_19_AM.png`)*
-
-![Action Plan Layout](images/p3_layout.png)
-
 ### 📸 เปรียบเทียบ ยิงหมด vs โฟกัสกลุ่ม
-
-> 📸 `docs/images/p3_untargeted.png` — screenshot ตอน filter = ทุกคน (45K)
-> 📸 `docs/images/p3_focused.png` — screenshot ตอน filter = High Risk เท่านั้น
 
 ![Untargeted](images/p3_untargeted.png)
 ![Focused](images/p3_focused.png)
@@ -235,13 +207,6 @@ ROI = (success_count × LTV - budget) / budget × 100
 
 ## 4 · 🔄 Buying Cycle Analysis
 
-### 📐 Layout Guide
-
-> 📸 `docs/images/p4_layout.png`
-> *(ไฟล์ที่มีแล้ว: `103d0090-5359-4aa2-8325-8a62435a5521.png`)*
-
-![Buying Cycle Layout](images/p4_layout.png)
-
 ### 📸 Dashboard จริง
 
 > 📸 `docs/images/p4_dashboard.png` *(ถ่าย screenshot)*
@@ -277,13 +242,6 @@ ROI = (success_count × LTV - budget) / budget × 100
 ---
 
 ## 5 · 🚛 Logistics Insights
-
-### 📐 Layout Guide
-
-> 📸 `docs/images/p5_layout.png`
-> *(ไฟล์ที่มีแล้ว: `1fc397e1-075e-41fa-877e-095fec2434f5.png`)*
-
-![Logistics Layout](images/p5_layout.png)
 
 ### 📸 Dashboard จริง
 
@@ -321,13 +279,6 @@ ROI = (success_count × LTV - budget) / budget × 100
 
 ## 6 · 🏪 Seller Audit
 
-### 📐 Layout Guide
-
-> 📸 `docs/images/p6_layout.png`
-> *(ไฟล์ที่มีแล้ว: `464787ac-51c7-48f9-983b-98957b5bfa5a.png`)*
-
-![Seller Audit Layout](images/p6_layout.png)
-
 ### 📸 Dashboard จริง
 
 > 📸 `docs/images/p6_dashboard.png` *(ถ่าย screenshot)*
@@ -362,13 +313,6 @@ ROI = (success_count × LTV - budget) / budget × 100
 ---
 
 ## 7 · 🔍 Customer Detail & CRM Roadmap
-
-### 📐 Layout Guide
-
-> 📸 `docs/images/p7_layout.png`
-> *(ยังไม่มี — annotate screenshot ของหน้า Customer Detail เอง)*
-
-![Customer Detail Layout](images/p7_layout.png)
 
 ### 📸 Dashboard จริง
 

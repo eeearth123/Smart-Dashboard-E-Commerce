@@ -1,0 +1,11 @@
+dbt_churn_pipeline:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: service-account
+      project: academic-moon-483615-t2
+      dataset: analytics_olist
+      threads: 4
+      keyfile: gcp-key.json
+      location: asia-southeast1

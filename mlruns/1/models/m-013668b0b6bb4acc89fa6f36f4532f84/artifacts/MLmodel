@@ -1,0 +1,27 @@
+artifact_path: file:///d:/Desktop/Churn interi Dashboard/Smart-Dashboard-E-Commerce/mlruns/1/models/m-013668b0b6bb4acc89fa6f36f4532f84/artifacts
+flavors:
+  lightgbm:
+    code: null
+    data: model.skops
+    lgb_version: 4.6.0
+    model_class: lightgbm.sklearn.LGBMClassifier
+    serialization_format: skops
+    skops_trusted_types:
+    - collections.OrderedDict
+    - lightgbm.basic.Booster
+    - lightgbm.sklearn.LGBMClassifier
+    - lightgbm.sklearn.LGBMRegressor
+  python_function:
+    data: model.skops
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.lightgbm
+    python_version: 3.12.4
+mlflow_version: 3.14.0
+model_id: m-013668b0b6bb4acc89fa6f36f4532f84
+model_size_bytes: 1039169
+model_uuid: m-013668b0b6bb4acc89fa6f36f4532f84
+prompts: null
+run_id: e6859369d2cb4448b69a7200628a7aed
+utc_time_created: '2026-07-12 15:34:27.196873'

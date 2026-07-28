@@ -10,6 +10,11 @@ def process_features(df_raw: pd.DataFrame) -> pd.DataFrame:
     """แปลงข้อมูลดิบเป็น features พร้อม predict"""
     df = df_raw.copy()
 
+    # Convert potential decimal columns to float
+    for col in ["price", "freight_value", "payment_value"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce").astype(float)
+
     # ── Parse timestamps ─────────────────────────────────────
     for col in [
         "order_purchase_timestamp",
@@ -140,6 +145,18 @@ def process_features(df_raw: pd.DataFrame) -> pd.DataFrame:
         ).dt.days.fillna(0)
     else:
         df["delay_days"] = 0
+
+    # ── Bad experience score (V2) ─────────────────────────────
+    df["first_purchase_late"] = np.where((df["is_first_purchase"] == 1) & (df["delivery_vs_estimated"] < 0), 1, 0)
+    df["first_purchase_bad_review"] = np.where((df["is_first_purchase"] == 1) & (df["review_score"] <= 2), 1, 0)
+    df["is_extremely_late"] = (df["delay_days"] > 7).astype(int)
+
+    df["bad_experience_score"] = (
+        df["is_low_score"] +
+        df["first_purchase_bad_review"] +
+        df["first_purchase_late"] +
+        df["is_extremely_late"]
+    )
 
     return df
 

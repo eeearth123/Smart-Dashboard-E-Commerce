@@ -6,7 +6,7 @@
 BEST_THRESHOLD = 0.55
 
 # BigQuery
-BQ_TABLE   = "academic-moon-483615-t2.Dashboard.input"
+BQ_TABLE   = "academic-moon-483615-t2.analytics_olist.mart_churn_features"
 BQ_LOCATION = "asia-southeast1"
 
 # Business rules — lateness thresholds

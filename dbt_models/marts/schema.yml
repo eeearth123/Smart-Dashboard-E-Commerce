@@ -1,0 +1,16 @@
+version: 2
+
+models:
+  - name: mart_churn_features
+    columns:
+      - name: order_id
+        tests:
+          - unique
+          - not_null
+      - name: customer_unique_id
+        tests:
+          - not_null
+      - name: split
+        tests:
+          - accepted_values:
+              values: ['train', 'test']

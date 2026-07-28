@@ -1,0 +1,1712 @@
+[0m11:31:20.330378 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001C7EB7F70E0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001C7EBBF8CE0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001C7EBBF8680>]}
+
+
+============================== 11:31:20.330378 | 4495434e-dc60-4ad0-9cb5-fff1b3182189 ==============================
+[0m11:31:20.330378 [info ] [MainThread]: Running with dbt=1.11.12
+[0m11:31:20.330378 [debug] [MainThread]: running dbt with arguments {'version_check': 'True', 'no_print': 'None', 'static_parser': 'True', 'target_path': 'None', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'printer_width': '80', 'write_json': 'True', 'empty': 'None', 'log_cache_events': 'False', 'introspect': 'True', 'cache_selected_only': 'False', 'fail_fast': 'False', 'debug': 'False', 'log_format': 'default', 'profiles_dir': '.', 'send_anonymous_usage_stats': 'True', 'quiet': 'False', 'warn_error': 'None', 'partial_parse': 'True', 'invocation_command': 'dbt debug --profiles-dir .', 'indirect_selection': 'eager', 'use_colors': 'True', 'use_experimental_parser': 'False', 'log_path': 'D:\\Desktop\\Churn interi Dashboard\\Smart-Dashboard-E-Commerce\\logs'}
+[0m11:31:20.362781 [info ] [MainThread]: dbt version: 1.11.12
+[0m11:31:20.362781 [info ] [MainThread]: python version: 3.12.4
+[0m11:31:20.364161 [info ] [MainThread]: python path: D:\Desktop\Churn interi Dashboard\.venv\Scripts\python.exe
+[0m11:31:20.365160 [info ] [MainThread]: os info: Windows-10-10.0.19045-SP0
+[0m11:31:23.149761 [info ] [MainThread]: Using profiles dir at .
+[0m11:31:23.149761 [info ] [MainThread]: Using profiles.yml file at .\profiles.yml
+[0m11:31:23.149761 [info ] [MainThread]: Using dbt_project.yml file at D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce\dbt_project.yml
+[0m11:31:23.149761 [info ] [MainThread]: adapter type: bigquery
+[0m11:31:23.149761 [info ] [MainThread]: adapter version: 1.11.3
+[0m11:31:23.265322 [info ] [MainThread]: Configuration:
+[0m11:31:23.265322 [info ] [MainThread]:   profiles.yml file [[32mOK found and valid[0m]
+[0m11:31:23.265322 [info ] [MainThread]:   dbt_project.yml file [[32mOK found and valid[0m]
+[0m11:31:23.265322 [info ] [MainThread]: Required dependencies:
+[0m11:31:23.265322 [debug] [MainThread]: Executing "git --help"
+[0m11:31:23.300950 [debug] [MainThread]: STDOUT: "b"usage: git [-v | --version] [-h | --help] [-C <path>] [-c <name>=<value>]\n           [--exec-path[=<path>]] [--html-path] [--man-path] [--info-path]\n           [-p | --paginate | -P | --no-pager] [--no-replace-objects] [--no-lazy-fetch]\n           [--no-optional-locks] [--no-advice] [--bare] [--git-dir=<path>]\n           [--work-tree=<path>] [--namespace=<name>] [--config-env=<name>=<envvar>]\n           <command> [<args>]\n\nThese are common Git commands used in various situations:\n\nstart a working area (see also: git help tutorial)\n   clone      Clone a repository into a new directory\n   init       Create an empty Git repository or reinitialize an existing one\n\nwork on the current change (see also: git help everyday)\n   add        Add file contents to the index\n   mv         Move or rename a file, a directory, or a symlink\n   restore    Restore working tree files\n   rm         Remove files from the working tree and from the index\n\nexamine the history and state (see also: git help revisions)\n   bisect     Use binary search to find the commit that introduced a bug\n   diff       Show changes between commits, commit and working tree, etc\n   grep       Print lines matching a pattern\n   log        Show commit logs\n   show       Show various types of objects\n   status     Show the working tree status\n\ngrow, mark and tweak your common history\n   backfill   Download missing objects in a partial clone\n   branch     List, create, or delete branches\n   commit     Record changes to the repository\n   merge      Join two or more development histories together\n   rebase     Reapply commits on top of another base tip\n   reset      Set `HEAD` or the index to a known state\n   switch     Switch branches\n   tag        Create, list, delete or verify tags\n\ncollaborate (see also: git help workflows)\n   fetch      Download objects and refs from another repository\n   pull       Fetch from and integrate with another repository or a local branch\n   push       Update remote refs along with associated objects\n\n'git help -a' and 'git help -g' list available subcommands and some\nconcept guides. See 'git help <command>' or 'git help <concept>'\nto read about a specific subcommand or concept.\nSee 'git help git' for an overview of the system.\n""
+[0m11:31:23.301951 [debug] [MainThread]: STDERR: "b''"
+[0m11:31:23.301951 [info ] [MainThread]:  - git [[32mOK found[0m]
+
+[0m11:31:23.302952 [info ] [MainThread]: Connection:
+[0m11:31:23.303943 [info ] [MainThread]:   method: service-account
+[0m11:31:23.304990 [info ] [MainThread]:   database: academic-moon-483615-t2
+[0m11:31:23.305491 [info ] [MainThread]:   execution_project: academic-moon-483615-t2
+[0m11:31:23.306490 [info ] [MainThread]:   schema: analytics_olist
+[0m11:31:23.306490 [info ] [MainThread]:   location: asia-southeast1
+[0m11:31:23.307490 [info ] [MainThread]:   priority: None
+[0m11:31:23.307582 [info ] [MainThread]:   maximum_bytes_billed: None
+[0m11:31:23.308099 [info ] [MainThread]:   impersonate_service_account: None
+[0m11:31:23.308099 [info ] [MainThread]:   job_retry_deadline_seconds: None
+[0m11:31:23.309195 [info ] [MainThread]:   job_retries: 1
+[0m11:31:23.309195 [info ] [MainThread]:   job_creation_timeout_seconds: None
+[0m11:31:23.309195 [info ] [MainThread]:   job_execution_timeout_seconds: None
+[0m11:31:23.309195 [info ] [MainThread]:   timeout_seconds: None
+[0m11:31:23.309195 [info ] [MainThread]:   client_id: None
+[0m11:31:23.309195 [info ] [MainThread]:   token_uri: None
+[0m11:31:23.309195 [info ] [MainThread]:   compute_region: None
+[0m11:31:23.313702 [info ] [MainThread]:   dataproc_cluster_name: None
+[0m11:31:23.313836 [info ] [MainThread]:   gcs_bucket: None
+[0m11:31:23.313836 [info ] [MainThread]:   dataproc_batch: None
+[0m11:31:23.314775 [info ] [MainThread]: Registered adapter: bigquery=1.11.3
+[0m11:31:23.626860 [debug] [MainThread]: Acquiring new bigquery connection 'debug'
+[0m11:31:23.626860 [debug] [MainThread]: On debug: select 1 as id
+[0m11:31:23.626860 [debug] [MainThread]: Opening a new connection, currently in state init
+[0m11:31:24.771277 [error] [MainThread]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:ed245595-db8c-4331-8734-261d1f7bd74c&page=queryresults
+[0m11:31:24.771277 [info ] [MainThread]:   Connection test: [[31mERROR[0m]
+
+[0m11:31:24.771277 [info ] [MainThread]: [31m1 check failed:[0m
+[0m11:31:24.771277 [info ] [MainThread]: dbt was unable to connect to the specified database.
+The database returned the following error:
+
+  >Database Error
+  Access Denied: Project academic-moon-483615-t2: User does not have bigquery.jobs.create permission in project academic-moon-483615-t2.
+
+Check your database credentials and try again. For more information, visit:
+https://docs.getdbt.com/docs/configure-your-profile
+
+
+[0m11:31:24.771277 [debug] [MainThread]: Command `dbt debug` failed at 11:31:24.771277 after 4.56 seconds
+[0m11:31:24.771277 [debug] [MainThread]: Connection 'debug' was properly closed.
+[0m11:31:24.786905 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001C7EBB95700>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001C7FA6F4140>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001C7FAB36660>]}
+[0m11:31:24.787715 [debug] [MainThread]: Flushing usage events
+[0m11:31:26.030701 [debug] [MainThread]: An error was encountered while trying to flush usage events
+[0m11:34:53.176454 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001E5B84D0230>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001E5BB1324B0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001E5BB133770>]}
+
+
+============================== 11:34:53.176454 | b6ee3256-991e-4ff2-8631-93816786920c ==============================
+[0m11:34:53.176454 [info ] [MainThread]: Running with dbt=1.11.12
+[0m11:34:53.192079 [debug] [MainThread]: running dbt with arguments {'version_check': 'True', 'no_print': 'None', 'static_parser': 'True', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'target_path': 'None', 'printer_width': '80', 'write_json': 'True', 'empty': 'None', 'log_cache_events': 'False', 'introspect': 'True', 'cache_selected_only': 'False', 'log_format': 'default', 'debug': 'False', 'fail_fast': 'False', 'profiles_dir': '.', 'send_anonymous_usage_stats': 'True', 'quiet': 'False', 'warn_error': 'None', 'partial_parse': 'True', 'use_colors': 'True', 'invocation_command': 'dbt debug --profiles-dir .', 'indirect_selection': 'eager', 'use_experimental_parser': 'False', 'log_path': 'D:\\Desktop\\Churn interi Dashboard\\Smart-Dashboard-E-Commerce\\logs'}
+[0m11:34:53.211741 [info ] [MainThread]: dbt version: 1.11.12
+[0m11:34:53.211741 [info ] [MainThread]: python version: 3.12.4
+[0m11:34:53.212742 [info ] [MainThread]: python path: D:\Desktop\Churn interi Dashboard\.venv\Scripts\python.exe
+[0m11:34:53.212742 [info ] [MainThread]: os info: Windows-10-10.0.19045-SP0
+[0m11:34:54.086667 [info ] [MainThread]: Using profiles dir at .
+[0m11:34:54.102293 [info ] [MainThread]: Using profiles.yml file at .\profiles.yml
+[0m11:34:54.102293 [info ] [MainThread]: Using dbt_project.yml file at D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce\dbt_project.yml
+[0m11:34:54.102293 [info ] [MainThread]: adapter type: bigquery
+[0m11:34:54.102293 [info ] [MainThread]: adapter version: 1.11.3
+[0m11:34:54.192636 [info ] [MainThread]: Configuration:
+[0m11:34:54.192636 [info ] [MainThread]:   profiles.yml file [[32mOK found and valid[0m]
+[0m11:34:54.192636 [info ] [MainThread]:   dbt_project.yml file [[32mOK found and valid[0m]
+[0m11:34:54.192636 [info ] [MainThread]: Required dependencies:
+[0m11:34:54.192636 [debug] [MainThread]: Executing "git --help"
+[0m11:34:54.238180 [debug] [MainThread]: STDOUT: "b"usage: git [-v | --version] [-h | --help] [-C <path>] [-c <name>=<value>]\n           [--exec-path[=<path>]] [--html-path] [--man-path] [--info-path]\n           [-p | --paginate | -P | --no-pager] [--no-replace-objects] [--no-lazy-fetch]\n           [--no-optional-locks] [--no-advice] [--bare] [--git-dir=<path>]\n           [--work-tree=<path>] [--namespace=<name>] [--config-env=<name>=<envvar>]\n           <command> [<args>]\n\nThese are common Git commands used in various situations:\n\nstart a working area (see also: git help tutorial)\n   clone      Clone a repository into a new directory\n   init       Create an empty Git repository or reinitialize an existing one\n\nwork on the current change (see also: git help everyday)\n   add        Add file contents to the index\n   mv         Move or rename a file, a directory, or a symlink\n   restore    Restore working tree files\n   rm         Remove files from the working tree and from the index\n\nexamine the history and state (see also: git help revisions)\n   bisect     Use binary search to find the commit that introduced a bug\n   diff       Show changes between commits, commit and working tree, etc\n   grep       Print lines matching a pattern\n   log        Show commit logs\n   show       Show various types of objects\n   status     Show the working tree status\n\ngrow, mark and tweak your common history\n   backfill   Download missing objects in a partial clone\n   branch     List, create, or delete branches\n   commit     Record changes to the repository\n   merge      Join two or more development histories together\n   rebase     Reapply commits on top of another base tip\n   reset      Set `HEAD` or the index to a known state\n   switch     Switch branches\n   tag        Create, list, delete or verify tags\n\ncollaborate (see also: git help workflows)\n   fetch      Download objects and refs from another repository\n   pull       Fetch from and integrate with another repository or a local branch\n   push       Update remote refs along with associated objects\n\n'git help -a' and 'git help -g' list available subcommands and some\nconcept guides. See 'git help <command>' or 'git help <concept>'\nto read about a specific subcommand or concept.\nSee 'git help git' for an overview of the system.\n""
+[0m11:34:54.239268 [debug] [MainThread]: STDERR: "b''"
+[0m11:34:54.240267 [info ] [MainThread]:  - git [[32mOK found[0m]
+
+[0m11:34:54.240267 [info ] [MainThread]: Connection:
+[0m11:34:54.241290 [info ] [MainThread]:   method: service-account
+[0m11:34:54.241290 [info ] [MainThread]:   database: academic-moon-483615-t2
+[0m11:34:54.241290 [info ] [MainThread]:   execution_project: academic-moon-483615-t2
+[0m11:34:54.242913 [info ] [MainThread]:   schema: analytics_olist
+[0m11:34:54.243231 [info ] [MainThread]:   location: asia-southeast1
+[0m11:34:54.243231 [info ] [MainThread]:   priority: None
+[0m11:34:54.243231 [info ] [MainThread]:   maximum_bytes_billed: None
+[0m11:34:54.243231 [info ] [MainThread]:   impersonate_service_account: None
+[0m11:34:54.243231 [info ] [MainThread]:   job_retry_deadline_seconds: None
+[0m11:34:54.243231 [info ] [MainThread]:   job_retries: 1
+[0m11:34:54.246319 [info ] [MainThread]:   job_creation_timeout_seconds: None
+[0m11:34:54.246319 [info ] [MainThread]:   job_execution_timeout_seconds: None
+[0m11:34:54.247317 [info ] [MainThread]:   timeout_seconds: None
+[0m11:34:54.247317 [info ] [MainThread]:   client_id: None
+[0m11:34:54.248318 [info ] [MainThread]:   token_uri: None
+[0m11:34:54.248780 [info ] [MainThread]:   compute_region: None
+[0m11:34:54.248780 [info ] [MainThread]:   dataproc_cluster_name: None
+[0m11:34:54.248780 [info ] [MainThread]:   gcs_bucket: None
+[0m11:34:54.250233 [info ] [MainThread]:   dataproc_batch: None
+[0m11:34:54.251154 [info ] [MainThread]: Registered adapter: bigquery=1.11.3
+[0m11:34:54.571683 [debug] [MainThread]: Acquiring new bigquery connection 'debug'
+[0m11:34:54.571683 [debug] [MainThread]: On debug: select 1 as id
+[0m11:34:54.571683 [debug] [MainThread]: Opening a new connection, currently in state init
+[0m11:35:03.686552 [debug] [MainThread]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:dcfbaf61-37d6-4d81-aeea-fe1cabe65a29&page=queryresults
+[0m11:35:04.116670 [debug] [MainThread]: SQL status: OK in 0.443 seconds
+[0m11:35:07.095993 [info ] [MainThread]:   Connection test: [[32mOK connection ok[0m]
+
+[0m11:35:07.095993 [info ] [MainThread]: [32mAll checks passed![0m
+[0m11:35:07.095993 [debug] [MainThread]: Command `dbt debug` succeeded at 11:35:07.095993 after 14.04 seconds
+[0m11:35:07.095993 [debug] [MainThread]: Connection 'debug' was properly closed.
+[0m11:35:07.095993 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001E5BB2BC9E0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001E5BAA930B0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001E5BAB19850>]}
+[0m11:35:07.095993 [debug] [MainThread]: Flushing usage events
+[0m11:35:08.450785 [debug] [MainThread]: An error was encountered while trying to flush usage events
+[0m12:29:12.384194 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001CF0CBDC6B0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001CF0C79D040>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001CF0C79DB20>]}
+
+
+============================== 12:29:12.388741 | 3c096463-f770-41a6-b920-6642018f2bc2 ==============================
+[0m12:29:12.388741 [info ] [MainThread]: Running with dbt=1.11.12
+[0m12:29:12.389741 [debug] [MainThread]: running dbt with arguments {'static_parser': 'True', 'no_print': 'None', 'version_check': 'True', 'target_path': 'None', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'printer_width': '80', 'write_json': 'True', 'introspect': 'True', 'log_cache_events': 'False', 'empty': 'False', 'cache_selected_only': 'False', 'fail_fast': 'False', 'debug': 'False', 'log_format': 'default', 'partial_parse': 'True', 'send_anonymous_usage_stats': 'True', 'quiet': 'False', 'warn_error': 'None', 'profiles_dir': '.', 'invocation_command': 'dbt run --profiles-dir .', 'use_colors': 'True', 'indirect_selection': 'eager', 'use_experimental_parser': 'False', 'log_path': 'D:\\Desktop\\Churn interi Dashboard\\Smart-Dashboard-E-Commerce\\logs'}
+[0m12:29:15.597583 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'project_id', 'label': '3c096463-f770-41a6-b920-6642018f2bc2', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001CF1B36AD20>]}
+[0m12:29:15.659545 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'adapter_info', 'label': '3c096463-f770-41a6-b920-6642018f2bc2', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001CF1964E3C0>]}
+[0m12:29:15.660544 [info ] [MainThread]: Registered adapter: bigquery=1.11.3
+[0m12:29:16.118806 [debug] [MainThread]: checksum: f368f5348cf42803b94ef7fb8257ecf3bf9a9a16dd9c8c51fe5172f2dbeb457f, vars: {}, profile: , target: , version: 1.11.12
+[0m12:29:16.119807 [info ] [MainThread]: Unable to do partial parsing because saved manifest not found. Starting full parse.
+[0m12:29:16.120835 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'partial_parser', 'label': '3c096463-f770-41a6-b920-6642018f2bc2', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001CF1B54D7C0>]}
+[0m12:29:18.627946 [error] [MainThread]: Encountered an error:
+Parsing Error in model predictor (models\predictor.py)
+  dbt allows exactly one model defined per python file, found 0
+[0m12:29:18.627946 [debug] [MainThread]: Command `dbt run` failed at 12:29:18.627946 after 6.39 seconds
+[0m12:29:18.627946 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001CF0A48B950>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001CF0CFC8E30>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001CF1B8B8290>]}
+[0m12:29:18.627946 [debug] [MainThread]: Flushing usage events
+[0m12:29:20.020464 [debug] [MainThread]: An error was encountered while trying to flush usage events
+[0m12:45:30.498015 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000248717D3EF0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000024873F56CF0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000248738A57F0>]}
+
+
+============================== 12:45:30.498015 | 2783b3dd-5579-47fc-962b-233f9216bbc1 ==============================
+[0m12:45:30.498015 [info ] [MainThread]: Running with dbt=1.11.12
+[0m12:45:30.498015 [debug] [MainThread]: running dbt with arguments {'version_check': 'True', 'no_print': 'None', 'static_parser': 'True', 'target_path': 'None', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'printer_width': '80', 'write_json': 'True', 'introspect': 'True', 'log_cache_events': 'False', 'empty': 'False', 'cache_selected_only': 'False', 'fail_fast': 'False', 'debug': 'False', 'log_format': 'default', 'profiles_dir': '.', 'send_anonymous_usage_stats': 'True', 'quiet': 'False', 'warn_error': 'None', 'partial_parse': 'True', 'indirect_selection': 'eager', 'invocation_command': 'dbt run --profiles-dir .', 'use_colors': 'True', 'use_experimental_parser': 'False', 'log_path': 'D:\\Desktop\\Churn interi Dashboard\\Smart-Dashboard-E-Commerce\\logs'}
+[0m12:45:31.522375 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'project_id', 'label': '2783b3dd-5579-47fc-962b-233f9216bbc1', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000248718ED340>]}
+[0m12:45:31.584880 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'adapter_info', 'label': '2783b3dd-5579-47fc-962b-233f9216bbc1', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000002487FEE46E0>]}
+[0m12:45:31.584880 [info ] [MainThread]: Registered adapter: bigquery=1.11.3
+[0m12:45:31.914117 [debug] [MainThread]: checksum: f368f5348cf42803b94ef7fb8257ecf3bf9a9a16dd9c8c51fe5172f2dbeb457f, vars: {}, profile: , target: , version: 1.11.12
+[0m12:45:31.914117 [info ] [MainThread]: Unable to do partial parsing because saved manifest not found. Starting full parse.
+[0m12:45:31.914117 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'partial_parser', 'label': '2783b3dd-5579-47fc-962b-233f9216bbc1', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000024875D28590>]}
+[0m12:45:33.158244 [warn ] [MainThread]: [[33mWARNING[0m][MissingArgumentsPropertyInGenericTestDeprecation]: Deprecated
+functionality
+Found top-level arguments to test `accepted_values` defined on
+'mart_churn_features' in package 'dbt_churn_pipeline'
+(dbt_models\marts\schema.yml). Arguments to generic tests should be nested under
+the `arguments` property.
+[0m12:45:33.158244 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'deprecation', 'label': '2783b3dd-5579-47fc-962b-233f9216bbc1', 'property_': 'warn', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000248037BF500>]}
+[0m12:45:33.410674 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'load_project', 'label': '2783b3dd-5579-47fc-962b-233f9216bbc1', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000024803A83860>]}
+[0m12:45:33.488805 [debug] [MainThread]: Wrote artifact WritableManifest to D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce\target\manifest.json
+[0m12:45:33.507849 [debug] [MainThread]: Wrote artifact SemanticManifest to D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce\target\semantic_manifest.json
+[0m12:45:33.518671 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'resource_counts', 'label': '2783b3dd-5579-47fc-962b-233f9216bbc1', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000024803B25610>]}
+[0m12:45:33.518671 [info ] [MainThread]: Found 7 models, 10 data tests, 9 sources, 553 macros
+[0m12:45:33.518671 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'runnable_timing', 'label': '2783b3dd-5579-47fc-962b-233f9216bbc1', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000024803626180>]}
+[0m12:45:33.518671 [info ] [MainThread]: 
+[0m12:45:33.518671 [info ] [MainThread]: Concurrency: 4 threads (target='dev')
+[0m12:45:33.518671 [info ] [MainThread]: 
+[0m12:45:33.518671 [debug] [MainThread]: Acquiring new bigquery connection 'master'
+[0m12:45:33.518671 [debug] [ThreadPool]: Acquiring new bigquery connection 'list_academic-moon-483615-t2'
+[0m12:45:33.518671 [debug] [ThreadPool]: Opening a new connection, currently in state init
+[0m12:45:34.571876 [debug] [ThreadPool]: Re-using an available connection from the pool (formerly list_academic-moon-483615-t2, now create_academic-moon-483615-t2_analytics_olist)
+[0m12:45:34.571876 [debug] [ThreadPool]: Creating schema "database: "academic-moon-483615-t2"
+schema: "analytics_olist"
+"
+[0m12:45:34.587502 [debug] [ThreadPool]: On create_academic-moon-483615-t2_analytics_olist: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "connection_name": "create_academic-moon-483615-t2_analytics_olist"} */
+create schema if not exists `academic-moon-483615-t2`.`analytics_olist`
+  
+[0m12:45:34.587502 [debug] [ThreadPool]: Opening a new connection, currently in state closed
+[0m12:45:35.818486 [debug] [ThreadPool]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:4f85552d-6676-4bc1-badb-f2c9340d49fa&page=queryresults
+[0m12:45:37.717308 [debug] [ThreadPool]: SQL status: OK in 1.892 seconds
+[0m12:45:38.605940 [debug] [ThreadPool]: Acquiring new bigquery connection 'list_academic-moon-483615-t2_analytics_olist'
+[0m12:45:38.605940 [debug] [ThreadPool]: Opening a new connection, currently in state init
+[0m12:45:39.474117 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'runnable_timing', 'label': '2783b3dd-5579-47fc-962b-233f9216bbc1', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000024803178D70>]}
+[0m12:45:39.474117 [debug] [MainThread]: Opening a new connection, currently in state init
+[0m12:45:39.505370 [debug] [Thread-4 (]: Began running node model.dbt_churn_pipeline.stg_customers
+[0m12:45:39.520996 [debug] [Thread-6 (]: Began running node model.dbt_churn_pipeline.stg_order_payments
+[0m12:45:39.505370 [debug] [Thread-5 (]: Began running node model.dbt_churn_pipeline.stg_order_items
+[0m12:45:39.520996 [debug] [Thread-7 (]: Began running node model.dbt_churn_pipeline.stg_order_reviews
+[0m12:45:39.520996 [info ] [Thread-4 (]: 1 of 7 START sql view model analytics_olist.stg_customers ...................... [RUN]
+[0m12:45:39.520996 [info ] [Thread-6 (]: 3 of 7 START sql view model analytics_olist.stg_order_payments ................. [RUN]
+[0m12:45:39.520996 [info ] [Thread-5 (]: 2 of 7 START sql view model analytics_olist.stg_order_items .................... [RUN]
+[0m12:45:39.520996 [info ] [Thread-7 (]: 4 of 7 START sql view model analytics_olist.stg_order_reviews .................. [RUN]
+[0m12:45:39.520996 [debug] [Thread-4 (]: Acquiring new bigquery connection 'model.dbt_churn_pipeline.stg_customers'
+[0m12:45:39.520996 [debug] [Thread-6 (]: Acquiring new bigquery connection 'model.dbt_churn_pipeline.stg_order_payments'
+[0m12:45:39.520996 [debug] [Thread-5 (]: Acquiring new bigquery connection 'model.dbt_churn_pipeline.stg_order_items'
+[0m12:45:39.520996 [debug] [Thread-7 (]: Acquiring new bigquery connection 'model.dbt_churn_pipeline.stg_order_reviews'
+[0m12:45:39.520996 [debug] [Thread-4 (]: Began compiling node model.dbt_churn_pipeline.stg_customers
+[0m12:45:39.520996 [debug] [Thread-6 (]: Began compiling node model.dbt_churn_pipeline.stg_order_payments
+[0m12:45:39.520996 [debug] [Thread-5 (]: Began compiling node model.dbt_churn_pipeline.stg_order_items
+[0m12:45:39.520996 [debug] [Thread-7 (]: Began compiling node model.dbt_churn_pipeline.stg_order_reviews
+[0m12:45:39.520996 [debug] [Thread-4 (]: Writing injected SQL for node "model.dbt_churn_pipeline.stg_customers"
+[0m12:45:39.538431 [debug] [Thread-6 (]: Writing injected SQL for node "model.dbt_churn_pipeline.stg_order_payments"
+[0m12:45:39.544458 [debug] [Thread-5 (]: Writing injected SQL for node "model.dbt_churn_pipeline.stg_order_items"
+[0m12:45:39.544458 [debug] [Thread-7 (]: Writing injected SQL for node "model.dbt_churn_pipeline.stg_order_reviews"
+[0m12:45:39.550260 [debug] [Thread-4 (]: Began executing node model.dbt_churn_pipeline.stg_customers
+[0m12:45:39.560730 [debug] [Thread-5 (]: Began executing node model.dbt_churn_pipeline.stg_order_items
+[0m12:45:39.560730 [debug] [Thread-6 (]: Began executing node model.dbt_churn_pipeline.stg_order_payments
+[0m12:45:39.577336 [debug] [Thread-4 (]: Writing runtime sql for node "model.dbt_churn_pipeline.stg_customers"
+[0m12:45:39.577336 [debug] [Thread-5 (]: Writing runtime sql for node "model.dbt_churn_pipeline.stg_order_items"
+[0m12:45:39.577336 [debug] [Thread-7 (]: Began executing node model.dbt_churn_pipeline.stg_order_reviews
+[0m12:45:39.582994 [debug] [Thread-6 (]: Writing runtime sql for node "model.dbt_churn_pipeline.stg_order_payments"
+[0m12:45:39.582994 [debug] [Thread-7 (]: Writing runtime sql for node "model.dbt_churn_pipeline.stg_order_reviews"
+[0m12:45:39.588603 [debug] [Thread-4 (]: On model.dbt_churn_pipeline.stg_customers: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "model.dbt_churn_pipeline.stg_customers"} */
+
+
+  create or replace view `academic-moon-483615-t2`.`analytics_olist`.`stg_customers`
+  OPTIONS()
+  as select
+    customer_id,
+    customer_unique_id
+from `academic-moon-483615-t2`.`raw_olist`.`raw_customers`;
+
+
+[0m12:45:39.588603 [debug] [Thread-6 (]: On model.dbt_churn_pipeline.stg_order_payments: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "model.dbt_churn_pipeline.stg_order_payments"} */
+
+
+  create or replace view `academic-moon-483615-t2`.`analytics_olist`.`stg_order_payments`
+  OPTIONS()
+  as select
+    order_id,
+    cast(payment_sequential as int64) as payment_sequential,
+    payment_type,
+    cast(payment_installments as int64) as payment_installments,
+    cast(payment_value as numeric) as payment_value
+from `academic-moon-483615-t2`.`raw_olist`.`raw_order_payments`;
+
+
+[0m12:45:39.588603 [debug] [Thread-4 (]: Opening a new connection, currently in state init
+[0m12:45:39.588603 [debug] [Thread-5 (]: On model.dbt_churn_pipeline.stg_order_items: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "model.dbt_churn_pipeline.stg_order_items"} */
+
+
+  create or replace view `academic-moon-483615-t2`.`analytics_olist`.`stg_order_items`
+  OPTIONS()
+  as select
+    order_id,
+    product_id,
+    cast(price as numeric) as price,
+    cast(freight_value as numeric) as freight_value
+from `academic-moon-483615-t2`.`raw_olist`.`raw_order_items`;
+
+
+[0m12:45:39.588603 [debug] [Thread-7 (]: On model.dbt_churn_pipeline.stg_order_reviews: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "model.dbt_churn_pipeline.stg_order_reviews"} */
+
+
+  create or replace view `academic-moon-483615-t2`.`analytics_olist`.`stg_order_reviews`
+  OPTIONS()
+  as select
+    order_id,
+    cast(review_score as int64) as review_score
+from `academic-moon-483615-t2`.`raw_olist`.`raw_order_reviews`;
+
+
+[0m12:45:39.588603 [debug] [Thread-6 (]: Opening a new connection, currently in state init
+[0m12:45:39.622064 [debug] [Thread-5 (]: Opening a new connection, currently in state init
+[0m12:45:39.627851 [debug] [Thread-7 (]: Opening a new connection, currently in state init
+[0m12:45:41.579582 [debug] [Thread-6 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:19c5313e-4f68-4ce1-a2a7-91d1fe50d40d&page=queryresults
+[0m12:45:41.595209 [debug] [Thread-4 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:48e15288-eb24-440c-8178-ddb00cd2e0c1&page=queryresults
+[0m12:45:41.610836 [debug] [Thread-5 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:ff1625bf-3b83-47e7-9aa3-61d1f4cd4416&page=queryresults
+[0m12:45:41.626461 [debug] [Thread-7 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:d0689ef8-59b5-4868-8a8b-28de778ea971&page=queryresults
+[0m12:45:41.914515 [debug] [Thread-4 (]: SQL status: OK in 0.319 seconds
+[0m12:45:41.945760 [debug] [Thread-4 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': '2783b3dd-5579-47fc-962b-233f9216bbc1', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000024803A8F0E0>]}
+[0m12:45:41.945760 [info ] [Thread-4 (]: 1 of 7 OK created sql view model analytics_olist.stg_customers ................. [[32mCREATE VIEW (0 processed)[0m in 2.41s]
+[0m12:45:41.945760 [debug] [Thread-4 (]: Finished running node model.dbt_churn_pipeline.stg_customers
+[0m12:45:41.945760 [debug] [Thread-4 (]: Began running node model.dbt_churn_pipeline.stg_orders
+[0m12:45:41.945760 [info ] [Thread-4 (]: 5 of 7 START sql view model analytics_olist.stg_orders ......................... [RUN]
+[0m12:45:41.945760 [debug] [Thread-4 (]: Re-using an available connection from the pool (formerly model.dbt_churn_pipeline.stg_customers, now model.dbt_churn_pipeline.stg_orders)
+[0m12:45:41.945760 [debug] [Thread-4 (]: Began compiling node model.dbt_churn_pipeline.stg_orders
+[0m12:45:41.945760 [debug] [Thread-4 (]: Writing injected SQL for node "model.dbt_churn_pipeline.stg_orders"
+[0m12:45:41.945760 [debug] [Thread-4 (]: Began executing node model.dbt_churn_pipeline.stg_orders
+[0m12:45:41.945760 [debug] [Thread-4 (]: Writing runtime sql for node "model.dbt_churn_pipeline.stg_orders"
+[0m12:45:41.945760 [debug] [Thread-4 (]: On model.dbt_churn_pipeline.stg_orders: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "model.dbt_churn_pipeline.stg_orders"} */
+
+
+  create or replace view `academic-moon-483615-t2`.`analytics_olist`.`stg_orders`
+  OPTIONS()
+  as select
+    order_id,
+    customer_id,
+    order_status,
+    cast(order_purchase_timestamp as timestamp) as order_purchase_timestamp,
+    cast(order_delivered_customer_date as timestamp) as order_delivered_customer_date,
+    cast(order_estimated_delivery_date as timestamp) as order_estimated_delivery_date
+from `academic-moon-483615-t2`.`raw_olist`.`raw_orders`;
+
+
+[0m12:45:41.945760 [debug] [Thread-4 (]: Opening a new connection, currently in state closed
+[0m12:45:41.994647 [debug] [Thread-7 (]: SQL status: OK in 0.355 seconds
+[0m12:45:41.994647 [debug] [Thread-5 (]: SQL status: OK in 0.384 seconds
+[0m12:45:41.999790 [debug] [Thread-7 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': '2783b3dd-5579-47fc-962b-233f9216bbc1', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000248052BC6E0>]}
+[0m12:45:42.005366 [debug] [Thread-5 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': '2783b3dd-5579-47fc-962b-233f9216bbc1', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000024803AD0410>]}
+[0m12:45:42.005366 [info ] [Thread-7 (]: 4 of 7 OK created sql view model analytics_olist.stg_order_reviews ............. [[32mCREATE VIEW (0 processed)[0m in 2.48s]
+[0m12:45:42.005366 [info ] [Thread-5 (]: 2 of 7 OK created sql view model analytics_olist.stg_order_items ............... [[32mCREATE VIEW (0 processed)[0m in 2.48s]
+[0m12:45:42.005366 [debug] [Thread-7 (]: Finished running node model.dbt_churn_pipeline.stg_order_reviews
+[0m12:45:42.005366 [debug] [Thread-5 (]: Finished running node model.dbt_churn_pipeline.stg_order_items
+[0m12:45:42.005366 [debug] [Thread-7 (]: Began running node model.dbt_churn_pipeline.stg_products
+[0m12:45:42.010530 [info ] [Thread-7 (]: 6 of 7 START sql view model analytics_olist.stg_products ....................... [RUN]
+[0m12:45:42.010885 [debug] [Thread-7 (]: Re-using an available connection from the pool (formerly model.dbt_churn_pipeline.stg_order_reviews, now model.dbt_churn_pipeline.stg_products)
+[0m12:45:42.010885 [debug] [Thread-7 (]: Began compiling node model.dbt_churn_pipeline.stg_products
+[0m12:45:42.010885 [debug] [Thread-7 (]: Writing injected SQL for node "model.dbt_churn_pipeline.stg_products"
+[0m12:45:42.016084 [debug] [Thread-6 (]: SQL status: OK in 0.432 seconds
+[0m12:45:42.020713 [debug] [Thread-6 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': '2783b3dd-5579-47fc-962b-233f9216bbc1', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000024803AD25D0>]}
+[0m12:45:42.020713 [debug] [Thread-7 (]: Began executing node model.dbt_churn_pipeline.stg_products
+[0m12:45:42.021714 [info ] [Thread-6 (]: 3 of 7 OK created sql view model analytics_olist.stg_order_payments ............ [[32mCREATE VIEW (0 processed)[0m in 2.50s]
+[0m12:45:42.025633 [debug] [Thread-7 (]: Writing runtime sql for node "model.dbt_churn_pipeline.stg_products"
+[0m12:45:42.026634 [debug] [Thread-6 (]: Finished running node model.dbt_churn_pipeline.stg_order_payments
+[0m12:45:42.027635 [debug] [Thread-7 (]: On model.dbt_churn_pipeline.stg_products: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "model.dbt_churn_pipeline.stg_products"} */
+
+
+  create or replace view `academic-moon-483615-t2`.`analytics_olist`.`stg_products`
+  OPTIONS()
+  as select
+    product_id,
+    product_category_name
+from `academic-moon-483615-t2`.`raw_olist`.`raw_products`;
+
+
+[0m12:45:42.028635 [debug] [Thread-7 (]: Opening a new connection, currently in state closed
+[0m12:45:43.459860 [debug] [Thread-4 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:f76b6291-8a80-490f-886d-81923a5ccd6a&page=queryresults
+[0m12:45:43.491105 [debug] [Thread-7 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:949c348d-7416-41ea-9ec1-c42c7b66854f&page=queryresults
+[0m12:45:43.756390 [debug] [Thread-7 (]: SQL status: OK in 0.259 seconds
+[0m12:45:43.761383 [debug] [Thread-7 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': '2783b3dd-5579-47fc-962b-233f9216bbc1', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000024803B44470>]}
+[0m12:45:43.762381 [info ] [Thread-7 (]: 6 of 7 OK created sql view model analytics_olist.stg_products .................. [[32mCREATE VIEW (0 processed)[0m in 1.75s]
+[0m12:45:43.763382 [debug] [Thread-7 (]: Finished running node model.dbt_churn_pipeline.stg_products
+[0m12:45:43.764383 [debug] [Thread-4 (]: SQL status: OK in 0.291 seconds
+[0m12:45:43.768478 [debug] [Thread-4 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': '2783b3dd-5579-47fc-962b-233f9216bbc1', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000024803A8E930>]}
+[0m12:45:43.769478 [info ] [Thread-4 (]: 5 of 7 OK created sql view model analytics_olist.stg_orders .................... [[32mCREATE VIEW (0 processed)[0m in 1.82s]
+[0m12:45:43.770479 [debug] [Thread-4 (]: Finished running node model.dbt_churn_pipeline.stg_orders
+[0m12:45:43.771480 [debug] [Thread-5 (]: Began running node model.dbt_churn_pipeline.mart_churn_features
+[0m12:45:43.772710 [info ] [Thread-5 (]: 7 of 7 START sql table model analytics_olist.mart_churn_features ............... [RUN]
+[0m12:45:43.772710 [debug] [Thread-5 (]: Re-using an available connection from the pool (formerly model.dbt_churn_pipeline.stg_order_items, now model.dbt_churn_pipeline.mart_churn_features)
+[0m12:45:43.772710 [debug] [Thread-5 (]: Began compiling node model.dbt_churn_pipeline.mart_churn_features
+[0m12:45:43.779297 [debug] [Thread-5 (]: Writing injected SQL for node "model.dbt_churn_pipeline.mart_churn_features"
+[0m12:45:43.781299 [debug] [Thread-5 (]: Began executing node model.dbt_churn_pipeline.mart_churn_features
+[0m12:45:43.810897 [debug] [Thread-5 (]: Writing runtime sql for node "model.dbt_churn_pipeline.mart_churn_features"
+[0m12:45:43.810897 [debug] [Thread-5 (]: On model.dbt_churn_pipeline.mart_churn_features: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "model.dbt_churn_pipeline.mart_churn_features"} */
+
+  
+    
+
+    create or replace table `academic-moon-483615-t2`.`analytics_olist`.`mart_churn_features`
+      
+    
+    
+
+    
+    OPTIONS()
+    as (
+      with customers as (
+    select * from `academic-moon-483615-t2`.`analytics_olist`.`stg_customers`
+),
+orders as (
+    select * from `academic-moon-483615-t2`.`analytics_olist`.`stg_orders`
+),
+payments as (
+    -- รวมข้อมูลการชำระเงินรายคำสั่งซื้อ (บางคำสั่งซื้อจ่ายหลายรอบ/หลายประเภท)
+    select
+        order_id,
+        max(payment_sequential) as payment_sequential,
+        max(payment_installments) as payment_installments,
+        sum(payment_value) as payment_value,
+        max(case when payment_type = 'voucher' then 1 else 0 end) as uses_voucher
+    from `academic-moon-483615-t2`.`analytics_olist`.`stg_order_payments`
+    group by 1
+),
+items as (
+    -- รวมข้อมูลราคาและค่าจัดส่งสินค้าในแต่ละคำสั่งซื้อ
+    select
+        order_id,
+        sum(price) as price,
+        sum(freight_value) as freight_value,
+        max(product_id) as product_id
+    from `academic-moon-483615-t2`.`analytics_olist`.`stg_order_items`
+    group by 1
+),
+reviews as (
+    -- หาคะแนนรีวิวเฉลี่ยในแต่ละคำสั่งซื้อ
+    select
+        order_id,
+        avg(review_score) as review_score
+    from `academic-moon-483615-t2`.`analytics_olist`.`stg_order_reviews`
+    group by 1
+),
+products as (
+    select * from `academic-moon-483615-t2`.`analytics_olist`.`stg_products`
+)
+
+select
+    o.order_id,
+    c.customer_unique_id,
+    o.order_status,
+    o.order_purchase_timestamp,
+    o.order_delivered_customer_date,
+    o.order_estimated_delivery_date,
+    coalesce(i.price, 0) as price,
+    coalesce(i.freight_value, 0) as freight_value,
+    coalesce(p.payment_installments, 1) as payment_installments,
+    coalesce(p.payment_value, 0) as payment_value,
+    coalesce(p.payment_sequential, 1) as payment_sequential,
+    coalesce(p.uses_voucher, 0) as uses_voucher,
+    coalesce(r.review_score, 3) as review_score,
+    pr.product_category_name,
+    -- คำนวณวันที่ซื้อล่าสุดเทียบกับวันสุดท้ายของระบบ:
+    -- หากเกิน 180 วัน -> เป็นข้อมูลมีผลเฉลยแล้ว นำไปใช้เทรน (train)
+    -- หากยังไม่เกิน 180 วัน -> เป็นลูกค้าปัจจุบันที่ต้องทำนายผลและโชว์บน Dashboard (test)
+    case 
+        when timestamp_diff(
+            max(o.order_purchase_timestamp) over (),
+            max(o.order_purchase_timestamp) over (partition by c.customer_unique_id),
+            DAY
+        ) >= 180 then 'train'
+        else 'test'
+    end as split
+from orders o
+join customers c on o.customer_id = c.customer_id
+left join items i on o.order_id = i.order_id
+left join payments p on o.order_id = p.order_id
+left join reviews r on o.order_id = r.order_id
+left join products pr on i.product_id = pr.product_id
+    );
+  
+[0m12:45:43.810897 [debug] [Thread-5 (]: Opening a new connection, currently in state closed
+[0m12:45:45.719430 [debug] [Thread-5 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:d8c90853-4394-4db9-ab9a-538b5d7b73a6&page=queryresults
+[0m12:45:49.504336 [debug] [Thread-5 (]: SQL status: OK in 3.784 seconds
+[0m12:45:49.691850 [debug] [Thread-5 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': '2783b3dd-5579-47fc-962b-233f9216bbc1', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000248053AB2C0>]}
+[0m12:45:49.707477 [info ] [Thread-5 (]: 7 of 7 OK created sql table model analytics_olist.mart_churn_features .......... [[32mCREATE TABLE (99.4k rows, 37.7 MiB processed)[0m in 5.92s]
+[0m12:45:49.707477 [debug] [Thread-5 (]: Finished running node model.dbt_churn_pipeline.mart_churn_features
+[0m12:45:49.707477 [debug] [MainThread]: Opening a new connection, currently in state closed
+[0m12:45:49.744877 [debug] [MainThread]: Connection 'master' was properly closed.
+[0m12:45:49.745434 [debug] [MainThread]: Connection 'create_academic-moon-483615-t2_analytics_olist' was properly closed.
+[0m12:45:49.745434 [debug] [MainThread]: Connection 'list_academic-moon-483615-t2_analytics_olist' was properly closed.
+[0m12:45:49.745434 [debug] [MainThread]: Connection 'model.dbt_churn_pipeline.stg_orders' was properly closed.
+[0m12:45:49.745434 [debug] [MainThread]: Connection 'model.dbt_churn_pipeline.stg_order_payments' was properly closed.
+[0m12:45:49.745434 [debug] [MainThread]: Connection 'model.dbt_churn_pipeline.mart_churn_features' was properly closed.
+[0m12:45:49.745434 [debug] [MainThread]: Connection 'model.dbt_churn_pipeline.stg_products' was properly closed.
+[0m12:45:49.745434 [info ] [MainThread]: 
+[0m12:45:49.745434 [info ] [MainThread]: Finished running 1 table model, 6 view models in 0 hours 0 minutes and 16.23 seconds (16.23s).
+[0m12:45:49.749829 [debug] [MainThread]: Command end result
+[0m12:45:49.883426 [debug] [MainThread]: Wrote artifact WritableManifest to D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce\target\manifest.json
+[0m12:45:49.883426 [debug] [MainThread]: Wrote artifact SemanticManifest to D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce\target\semantic_manifest.json
+[0m12:45:49.899052 [debug] [MainThread]: Wrote artifact RunExecutionResult to D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce\target\run_results.json
+[0m12:45:49.899052 [info ] [MainThread]: 
+[0m12:45:49.899052 [info ] [MainThread]: [32mCompleted successfully[0m
+[0m12:45:49.899052 [info ] [MainThread]: 
+[0m12:45:49.899052 [info ] [MainThread]: Done. PASS=7 WARN=0 ERROR=0 SKIP=0 NO-OP=0 TOTAL=7
+[0m12:45:49.899052 [warn ] [MainThread]: [[33mWARNING[0m][DeprecationsSummary]: Deprecated functionality
+Summary of encountered deprecations:
+- MissingArgumentsPropertyInGenericTestDeprecation: 1 occurrence
+To see all deprecation instances instead of just the first occurrence of each,
+run command again with the `--show-all-deprecations` flag. You may also need to
+run with `--no-partial-parse` as some deprecations are only encountered during
+parsing.
+[0m12:45:49.899052 [debug] [MainThread]: Command `dbt run` succeeded at 12:45:49.899052 after 19.52 seconds
+[0m12:45:49.899052 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000002487416B7A0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000248738A57F0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000002487394FEC0>]}
+[0m12:45:49.899052 [debug] [MainThread]: Flushing usage events
+[0m12:45:51.447697 [debug] [MainThread]: An error was encountered while trying to flush usage events
+[0m12:50:22.457817 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000029438E898B0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000002943C0565A0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000002943C0544D0>]}
+
+
+============================== 12:50:22.457817 | c7422e82-53e4-4914-8823-15d0fd3df049 ==============================
+[0m12:50:22.457817 [info ] [MainThread]: Running with dbt=1.11.12
+[0m12:50:22.457817 [debug] [MainThread]: running dbt with arguments {'static_parser': 'True', 'no_print': 'None', 'version_check': 'True', 'target_path': 'None', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'printer_width': '80', 'write_json': 'True', 'introspect': 'True', 'log_cache_events': 'False', 'empty': 'None', 'cache_selected_only': 'False', 'fail_fast': 'False', 'debug': 'False', 'log_format': 'default', 'partial_parse': 'True', 'send_anonymous_usage_stats': 'True', 'quiet': 'False', 'warn_error': 'None', 'profiles_dir': '.', 'indirect_selection': 'eager', 'use_colors': 'True', 'invocation_command': 'dbt test --profiles-dir .', 'use_experimental_parser': 'False', 'log_path': 'D:\\Desktop\\Churn interi Dashboard\\Smart-Dashboard-E-Commerce\\logs'}
+[0m12:50:23.459774 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'project_id', 'label': 'c7422e82-53e4-4914-8823-15d0fd3df049', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000002944989A7B0>]}
+[0m12:50:23.522278 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'adapter_info', 'label': 'c7422e82-53e4-4914-8823-15d0fd3df049', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000029448DADD90>]}
+[0m12:50:23.522278 [info ] [MainThread]: Registered adapter: bigquery=1.11.3
+[0m12:50:23.849686 [debug] [MainThread]: checksum: f368f5348cf42803b94ef7fb8257ecf3bf9a9a16dd9c8c51fe5172f2dbeb457f, vars: {}, profile: , target: , version: 1.11.12
+[0m12:50:24.054589 [debug] [MainThread]: Partial parsing enabled: 0 files deleted, 0 files added, 0 files changed.
+[0m12:50:24.054589 [debug] [MainThread]: Nothing changed, skipping partial parsing.
+[0m12:50:24.070216 [debug] [MainThread]: Partial parsing enabled, no changes found, skipping parsing
+[0m12:50:24.101468 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'load_project', 'label': 'c7422e82-53e4-4914-8823-15d0fd3df049', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000002943C0544D0>]}
+[0m12:50:24.195225 [debug] [MainThread]: Wrote artifact WritableManifest to D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce\target\manifest.json
+[0m12:50:24.210851 [debug] [MainThread]: Wrote artifact SemanticManifest to D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce\target\semantic_manifest.json
+[0m12:50:24.226478 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'resource_counts', 'label': 'c7422e82-53e4-4914-8823-15d0fd3df049', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000002944BA1D5B0>]}
+[0m12:50:24.226478 [info ] [MainThread]: Found 7 models, 10 data tests, 9 sources, 553 macros
+[0m12:50:24.226478 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'runnable_timing', 'label': 'c7422e82-53e4-4914-8823-15d0fd3df049', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000002944B57FB60>]}
+[0m12:50:24.226478 [info ] [MainThread]: 
+[0m12:50:24.226478 [info ] [MainThread]: Concurrency: 4 threads (target='dev')
+[0m12:50:24.226478 [info ] [MainThread]: 
+[0m12:50:24.226478 [debug] [MainThread]: Acquiring new bigquery connection 'master'
+[0m12:50:24.226478 [debug] [ThreadPool]: Acquiring new bigquery connection 'list_academic-moon-483615-t2_analytics_olist'
+[0m12:50:24.226478 [debug] [ThreadPool]: Opening a new connection, currently in state init
+[0m12:50:25.095908 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'runnable_timing', 'label': 'c7422e82-53e4-4914-8823-15d0fd3df049', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000002944B398E90>]}
+[0m12:50:25.095908 [debug] [MainThread]: Opening a new connection, currently in state init
+[0m12:50:25.127160 [debug] [Thread-2 (]: Began running node test.dbt_churn_pipeline.accepted_values_mart_churn_features_split__train__test.83d7ab82e8
+[0m12:50:25.127160 [debug] [Thread-3 (]: Began running node test.dbt_churn_pipeline.not_null_mart_churn_features_customer_unique_id.aaf6c2015b
+[0m12:50:25.127160 [debug] [Thread-4 (]: Began running node test.dbt_churn_pipeline.not_null_mart_churn_features_order_id.9cd343c540
+[0m12:50:25.127160 [debug] [Thread-5 (]: Began running node test.dbt_churn_pipeline.not_null_stg_customers_customer_id.e2cfb1f9aa
+[0m12:50:25.127160 [info ] [Thread-2 (]: 1 of 10 START test accepted_values_mart_churn_features_split__train__test ...... [RUN]
+[0m12:50:25.127160 [info ] [Thread-3 (]: 2 of 10 START test not_null_mart_churn_features_customer_unique_id ............. [RUN]
+[0m12:50:25.127160 [info ] [Thread-4 (]: 3 of 10 START test not_null_mart_churn_features_order_id ....................... [RUN]
+[0m12:50:25.127160 [info ] [Thread-5 (]: 4 of 10 START test not_null_stg_customers_customer_id .......................... [RUN]
+[0m12:50:25.127160 [debug] [Thread-2 (]: Acquiring new bigquery connection 'test.dbt_churn_pipeline.accepted_values_mart_churn_features_split__train__test.83d7ab82e8'
+[0m12:50:25.127160 [debug] [Thread-3 (]: Acquiring new bigquery connection 'test.dbt_churn_pipeline.not_null_mart_churn_features_customer_unique_id.aaf6c2015b'
+[0m12:50:25.127160 [debug] [Thread-4 (]: Acquiring new bigquery connection 'test.dbt_churn_pipeline.not_null_mart_churn_features_order_id.9cd343c540'
+[0m12:50:25.127160 [debug] [Thread-5 (]: Acquiring new bigquery connection 'test.dbt_churn_pipeline.not_null_stg_customers_customer_id.e2cfb1f9aa'
+[0m12:50:25.127160 [debug] [Thread-2 (]: Began compiling node test.dbt_churn_pipeline.accepted_values_mart_churn_features_split__train__test.83d7ab82e8
+[0m12:50:25.127160 [debug] [Thread-3 (]: Began compiling node test.dbt_churn_pipeline.not_null_mart_churn_features_customer_unique_id.aaf6c2015b
+[0m12:50:25.127160 [debug] [Thread-4 (]: Began compiling node test.dbt_churn_pipeline.not_null_mart_churn_features_order_id.9cd343c540
+[0m12:50:25.127160 [debug] [Thread-5 (]: Began compiling node test.dbt_churn_pipeline.not_null_stg_customers_customer_id.e2cfb1f9aa
+[0m12:50:25.162859 [debug] [Thread-2 (]: Writing injected SQL for node "test.dbt_churn_pipeline.accepted_values_mart_churn_features_split__train__test.83d7ab82e8"
+[0m12:50:25.171776 [debug] [Thread-3 (]: Writing injected SQL for node "test.dbt_churn_pipeline.not_null_mart_churn_features_customer_unique_id.aaf6c2015b"
+[0m12:50:25.175779 [debug] [Thread-4 (]: Writing injected SQL for node "test.dbt_churn_pipeline.not_null_mart_churn_features_order_id.9cd343c540"
+[0m12:50:25.179427 [debug] [Thread-5 (]: Writing injected SQL for node "test.dbt_churn_pipeline.not_null_stg_customers_customer_id.e2cfb1f9aa"
+[0m12:50:25.181429 [debug] [Thread-2 (]: Began executing node test.dbt_churn_pipeline.accepted_values_mart_churn_features_split__train__test.83d7ab82e8
+[0m12:50:25.182451 [debug] [Thread-3 (]: Began executing node test.dbt_churn_pipeline.not_null_mart_churn_features_customer_unique_id.aaf6c2015b
+[0m12:50:25.182451 [debug] [Thread-5 (]: Began executing node test.dbt_churn_pipeline.not_null_stg_customers_customer_id.e2cfb1f9aa
+[0m12:50:25.198076 [debug] [Thread-2 (]: Writing runtime sql for node "test.dbt_churn_pipeline.accepted_values_mart_churn_features_split__train__test.83d7ab82e8"
+[0m12:50:25.198076 [debug] [Thread-4 (]: Began executing node test.dbt_churn_pipeline.not_null_mart_churn_features_order_id.9cd343c540
+[0m12:50:25.198076 [debug] [Thread-3 (]: Writing runtime sql for node "test.dbt_churn_pipeline.not_null_mart_churn_features_customer_unique_id.aaf6c2015b"
+[0m12:50:25.198076 [debug] [Thread-5 (]: Writing runtime sql for node "test.dbt_churn_pipeline.not_null_stg_customers_customer_id.e2cfb1f9aa"
+[0m12:50:25.198076 [debug] [Thread-4 (]: Writing runtime sql for node "test.dbt_churn_pipeline.not_null_mart_churn_features_order_id.9cd343c540"
+[0m12:50:25.213704 [debug] [Thread-3 (]: On test.dbt_churn_pipeline.not_null_mart_churn_features_customer_unique_id.aaf6c2015b: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "test.dbt_churn_pipeline.not_null_mart_churn_features_customer_unique_id.aaf6c2015b"} */
+
+    
+    select
+      count(*) as failures,
+      count(*) != 0 as should_warn,
+      count(*) != 0 as should_error
+    from (
+      
+    
+  
+    
+    
+
+
+
+select customer_unique_id
+from `academic-moon-483615-t2`.`analytics_olist`.`mart_churn_features`
+where customer_unique_id is null
+
+
+
+  
+  
+      
+    ) dbt_internal_test
+[0m12:50:25.214699 [debug] [Thread-2 (]: On test.dbt_churn_pipeline.accepted_values_mart_churn_features_split__train__test.83d7ab82e8: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "test.dbt_churn_pipeline.accepted_values_mart_churn_features_split__train__test.83d7ab82e8"} */
+
+    
+    select
+      count(*) as failures,
+      count(*) != 0 as should_warn,
+      count(*) != 0 as should_error
+    from (
+      
+    
+  
+    
+    
+
+with all_values as (
+
+    select
+        split as value_field,
+        count(*) as n_records
+
+    from `academic-moon-483615-t2`.`analytics_olist`.`mart_churn_features`
+    group by split
+
+)
+
+select *
+from all_values
+where value_field not in (
+    'train','test'
+)
+
+
+
+  
+  
+      
+    ) dbt_internal_test
+[0m12:50:25.215203 [debug] [Thread-4 (]: On test.dbt_churn_pipeline.not_null_mart_churn_features_order_id.9cd343c540: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "test.dbt_churn_pipeline.not_null_mart_churn_features_order_id.9cd343c540"} */
+
+    
+    select
+      count(*) as failures,
+      count(*) != 0 as should_warn,
+      count(*) != 0 as should_error
+    from (
+      
+    
+  
+    
+    
+
+
+
+select order_id
+from `academic-moon-483615-t2`.`analytics_olist`.`mart_churn_features`
+where order_id is null
+
+
+
+  
+  
+      
+    ) dbt_internal_test
+[0m12:50:25.215203 [debug] [Thread-5 (]: On test.dbt_churn_pipeline.not_null_stg_customers_customer_id.e2cfb1f9aa: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "test.dbt_churn_pipeline.not_null_stg_customers_customer_id.e2cfb1f9aa"} */
+
+    
+    select
+      count(*) as failures,
+      count(*) != 0 as should_warn,
+      count(*) != 0 as should_error
+    from (
+      
+    
+  
+    
+    
+
+
+
+select customer_id
+from `academic-moon-483615-t2`.`analytics_olist`.`stg_customers`
+where customer_id is null
+
+
+
+  
+  
+      
+    ) dbt_internal_test
+[0m12:50:25.215203 [debug] [Thread-3 (]: Opening a new connection, currently in state init
+[0m12:50:25.215203 [debug] [Thread-2 (]: Opening a new connection, currently in state init
+[0m12:50:25.215203 [debug] [Thread-4 (]: Opening a new connection, currently in state init
+[0m12:50:25.215203 [debug] [Thread-5 (]: Opening a new connection, currently in state init
+[0m12:50:27.219274 [debug] [Thread-3 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:03ae1a74-74da-474d-8c8c-f517cb8b5371&page=queryresults
+[0m12:50:27.344284 [debug] [Thread-2 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:0d318b59-41e5-4245-a4a7-84eed860283f&page=queryresults
+[0m12:50:27.407842 [debug] [Thread-3 (]: SQL status: OK in 0.189 seconds
+[0m12:50:27.423469 [debug] [Thread-4 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:3581594e-b935-40a4-823f-a3eb307b0815&page=queryresults
+[0m12:50:27.549930 [debug] [Thread-2 (]: SQL status: OK in 0.210 seconds
+[0m12:50:27.617881 [debug] [Thread-4 (]: SQL status: OK in 0.191 seconds
+[0m12:50:27.802730 [info ] [Thread-3 (]: 2 of 10 PASS not_null_mart_churn_features_customer_unique_id ................... [[32mPASS[0m in 2.68s]
+[0m12:50:27.802730 [debug] [Thread-3 (]: Finished running node test.dbt_churn_pipeline.not_null_mart_churn_features_customer_unique_id.aaf6c2015b
+[0m12:50:27.802730 [debug] [Thread-3 (]: Began running node test.dbt_churn_pipeline.not_null_stg_customers_customer_unique_id.7144461cba
+[0m12:50:27.802730 [info ] [Thread-3 (]: 5 of 10 START test not_null_stg_customers_customer_unique_id ................... [RUN]
+[0m12:50:27.802730 [debug] [Thread-3 (]: Re-using an available connection from the pool (formerly test.dbt_churn_pipeline.not_null_mart_churn_features_customer_unique_id.aaf6c2015b, now test.dbt_churn_pipeline.not_null_stg_customers_customer_unique_id.7144461cba)
+[0m12:50:27.802730 [debug] [Thread-3 (]: Began compiling node test.dbt_churn_pipeline.not_null_stg_customers_customer_unique_id.7144461cba
+[0m12:50:27.818356 [debug] [Thread-3 (]: Writing injected SQL for node "test.dbt_churn_pipeline.not_null_stg_customers_customer_unique_id.7144461cba"
+[0m12:50:27.818356 [debug] [Thread-3 (]: Began executing node test.dbt_churn_pipeline.not_null_stg_customers_customer_unique_id.7144461cba
+[0m12:50:27.818356 [debug] [Thread-3 (]: Writing runtime sql for node "test.dbt_churn_pipeline.not_null_stg_customers_customer_unique_id.7144461cba"
+[0m12:50:27.818356 [debug] [Thread-3 (]: On test.dbt_churn_pipeline.not_null_stg_customers_customer_unique_id.7144461cba: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "test.dbt_churn_pipeline.not_null_stg_customers_customer_unique_id.7144461cba"} */
+
+    
+    select
+      count(*) as failures,
+      count(*) != 0 as should_warn,
+      count(*) != 0 as should_error
+    from (
+      
+    
+  
+    
+    
+
+
+
+select customer_unique_id
+from `academic-moon-483615-t2`.`analytics_olist`.`stg_customers`
+where customer_unique_id is null
+
+
+
+  
+  
+      
+    ) dbt_internal_test
+[0m12:50:27.818356 [debug] [Thread-3 (]: Opening a new connection, currently in state closed
+[0m12:50:27.882474 [debug] [Thread-5 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:51657bdd-d9fb-4b5d-928c-22296fc0d932&page=queryresults
+[0m12:50:27.915035 [info ] [Thread-2 (]: 1 of 10 PASS accepted_values_mart_churn_features_split__train__test ............ [[32mPASS[0m in 2.79s]
+[0m12:50:27.915035 [debug] [Thread-2 (]: Finished running node test.dbt_churn_pipeline.accepted_values_mart_churn_features_split__train__test.83d7ab82e8
+[0m12:50:27.915035 [info ] [Thread-4 (]: 3 of 10 PASS not_null_mart_churn_features_order_id ............................. [[32mPASS[0m in 2.79s]
+[0m12:50:27.915035 [debug] [Thread-2 (]: Began running node test.dbt_churn_pipeline.not_null_stg_order_items_price.ff3393f991
+[0m12:50:27.915035 [debug] [Thread-4 (]: Finished running node test.dbt_churn_pipeline.not_null_mart_churn_features_order_id.9cd343c540
+[0m12:50:27.915035 [info ] [Thread-2 (]: 6 of 10 START test not_null_stg_order_items_price .............................. [RUN]
+[0m12:50:27.915035 [debug] [Thread-4 (]: Began running node test.dbt_churn_pipeline.not_null_stg_orders_order_id.81cfe2fe64
+[0m12:50:27.922990 [debug] [Thread-2 (]: Re-using an available connection from the pool (formerly test.dbt_churn_pipeline.accepted_values_mart_churn_features_split__train__test.83d7ab82e8, now test.dbt_churn_pipeline.not_null_stg_order_items_price.ff3393f991)
+[0m12:50:27.922990 [info ] [Thread-4 (]: 7 of 10 START test not_null_stg_orders_order_id ................................ [RUN]
+[0m12:50:27.924039 [debug] [Thread-2 (]: Began compiling node test.dbt_churn_pipeline.not_null_stg_order_items_price.ff3393f991
+[0m12:50:27.924950 [debug] [Thread-4 (]: Re-using an available connection from the pool (formerly test.dbt_churn_pipeline.not_null_mart_churn_features_order_id.9cd343c540, now test.dbt_churn_pipeline.not_null_stg_orders_order_id.81cfe2fe64)
+[0m12:50:27.928492 [debug] [Thread-2 (]: Writing injected SQL for node "test.dbt_churn_pipeline.not_null_stg_order_items_price.ff3393f991"
+[0m12:50:27.928492 [debug] [Thread-4 (]: Began compiling node test.dbt_churn_pipeline.not_null_stg_orders_order_id.81cfe2fe64
+[0m12:50:27.937077 [debug] [Thread-4 (]: Writing injected SQL for node "test.dbt_churn_pipeline.not_null_stg_orders_order_id.81cfe2fe64"
+[0m12:50:27.938269 [debug] [Thread-2 (]: Began executing node test.dbt_churn_pipeline.not_null_stg_order_items_price.ff3393f991
+[0m12:50:27.938269 [debug] [Thread-2 (]: Writing runtime sql for node "test.dbt_churn_pipeline.not_null_stg_order_items_price.ff3393f991"
+[0m12:50:27.938269 [debug] [Thread-4 (]: Began executing node test.dbt_churn_pipeline.not_null_stg_orders_order_id.81cfe2fe64
+[0m12:50:27.944277 [debug] [Thread-4 (]: Writing runtime sql for node "test.dbt_churn_pipeline.not_null_stg_orders_order_id.81cfe2fe64"
+[0m12:50:27.945278 [debug] [Thread-2 (]: On test.dbt_churn_pipeline.not_null_stg_order_items_price.ff3393f991: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "test.dbt_churn_pipeline.not_null_stg_order_items_price.ff3393f991"} */
+
+    
+    select
+      count(*) as failures,
+      count(*) != 0 as should_warn,
+      count(*) != 0 as should_error
+    from (
+      
+    
+  
+    
+    
+
+
+
+select price
+from `academic-moon-483615-t2`.`analytics_olist`.`stg_order_items`
+where price is null
+
+
+
+  
+  
+      
+    ) dbt_internal_test
+[0m12:50:27.945278 [debug] [Thread-2 (]: Opening a new connection, currently in state closed
+[0m12:50:27.946279 [debug] [Thread-4 (]: On test.dbt_churn_pipeline.not_null_stg_orders_order_id.81cfe2fe64: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "test.dbt_churn_pipeline.not_null_stg_orders_order_id.81cfe2fe64"} */
+
+    
+    select
+      count(*) as failures,
+      count(*) != 0 as should_warn,
+      count(*) != 0 as should_error
+    from (
+      
+    
+  
+    
+    
+
+
+
+select order_id
+from `academic-moon-483615-t2`.`analytics_olist`.`stg_orders`
+where order_id is null
+
+
+
+  
+  
+      
+    ) dbt_internal_test
+[0m12:50:27.981490 [debug] [Thread-4 (]: Opening a new connection, currently in state closed
+[0m12:50:28.069384 [debug] [Thread-5 (]: SQL status: OK in 0.180 seconds
+[0m12:50:28.373846 [info ] [Thread-5 (]: 4 of 10 PASS not_null_stg_customers_customer_id ................................ [[32mPASS[0m in 3.25s]
+[0m12:50:28.373846 [debug] [Thread-5 (]: Finished running node test.dbt_churn_pipeline.not_null_stg_customers_customer_id.e2cfb1f9aa
+[0m12:50:28.373846 [debug] [Thread-5 (]: Began running node test.dbt_churn_pipeline.unique_mart_churn_features_order_id.0325441aa3
+[0m12:50:28.373846 [info ] [Thread-5 (]: 8 of 10 START test unique_mart_churn_features_order_id ......................... [RUN]
+[0m12:50:28.373846 [debug] [Thread-5 (]: Re-using an available connection from the pool (formerly test.dbt_churn_pipeline.not_null_stg_customers_customer_id.e2cfb1f9aa, now test.dbt_churn_pipeline.unique_mart_churn_features_order_id.0325441aa3)
+[0m12:50:28.373846 [debug] [Thread-5 (]: Began compiling node test.dbt_churn_pipeline.unique_mart_churn_features_order_id.0325441aa3
+[0m12:50:28.373846 [debug] [Thread-5 (]: Writing injected SQL for node "test.dbt_churn_pipeline.unique_mart_churn_features_order_id.0325441aa3"
+[0m12:50:28.389475 [debug] [Thread-5 (]: Began executing node test.dbt_churn_pipeline.unique_mart_churn_features_order_id.0325441aa3
+[0m12:50:28.392663 [debug] [Thread-5 (]: Writing runtime sql for node "test.dbt_churn_pipeline.unique_mart_churn_features_order_id.0325441aa3"
+[0m12:50:28.394305 [debug] [Thread-5 (]: On test.dbt_churn_pipeline.unique_mart_churn_features_order_id.0325441aa3: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "test.dbt_churn_pipeline.unique_mart_churn_features_order_id.0325441aa3"} */
+
+    
+    select
+      count(*) as failures,
+      count(*) != 0 as should_warn,
+      count(*) != 0 as should_error
+    from (
+      
+    
+  
+    
+    
+
+with dbt_test__target as (
+
+  select order_id as unique_field
+  from `academic-moon-483615-t2`.`analytics_olist`.`mart_churn_features`
+  where order_id is not null
+
+)
+
+select
+    unique_field,
+    count(*) as n_records
+
+from dbt_test__target
+group by unique_field
+having count(*) > 1
+
+
+
+  
+  
+      
+    ) dbt_internal_test
+[0m12:50:28.394756 [debug] [Thread-5 (]: Opening a new connection, currently in state closed
+[0m12:50:29.771558 [debug] [Thread-3 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:b37dc09d-9916-42d1-8118-510dee1cb88f&page=queryresults
+[0m12:50:29.931150 [debug] [Thread-3 (]: SQL status: OK in 0.165 seconds
+[0m12:50:30.165132 [debug] [Thread-2 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:58a23d6c-8a84-4eb9-82b0-ae80b69e351b&page=queryresults
+[0m12:50:30.243263 [info ] [Thread-3 (]: 5 of 10 PASS not_null_stg_customers_customer_unique_id ......................... [[32mPASS[0m in 2.44s]
+[0m12:50:30.258890 [debug] [Thread-3 (]: Finished running node test.dbt_churn_pipeline.not_null_stg_customers_customer_unique_id.7144461cba
+[0m12:50:30.259430 [debug] [Thread-3 (]: Began running node test.dbt_churn_pipeline.unique_stg_customers_customer_id.c7614daada
+[0m12:50:30.259817 [info ] [Thread-3 (]: 9 of 10 START test unique_stg_customers_customer_id ............................ [RUN]
+[0m12:50:30.260824 [debug] [Thread-3 (]: Re-using an available connection from the pool (formerly test.dbt_churn_pipeline.not_null_stg_customers_customer_unique_id.7144461cba, now test.dbt_churn_pipeline.unique_stg_customers_customer_id.c7614daada)
+[0m12:50:30.260824 [debug] [Thread-3 (]: Began compiling node test.dbt_churn_pipeline.unique_stg_customers_customer_id.c7614daada
+[0m12:50:30.264828 [debug] [Thread-3 (]: Writing injected SQL for node "test.dbt_churn_pipeline.unique_stg_customers_customer_id.c7614daada"
+[0m12:50:30.267020 [debug] [Thread-3 (]: Began executing node test.dbt_churn_pipeline.unique_stg_customers_customer_id.c7614daada
+[0m12:50:30.269028 [debug] [Thread-3 (]: Writing runtime sql for node "test.dbt_churn_pipeline.unique_stg_customers_customer_id.c7614daada"
+[0m12:50:30.271098 [debug] [Thread-3 (]: On test.dbt_churn_pipeline.unique_stg_customers_customer_id.c7614daada: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "test.dbt_churn_pipeline.unique_stg_customers_customer_id.c7614daada"} */
+
+    
+    select
+      count(*) as failures,
+      count(*) != 0 as should_warn,
+      count(*) != 0 as should_error
+    from (
+      
+    
+  
+    
+    
+
+with dbt_test__target as (
+
+  select customer_id as unique_field
+  from `academic-moon-483615-t2`.`analytics_olist`.`stg_customers`
+  where customer_id is not null
+
+)
+
+select
+    unique_field,
+    count(*) as n_records
+
+from dbt_test__target
+group by unique_field
+having count(*) > 1
+
+
+
+  
+  
+      
+    ) dbt_internal_test
+[0m12:50:30.271634 [debug] [Thread-3 (]: Opening a new connection, currently in state closed
+[0m12:50:30.385097 [debug] [Thread-2 (]: SQL status: OK in 0.226 seconds
+[0m12:50:30.756102 [info ] [Thread-2 (]: 6 of 10 PASS not_null_stg_order_items_price .................................... [[32mPASS[0m in 2.84s]
+[0m12:50:30.771731 [debug] [Thread-2 (]: Finished running node test.dbt_churn_pipeline.not_null_stg_order_items_price.ff3393f991
+[0m12:50:30.771731 [debug] [Thread-2 (]: Began running node test.dbt_churn_pipeline.unique_stg_orders_order_id.e3b841c71a
+[0m12:50:30.771731 [info ] [Thread-2 (]: 10 of 10 START test unique_stg_orders_order_id ................................. [RUN]
+[0m12:50:30.771731 [debug] [Thread-2 (]: Re-using an available connection from the pool (formerly test.dbt_churn_pipeline.not_null_stg_order_items_price.ff3393f991, now test.dbt_churn_pipeline.unique_stg_orders_order_id.e3b841c71a)
+[0m12:50:30.771731 [debug] [Thread-2 (]: Began compiling node test.dbt_churn_pipeline.unique_stg_orders_order_id.e3b841c71a
+[0m12:50:30.771731 [debug] [Thread-2 (]: Writing injected SQL for node "test.dbt_churn_pipeline.unique_stg_orders_order_id.e3b841c71a"
+[0m12:50:30.771731 [debug] [Thread-2 (]: Began executing node test.dbt_churn_pipeline.unique_stg_orders_order_id.e3b841c71a
+[0m12:50:30.771731 [debug] [Thread-2 (]: Writing runtime sql for node "test.dbt_churn_pipeline.unique_stg_orders_order_id.e3b841c71a"
+[0m12:50:30.771731 [debug] [Thread-2 (]: On test.dbt_churn_pipeline.unique_stg_orders_order_id.e3b841c71a: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "test.dbt_churn_pipeline.unique_stg_orders_order_id.e3b841c71a"} */
+
+    
+    select
+      count(*) as failures,
+      count(*) != 0 as should_warn,
+      count(*) != 0 as should_error
+    from (
+      
+    
+  
+    
+    
+
+with dbt_test__target as (
+
+  select order_id as unique_field
+  from `academic-moon-483615-t2`.`analytics_olist`.`stg_orders`
+  where order_id is not null
+
+)
+
+select
+    unique_field,
+    count(*) as n_records
+
+from dbt_test__target
+group by unique_field
+having count(*) > 1
+
+
+
+  
+  
+      
+    ) dbt_internal_test
+[0m12:50:30.771731 [debug] [Thread-2 (]: Opening a new connection, currently in state closed
+[0m12:50:30.866673 [debug] [Thread-5 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:26d610d3-72cc-4360-9802-f25cf2f6b261&page=queryresults
+[0m12:50:30.976641 [debug] [Thread-5 (]: SQL status: OK in 0.118 seconds
+[0m12:50:31.086024 [debug] [Thread-4 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:149906cc-63c6-4dad-a684-0a4b99240a12&page=queryresults
+[0m12:50:31.226660 [debug] [Thread-4 (]: SQL status: OK in 0.154 seconds
+[0m12:50:31.257913 [info ] [Thread-5 (]: 8 of 10 PASS unique_mart_churn_features_order_id ............................... [[32mPASS[0m in 2.88s]
+[0m12:50:31.257913 [debug] [Thread-5 (]: Finished running node test.dbt_churn_pipeline.unique_mart_churn_features_order_id.0325441aa3
+[0m12:50:31.527183 [info ] [Thread-4 (]: 7 of 10 PASS not_null_stg_orders_order_id ...................................... [[32mPASS[0m in 3.60s]
+[0m12:50:31.527183 [debug] [Thread-4 (]: Finished running node test.dbt_churn_pipeline.not_null_stg_orders_order_id.81cfe2fe64
+[0m12:50:32.039342 [debug] [Thread-3 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:ea6a9782-9952-4e11-9dbc-d975f088903c&page=queryresults
+[0m12:50:32.175017 [debug] [Thread-3 (]: SQL status: OK in 0.128 seconds
+[0m12:50:32.504058 [debug] [Thread-2 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:3aa8aad6-426c-4395-a643-d93a4866299a&page=queryresults
+[0m12:50:32.513247 [info ] [Thread-3 (]: 9 of 10 PASS unique_stg_customers_customer_id .................................. [[32mPASS[0m in 2.25s]
+[0m12:50:32.513247 [debug] [Thread-3 (]: Finished running node test.dbt_churn_pipeline.unique_stg_customers_customer_id.c7614daada
+[0m12:50:32.719601 [debug] [Thread-2 (]: SQL status: OK in 0.222 seconds
+[0m12:50:32.994685 [info ] [Thread-2 (]: 10 of 10 PASS unique_stg_orders_order_id ....................................... [[32mPASS[0m in 2.22s]
+[0m12:50:32.994685 [debug] [Thread-2 (]: Finished running node test.dbt_churn_pipeline.unique_stg_orders_order_id.e3b841c71a
+[0m12:50:32.994685 [debug] [MainThread]: Opening a new connection, currently in state closed
+[0m12:50:33.032720 [debug] [MainThread]: Connection 'master' was properly closed.
+[0m12:50:33.032720 [debug] [MainThread]: Connection 'list_academic-moon-483615-t2_analytics_olist' was properly closed.
+[0m12:50:33.032720 [debug] [MainThread]: Connection 'test.dbt_churn_pipeline.unique_stg_orders_order_id.e3b841c71a' was properly closed.
+[0m12:50:33.032720 [debug] [MainThread]: Connection 'test.dbt_churn_pipeline.unique_stg_customers_customer_id.c7614daada' was properly closed.
+[0m12:50:33.037779 [debug] [MainThread]: Connection 'test.dbt_churn_pipeline.not_null_stg_orders_order_id.81cfe2fe64' was properly closed.
+[0m12:50:33.038029 [debug] [MainThread]: Connection 'test.dbt_churn_pipeline.unique_mart_churn_features_order_id.0325441aa3' was properly closed.
+[0m12:50:33.038029 [info ] [MainThread]: 
+[0m12:50:33.038029 [info ] [MainThread]: Finished running 10 data tests in 0 hours 0 minutes and 8.81 seconds (8.81s).
+[0m12:50:33.038029 [debug] [MainThread]: Command end result
+[0m12:50:33.076733 [debug] [MainThread]: Wrote artifact WritableManifest to D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce\target\manifest.json
+[0m12:50:33.079735 [debug] [MainThread]: Wrote artifact SemanticManifest to D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce\target\semantic_manifest.json
+[0m12:50:33.085428 [debug] [MainThread]: Wrote artifact RunExecutionResult to D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce\target\run_results.json
+[0m12:50:33.086429 [info ] [MainThread]: 
+[0m12:50:33.086429 [info ] [MainThread]: [32mCompleted successfully[0m
+[0m12:50:33.087430 [info ] [MainThread]: 
+[0m12:50:33.087430 [info ] [MainThread]: Done. PASS=10 WARN=0 ERROR=0 SKIP=0 NO-OP=0 TOTAL=10
+[0m12:50:33.088451 [debug] [MainThread]: Command `dbt test` succeeded at 12:50:33.088451 after 10.74 seconds
+[0m12:50:33.088451 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000002943B627980>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000002943A2624E0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000002943A263350>]}
+[0m12:50:33.088451 [debug] [MainThread]: Flushing usage events
+[0m12:50:34.330841 [debug] [MainThread]: An error was encountered while trying to flush usage events
+[0m13:38:08.115377 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000231889D5AF0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000231864449E0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000023185B3CDD0>]}
+
+
+============================== 13:38:08.119459 | db89037d-9b69-42fb-99ce-f469df281c12 ==============================
+[0m13:38:08.119459 [info ] [MainThread]: Running with dbt=1.11.12
+[0m13:38:08.120460 [debug] [MainThread]: running dbt with arguments {'static_parser': 'True', 'no_print': 'None', 'version_check': 'True', 'target_path': 'None', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'printer_width': '80', 'write_json': 'True', 'introspect': 'True', 'log_cache_events': 'False', 'empty': 'False', 'cache_selected_only': 'False', 'log_format': 'default', 'debug': 'False', 'fail_fast': 'False', 'partial_parse': 'True', 'send_anonymous_usage_stats': 'True', 'quiet': 'False', 'warn_error': 'None', 'profiles_dir': '.', 'indirect_selection': 'eager', 'invocation_command': 'dbt run --profiles-dir .', 'use_colors': 'True', 'use_experimental_parser': 'False', 'log_path': 'D:\\Desktop\\Churn interi Dashboard\\Smart-Dashboard-E-Commerce\\logs'}
+[0m13:38:10.683064 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'project_id', 'label': 'db89037d-9b69-42fb-99ce-f469df281c12', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000023197F6E390>]}
+[0m13:38:10.741440 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'adapter_info', 'label': 'db89037d-9b69-42fb-99ce-f469df281c12', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000231866215E0>]}
+[0m13:38:10.742442 [info ] [MainThread]: Registered adapter: bigquery=1.11.3
+[0m13:38:11.072786 [debug] [MainThread]: checksum: f368f5348cf42803b94ef7fb8257ecf3bf9a9a16dd9c8c51fe5172f2dbeb457f, vars: {}, profile: , target: , version: 1.11.12
+[0m13:38:11.213195 [debug] [MainThread]: Partial parsing enabled: 0 files deleted, 0 files added, 1 files changed.
+[0m13:38:11.214196 [debug] [MainThread]: Partial parsing: updated file: dbt_churn_pipeline://dbt_models\staging\stg_products.sql
+[0m13:38:11.466831 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'load_project', 'label': 'db89037d-9b69-42fb-99ce-f469df281c12', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000023198A77CB0>]}
+[0m13:38:11.556521 [debug] [MainThread]: Wrote artifact WritableManifest to D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce\target\manifest.json
+[0m13:38:11.559818 [debug] [MainThread]: Wrote artifact SemanticManifest to D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce\target\semantic_manifest.json
+[0m13:38:11.571909 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'resource_counts', 'label': 'db89037d-9b69-42fb-99ce-f469df281c12', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000023198C158B0>]}
+[0m13:38:11.572930 [info ] [MainThread]: Found 7 models, 10 data tests, 9 sources, 553 macros
+[0m13:38:11.573433 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'runnable_timing', 'label': 'db89037d-9b69-42fb-99ce-f469df281c12', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000023198BDC4D0>]}
+[0m13:38:11.575437 [info ] [MainThread]: 
+[0m13:38:11.576437 [info ] [MainThread]: Concurrency: 4 threads (target='dev')
+[0m13:38:11.576437 [info ] [MainThread]: 
+[0m13:38:11.577439 [debug] [MainThread]: Acquiring new bigquery connection 'master'
+[0m13:38:11.581526 [debug] [ThreadPool]: Acquiring new bigquery connection 'list_academic-moon-483615-t2'
+[0m13:38:11.581526 [debug] [ThreadPool]: Opening a new connection, currently in state init
+[0m13:38:12.611890 [debug] [ThreadPool]: Acquiring new bigquery connection 'list_academic-moon-483615-t2_analytics_olist'
+[0m13:38:12.611890 [debug] [ThreadPool]: Opening a new connection, currently in state init
+[0m13:38:13.429797 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'runnable_timing', 'label': 'db89037d-9b69-42fb-99ce-f469df281c12', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000023186621850>]}
+[0m13:38:13.429797 [debug] [MainThread]: Opening a new connection, currently in state init
+[0m13:38:13.468069 [debug] [Thread-3 (]: Began running node model.dbt_churn_pipeline.stg_customers
+[0m13:38:13.468069 [debug] [Thread-4 (]: Began running node model.dbt_churn_pipeline.stg_order_items
+[0m13:38:13.468069 [debug] [Thread-5 (]: Began running node model.dbt_churn_pipeline.stg_order_payments
+[0m13:38:13.469069 [debug] [Thread-6 (]: Began running node model.dbt_churn_pipeline.stg_order_reviews
+[0m13:38:13.469069 [info ] [Thread-3 (]: 1 of 7 START sql view model analytics_olist.stg_customers ...................... [RUN]
+[0m13:38:13.470069 [info ] [Thread-4 (]: 2 of 7 START sql view model analytics_olist.stg_order_items .................... [RUN]
+[0m13:38:13.471071 [info ] [Thread-5 (]: 3 of 7 START sql view model analytics_olist.stg_order_payments ................. [RUN]
+[0m13:38:13.471071 [info ] [Thread-6 (]: 4 of 7 START sql view model analytics_olist.stg_order_reviews .................. [RUN]
+[0m13:38:13.472072 [debug] [Thread-3 (]: Acquiring new bigquery connection 'model.dbt_churn_pipeline.stg_customers'
+[0m13:38:13.473072 [debug] [Thread-4 (]: Acquiring new bigquery connection 'model.dbt_churn_pipeline.stg_order_items'
+[0m13:38:13.473072 [debug] [Thread-5 (]: Acquiring new bigquery connection 'model.dbt_churn_pipeline.stg_order_payments'
+[0m13:38:13.474074 [debug] [Thread-6 (]: Acquiring new bigquery connection 'model.dbt_churn_pipeline.stg_order_reviews'
+[0m13:38:13.475229 [debug] [Thread-3 (]: Began compiling node model.dbt_churn_pipeline.stg_customers
+[0m13:38:13.475734 [debug] [Thread-4 (]: Began compiling node model.dbt_churn_pipeline.stg_order_items
+[0m13:38:13.475734 [debug] [Thread-5 (]: Began compiling node model.dbt_churn_pipeline.stg_order_payments
+[0m13:38:13.475734 [debug] [Thread-6 (]: Began compiling node model.dbt_churn_pipeline.stg_order_reviews
+[0m13:38:13.483847 [debug] [Thread-3 (]: Writing injected SQL for node "model.dbt_churn_pipeline.stg_customers"
+[0m13:38:13.486849 [debug] [Thread-4 (]: Writing injected SQL for node "model.dbt_churn_pipeline.stg_order_items"
+[0m13:38:13.488920 [debug] [Thread-5 (]: Writing injected SQL for node "model.dbt_churn_pipeline.stg_order_payments"
+[0m13:38:13.491924 [debug] [Thread-6 (]: Writing injected SQL for node "model.dbt_churn_pipeline.stg_order_reviews"
+[0m13:38:13.493925 [debug] [Thread-3 (]: Began executing node model.dbt_churn_pipeline.stg_customers
+[0m13:38:13.493925 [debug] [Thread-4 (]: Began executing node model.dbt_churn_pipeline.stg_order_items
+[0m13:38:13.505936 [debug] [Thread-5 (]: Began executing node model.dbt_churn_pipeline.stg_order_payments
+[0m13:38:13.528052 [debug] [Thread-3 (]: Writing runtime sql for node "model.dbt_churn_pipeline.stg_customers"
+[0m13:38:13.531055 [debug] [Thread-4 (]: Writing runtime sql for node "model.dbt_churn_pipeline.stg_order_items"
+[0m13:38:13.532055 [debug] [Thread-6 (]: Began executing node model.dbt_churn_pipeline.stg_order_reviews
+[0m13:38:13.534057 [debug] [Thread-5 (]: Writing runtime sql for node "model.dbt_churn_pipeline.stg_order_payments"
+[0m13:38:13.537196 [debug] [Thread-6 (]: Writing runtime sql for node "model.dbt_churn_pipeline.stg_order_reviews"
+[0m13:38:13.538196 [debug] [Thread-3 (]: On model.dbt_churn_pipeline.stg_customers: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "model.dbt_churn_pipeline.stg_customers"} */
+
+
+  create or replace view `academic-moon-483615-t2`.`analytics_olist`.`stg_customers`
+  OPTIONS()
+  as select
+    customer_id,
+    customer_unique_id
+from `academic-moon-483615-t2`.`raw_olist`.`raw_customers`;
+
+
+[0m13:38:13.538196 [debug] [Thread-4 (]: On model.dbt_churn_pipeline.stg_order_items: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "model.dbt_churn_pipeline.stg_order_items"} */
+
+
+  create or replace view `academic-moon-483615-t2`.`analytics_olist`.`stg_order_items`
+  OPTIONS()
+  as select
+    order_id,
+    product_id,
+    cast(price as numeric) as price,
+    cast(freight_value as numeric) as freight_value
+from `academic-moon-483615-t2`.`raw_olist`.`raw_order_items`;
+
+
+[0m13:38:13.539196 [debug] [Thread-3 (]: Opening a new connection, currently in state init
+[0m13:38:13.540197 [debug] [Thread-5 (]: On model.dbt_churn_pipeline.stg_order_payments: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "model.dbt_churn_pipeline.stg_order_payments"} */
+
+
+  create or replace view `academic-moon-483615-t2`.`analytics_olist`.`stg_order_payments`
+  OPTIONS()
+  as select
+    order_id,
+    cast(payment_sequential as int64) as payment_sequential,
+    payment_type,
+    cast(payment_installments as int64) as payment_installments,
+    cast(payment_value as numeric) as payment_value
+from `academic-moon-483615-t2`.`raw_olist`.`raw_order_payments`;
+
+
+[0m13:38:13.540197 [debug] [Thread-4 (]: Opening a new connection, currently in state init
+[0m13:38:13.541198 [debug] [Thread-6 (]: On model.dbt_churn_pipeline.stg_order_reviews: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "model.dbt_churn_pipeline.stg_order_reviews"} */
+
+
+  create or replace view `academic-moon-483615-t2`.`analytics_olist`.`stg_order_reviews`
+  OPTIONS()
+  as select
+    order_id,
+    cast(review_score as int64) as review_score
+from `academic-moon-483615-t2`.`raw_olist`.`raw_order_reviews`;
+
+
+[0m13:38:13.574774 [debug] [Thread-5 (]: Opening a new connection, currently in state init
+[0m13:38:13.611061 [debug] [Thread-6 (]: Opening a new connection, currently in state init
+[0m13:38:15.687265 [debug] [Thread-4 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:245a6fc8-e18f-46fc-a302-7e6f4faf9eb3&page=queryresults
+[0m13:38:15.690635 [debug] [Thread-5 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:1fe4bdc1-9667-4da8-a832-8fb2c48c9796&page=queryresults
+[0m13:38:15.959963 [debug] [Thread-4 (]: SQL status: OK in 0.273 seconds
+[0m13:38:16.038472 [debug] [Thread-5 (]: SQL status: OK in 0.347 seconds
+[0m13:38:16.042476 [debug] [Thread-4 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': 'db89037d-9b69-42fb-99ce-f469df281c12', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000023198767DD0>]}
+[0m13:38:16.043477 [debug] [Thread-5 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': 'db89037d-9b69-42fb-99ce-f469df281c12', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000002319A06D130>]}
+[0m13:38:16.043477 [info ] [Thread-4 (]: 2 of 7 OK created sql view model analytics_olist.stg_order_items ............... [[32mCREATE VIEW (0 processed)[0m in 2.56s]
+[0m13:38:16.044478 [info ] [Thread-5 (]: 3 of 7 OK created sql view model analytics_olist.stg_order_payments ............ [[32mCREATE VIEW (0 processed)[0m in 2.57s]
+[0m13:38:16.045479 [debug] [Thread-4 (]: Finished running node model.dbt_churn_pipeline.stg_order_items
+[0m13:38:16.045479 [debug] [Thread-5 (]: Finished running node model.dbt_churn_pipeline.stg_order_payments
+[0m13:38:16.046814 [debug] [Thread-4 (]: Began running node model.dbt_churn_pipeline.stg_orders
+[0m13:38:16.047328 [debug] [Thread-5 (]: Began running node model.dbt_churn_pipeline.stg_products
+[0m13:38:16.047942 [info ] [Thread-4 (]: 5 of 7 START sql view model analytics_olist.stg_orders ......................... [RUN]
+[0m13:38:16.048454 [info ] [Thread-5 (]: 6 of 7 START sql view model analytics_olist.stg_products ....................... [RUN]
+[0m13:38:16.049482 [debug] [Thread-4 (]: Re-using an available connection from the pool (formerly model.dbt_churn_pipeline.stg_order_items, now model.dbt_churn_pipeline.stg_orders)
+[0m13:38:16.049995 [debug] [Thread-5 (]: Re-using an available connection from the pool (formerly model.dbt_churn_pipeline.stg_order_payments, now model.dbt_churn_pipeline.stg_products)
+[0m13:38:16.050508 [debug] [Thread-4 (]: Began compiling node model.dbt_churn_pipeline.stg_orders
+[0m13:38:16.051022 [debug] [Thread-5 (]: Began compiling node model.dbt_churn_pipeline.stg_products
+[0m13:38:16.054101 [debug] [Thread-4 (]: Writing injected SQL for node "model.dbt_churn_pipeline.stg_orders"
+[0m13:38:16.056655 [debug] [Thread-5 (]: Writing injected SQL for node "model.dbt_churn_pipeline.stg_products"
+[0m13:38:16.057657 [debug] [Thread-4 (]: Began executing node model.dbt_churn_pipeline.stg_orders
+[0m13:38:16.058688 [debug] [Thread-5 (]: Began executing node model.dbt_churn_pipeline.stg_products
+[0m13:38:16.060779 [debug] [Thread-4 (]: Writing runtime sql for node "model.dbt_churn_pipeline.stg_orders"
+[0m13:38:16.063783 [debug] [Thread-5 (]: Writing runtime sql for node "model.dbt_churn_pipeline.stg_products"
+[0m13:38:16.065784 [debug] [Thread-4 (]: On model.dbt_churn_pipeline.stg_orders: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "model.dbt_churn_pipeline.stg_orders"} */
+
+
+  create or replace view `academic-moon-483615-t2`.`analytics_olist`.`stg_orders`
+  OPTIONS()
+  as select
+    order_id,
+    customer_id,
+    order_status,
+    cast(order_purchase_timestamp as timestamp) as order_purchase_timestamp,
+    cast(order_delivered_customer_date as timestamp) as order_delivered_customer_date,
+    cast(order_estimated_delivery_date as timestamp) as order_estimated_delivery_date
+from `academic-moon-483615-t2`.`raw_olist`.`raw_orders`;
+
+
+[0m13:38:16.065784 [debug] [Thread-5 (]: On model.dbt_churn_pipeline.stg_products: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "model.dbt_churn_pipeline.stg_products"} */
+
+
+  create or replace view `academic-moon-483615-t2`.`analytics_olist`.`stg_products`
+  OPTIONS()
+  as select
+    product_id,
+    case
+        when product_category_name in (
+            'bed_bath_table', 'furniture_decor', 'housewares', 'furniture_living_room',
+            'furniture_bedroom', 'furniture_mattress_and_upholstery', 'kitchen_dining_laundry_garden_furniture',
+            'office_furniture', 'garden_tools', 'home_confort', 'home_comfort_2', 'air_conditioning', 'flowers', 'la_cuisine'
+        ) then 'Home & Furniture'
+        
+        when product_category_name in (
+            'computers_accessories', 'telephony', 'electronics', 'computers', 'tablets_printing_image',
+            'fixed_telephony', 'signaling_and_security', 'security_and_services', 'audio'
+        ) then 'Electronics & Tech'
+        
+        when product_category_name in (
+            'home_appliances', 'home_appliances_2', 'small_appliances', 'small_appliances_home_oven_and_coffee'
+        ) then 'Appliances'
+        
+        when product_category_name in (
+            'construction_tools_construction', 'construction_tools_lights', 'construction_tools_safety',
+            'costruction_tools_garden', 'costruction_tools_tools', 'home_construction'
+        ) then 'Construction & Tools'
+        
+        when product_category_name in (
+            'sports_leisure', 'fashion_sport'
+        ) then 'Sports & Leisure'
+        
+        when product_category_name in (
+            'health_beauty', 'perfumery', 'diapers_and_hygiene'
+        ) then 'Health & Beauty'
+        
+        when product_category_name in (
+            'watches_gifts', 'fashion_bags_accessories', 'fashion_shoes', 'fashion_male_clothing',
+            'fashion_underwear_beach', 'fashio_female_clothing', 'fashion_childrens_clothes', 'luggage_accessories'
+        ) then 'Fashion & Accessories'
+        
+        when product_category_name in (
+            'toys', 'baby', 'consoles_games', 'cool_stuff'
+        ) then 'Toys & Games'
+        
+        when product_category_name in (
+            'books_general_interest', 'books_technical', 'books_imported', 'stationery',
+            'dvds_blu_ray', 'musical_instruments', 'music', 'cds_dvds_musicals', 'art',
+            'arts_and_craftmanship', 'cine_photo', 'party_supplies'
+        ) then 'Books, Art & Media'
+        
+        when product_category_name = 'auto' then 'Auto'
+        
+        when product_category_name in (
+            'food', 'drinks', 'food_drink'
+        ) then 'Food & Drinks'
+        
+        when product_category_name in (
+            'industry_commerce_and_business', 'agro_industry_and_commerce', 'market_place'
+        ) then 'Industry & Business'
+        
+        else 'Others'
+    end as product_category_name
+from `academic-moon-483615-t2`.`raw_olist`.`raw_products`;
+
+
+[0m13:38:16.066785 [debug] [Thread-4 (]: Opening a new connection, currently in state closed
+[0m13:38:16.067786 [debug] [Thread-5 (]: Opening a new connection, currently in state closed
+[0m13:38:17.127471 [debug] [Thread-6 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:eae84f3a-62e7-469a-ad1c-16bc71c936ed&page=queryresults
+[0m13:38:17.179057 [debug] [Thread-3 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:4ca561d7-7019-4923-9632-18d27355d715&page=queryresults
+[0m13:38:17.366885 [debug] [Thread-4 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:80995458-178a-4399-b854-8bc36d5bb6ca&page=queryresults
+[0m13:38:17.529334 [debug] [Thread-6 (]: SQL status: OK in 0.402 seconds
+[0m13:38:17.534339 [debug] [Thread-6 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': 'db89037d-9b69-42fb-99ce-f469df281c12', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000023199C59A60>]}
+[0m13:38:17.534339 [info ] [Thread-6 (]: 4 of 7 OK created sql view model analytics_olist.stg_order_reviews ............. [[32mCREATE VIEW (0 processed)[0m in 4.06s]
+[0m13:38:17.536363 [debug] [Thread-6 (]: Finished running node model.dbt_churn_pipeline.stg_order_reviews
+[0m13:38:17.632551 [debug] [Thread-3 (]: SQL status: OK in 0.452 seconds
+[0m13:38:17.636554 [debug] [Thread-3 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': 'db89037d-9b69-42fb-99ce-f469df281c12', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000002319A110FE0>]}
+[0m13:38:17.636554 [info ] [Thread-3 (]: 1 of 7 OK created sql view model analytics_olist.stg_customers ................. [[32mCREATE VIEW (0 processed)[0m in 4.16s]
+[0m13:38:17.638628 [debug] [Thread-3 (]: Finished running node model.dbt_churn_pipeline.stg_customers
+[0m13:38:17.678810 [debug] [Thread-4 (]: SQL status: OK in 0.311 seconds
+[0m13:38:17.682814 [debug] [Thread-4 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': 'db89037d-9b69-42fb-99ce-f469df281c12', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000023199CB5E20>]}
+[0m13:38:17.683814 [info ] [Thread-4 (]: 5 of 7 OK created sql view model analytics_olist.stg_orders .................... [[32mCREATE VIEW (0 processed)[0m in 1.63s]
+[0m13:38:17.684816 [debug] [Thread-4 (]: Finished running node model.dbt_churn_pipeline.stg_orders
+[0m13:38:19.097918 [debug] [Thread-5 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:0f1aff14-f9da-42d3-be3e-67724d3b93e5&page=queryresults
+[0m13:38:19.542983 [debug] [Thread-5 (]: SQL status: OK in 0.444 seconds
+[0m13:38:19.547997 [debug] [Thread-5 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': 'db89037d-9b69-42fb-99ce-f469df281c12', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000023199CB5E20>]}
+[0m13:38:19.547997 [info ] [Thread-5 (]: 6 of 7 OK created sql view model analytics_olist.stg_products .................. [[32mCREATE VIEW (0 processed)[0m in 3.50s]
+[0m13:38:19.548998 [debug] [Thread-5 (]: Finished running node model.dbt_churn_pipeline.stg_products
+[0m13:38:19.549997 [debug] [Thread-6 (]: Began running node model.dbt_churn_pipeline.mart_churn_features
+[0m13:38:19.550998 [info ] [Thread-6 (]: 7 of 7 START sql table model analytics_olist.mart_churn_features ............... [RUN]
+[0m13:38:19.551999 [debug] [Thread-6 (]: Re-using an available connection from the pool (formerly model.dbt_churn_pipeline.stg_order_reviews, now model.dbt_churn_pipeline.mart_churn_features)
+[0m13:38:19.551999 [debug] [Thread-6 (]: Began compiling node model.dbt_churn_pipeline.mart_churn_features
+[0m13:38:19.557005 [debug] [Thread-6 (]: Writing injected SQL for node "model.dbt_churn_pipeline.mart_churn_features"
+[0m13:38:19.558107 [debug] [Thread-6 (]: Began executing node model.dbt_churn_pipeline.mart_churn_features
+[0m13:38:19.568223 [debug] [Thread-6 (]: Opening a new connection, currently in state closed
+[0m13:38:20.339376 [debug] [Thread-6 (]: Writing runtime sql for node "model.dbt_churn_pipeline.mart_churn_features"
+[0m13:38:20.340376 [debug] [Thread-6 (]: On model.dbt_churn_pipeline.mart_churn_features: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "model.dbt_churn_pipeline.mart_churn_features"} */
+
+  
+    
+
+    create or replace table `academic-moon-483615-t2`.`analytics_olist`.`mart_churn_features`
+      
+    
+    
+
+    
+    OPTIONS()
+    as (
+      with customers as (
+    select * from `academic-moon-483615-t2`.`analytics_olist`.`stg_customers`
+),
+orders as (
+    select * from `academic-moon-483615-t2`.`analytics_olist`.`stg_orders`
+),
+payments as (
+    -- รวมข้อมูลการชำระเงินรายคำสั่งซื้อ (บางคำสั่งซื้อจ่ายหลายรอบ/หลายประเภท)
+    select
+        order_id,
+        max(payment_sequential) as payment_sequential,
+        max(payment_installments) as payment_installments,
+        sum(payment_value) as payment_value,
+        max(case when payment_type = 'voucher' then 1 else 0 end) as uses_voucher
+    from `academic-moon-483615-t2`.`analytics_olist`.`stg_order_payments`
+    group by 1
+),
+items as (
+    -- รวมข้อมูลราคาและค่าจัดส่งสินค้าในแต่ละคำสั่งซื้อ
+    select
+        order_id,
+        sum(price) as price,
+        sum(freight_value) as freight_value,
+        max(product_id) as product_id
+    from `academic-moon-483615-t2`.`analytics_olist`.`stg_order_items`
+    group by 1
+),
+reviews as (
+    -- หาคะแนนรีวิวเฉลี่ยในแต่ละคำสั่งซื้อ
+    select
+        order_id,
+        avg(review_score) as review_score
+    from `academic-moon-483615-t2`.`analytics_olist`.`stg_order_reviews`
+    group by 1
+),
+products as (
+    select * from `academic-moon-483615-t2`.`analytics_olist`.`stg_products`
+)
+
+select
+    o.order_id,
+    c.customer_unique_id,
+    o.order_status,
+    o.order_purchase_timestamp,
+    o.order_delivered_customer_date,
+    o.order_estimated_delivery_date,
+    coalesce(i.price, 0) as price,
+    coalesce(i.freight_value, 0) as freight_value,
+    coalesce(p.payment_installments, 1) as payment_installments,
+    coalesce(p.payment_value, 0) as payment_value,
+    coalesce(p.payment_sequential, 1) as payment_sequential,
+    coalesce(p.uses_voucher, 0) as uses_voucher,
+    coalesce(r.review_score, 3) as review_score,
+    pr.product_category_name,
+    -- คำนวณวันที่ซื้อล่าสุดเทียบกับวันสุดท้ายของระบบ:
+    -- หากเกิน 180 วัน -> เป็นข้อมูลมีผลเฉลยแล้ว นำไปใช้เทรน (train)
+    -- หากยังไม่เกิน 180 วัน -> เป็นลูกค้าปัจจุบันที่ต้องทำนายผลและโชว์บน Dashboard (test)
+    case 
+        when timestamp_diff(
+            max(o.order_purchase_timestamp) over (),
+            max(o.order_purchase_timestamp) over (partition by c.customer_unique_id),
+            DAY
+        ) >= 180 then 'train'
+        else 'test'
+    end as split
+from orders o
+join customers c on o.customer_id = c.customer_id
+left join items i on o.order_id = i.order_id
+left join payments p on o.order_id = p.order_id
+left join reviews r on o.order_id = r.order_id
+left join products pr on i.product_id = pr.product_id
+    );
+  
+[0m13:38:23.160204 [debug] [Thread-6 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:7b96c150-092e-42aa-be57-0a646f23de5c&page=queryresults
+[0m13:38:25.870673 [debug] [Thread-6 (]: SQL status: OK in 2.710 seconds
+[0m13:38:26.041908 [debug] [Thread-6 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': 'db89037d-9b69-42fb-99ce-f469df281c12', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000231987B3320>]}
+[0m13:38:26.042910 [info ] [Thread-6 (]: 7 of 7 OK created sql table model analytics_olist.mart_churn_features .......... [[32mCREATE TABLE (99.4k rows, 37.7 MiB processed)[0m in 6.49s]
+[0m13:38:26.043910 [debug] [Thread-6 (]: Finished running node model.dbt_churn_pipeline.mart_churn_features
+[0m13:38:26.045913 [debug] [MainThread]: Opening a new connection, currently in state closed
+[0m13:38:26.080374 [debug] [MainThread]: Connection 'master' was properly closed.
+[0m13:38:26.080374 [debug] [MainThread]: Connection 'list_academic-moon-483615-t2' was properly closed.
+[0m13:38:26.080374 [debug] [MainThread]: Connection 'list_academic-moon-483615-t2_analytics_olist' was properly closed.
+[0m13:38:26.081375 [debug] [MainThread]: Connection 'model.dbt_churn_pipeline.stg_customers' was properly closed.
+[0m13:38:26.081375 [debug] [MainThread]: Connection 'model.dbt_churn_pipeline.stg_orders' was properly closed.
+[0m13:38:26.081375 [debug] [MainThread]: Connection 'model.dbt_churn_pipeline.stg_products' was properly closed.
+[0m13:38:26.082376 [debug] [MainThread]: Connection 'model.dbt_churn_pipeline.mart_churn_features' was properly closed.
+[0m13:38:26.082376 [info ] [MainThread]: 
+[0m13:38:26.083377 [info ] [MainThread]: Finished running 1 table model, 6 view models in 0 hours 0 minutes and 14.51 seconds (14.51s).
+[0m13:38:26.085379 [debug] [MainThread]: Command end result
+[0m13:38:26.122516 [debug] [MainThread]: Wrote artifact WritableManifest to D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce\target\manifest.json
+[0m13:38:26.125519 [debug] [MainThread]: Wrote artifact SemanticManifest to D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce\target\semantic_manifest.json
+[0m13:38:26.131524 [debug] [MainThread]: Wrote artifact RunExecutionResult to D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce\target\run_results.json
+[0m13:38:26.131524 [info ] [MainThread]: 
+[0m13:38:26.132525 [info ] [MainThread]: [32mCompleted successfully[0m
+[0m13:38:26.132525 [info ] [MainThread]: 
+[0m13:38:26.133526 [info ] [MainThread]: Done. PASS=7 WARN=0 ERROR=0 SKIP=0 NO-OP=0 TOTAL=7
+[0m13:38:26.134527 [debug] [MainThread]: Command `dbt run` succeeded at 13:38:26.134527 after 18.13 seconds
+[0m13:38:26.135528 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000002318A7759A0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000231890E6150>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000231890E60C0>]}
+[0m13:38:26.135528 [debug] [MainThread]: Flushing usage events
+[0m13:38:27.909581 [debug] [MainThread]: An error was encountered while trying to flush usage events
+[0m18:44:49.529236 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000249E42D30E0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000249E2145490>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000249E5199160>]}
+
+
+============================== 18:44:49.561860 | 96deccc4-8544-4c6f-b19b-8bff886c04b7 ==============================
+[0m18:44:49.561860 [info ] [MainThread]: Running with dbt=1.11.12
+[0m18:44:49.563418 [debug] [MainThread]: running dbt with arguments {'static_parser': 'True', 'no_print': 'None', 'version_check': 'True', 'target_path': 'None', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'printer_width': '80', 'write_json': 'True', 'empty': 'None', 'log_cache_events': 'False', 'introspect': 'True', 'cache_selected_only': 'False', 'log_format': 'default', 'debug': 'False', 'fail_fast': 'False', 'partial_parse': 'True', 'send_anonymous_usage_stats': 'True', 'quiet': 'False', 'warn_error': 'None', 'profiles_dir': 'D:\\Desktop\\Churn interi Dashboard\\Smart-Dashboard-E-Commerce', 'indirect_selection': 'eager', 'invocation_command': 'dbt debug', 'use_colors': 'True', 'use_experimental_parser': 'False', 'log_path': 'D:\\Desktop\\Churn interi Dashboard\\Smart-Dashboard-E-Commerce\\logs'}
+[0m18:44:49.635482 [info ] [MainThread]: dbt version: 1.11.12
+[0m18:44:49.635927 [info ] [MainThread]: python version: 3.12.4
+[0m18:44:49.636442 [info ] [MainThread]: python path: D:\Desktop\Churn interi Dashboard\.venv\Scripts\python.exe
+[0m18:44:49.636964 [info ] [MainThread]: os info: Windows-10-10.0.19045-SP0
+[0m18:45:04.334935 [info ] [MainThread]: Using profiles dir at D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce
+[0m18:45:04.336191 [info ] [MainThread]: Using profiles.yml file at D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce\profiles.yml
+[0m18:45:04.336715 [info ] [MainThread]: Using dbt_project.yml file at D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce\dbt_project.yml
+[0m18:45:04.337337 [info ] [MainThread]: adapter type: bigquery
+[0m18:45:04.337894 [info ] [MainThread]: adapter version: 1.11.3
+[0m18:45:04.443997 [info ] [MainThread]: Configuration:
+[0m18:45:04.444796 [info ] [MainThread]:   profiles.yml file [[32mOK found and valid[0m]
+[0m18:45:04.445311 [info ] [MainThread]:   dbt_project.yml file [[32mOK found and valid[0m]
+[0m18:45:04.445861 [info ] [MainThread]: Required dependencies:
+[0m18:45:04.445861 [debug] [MainThread]: Executing "git --help"
+[0m18:45:04.496250 [debug] [MainThread]: STDOUT: "b"usage: git [-v | --version] [-h | --help] [-C <path>] [-c <name>=<value>]\n           [--exec-path[=<path>]] [--html-path] [--man-path] [--info-path]\n           [-p | --paginate | -P | --no-pager] [--no-replace-objects] [--no-lazy-fetch]\n           [--no-optional-locks] [--no-advice] [--bare] [--git-dir=<path>]\n           [--work-tree=<path>] [--namespace=<name>] [--config-env=<name>=<envvar>]\n           <command> [<args>]\n\nThese are common Git commands used in various situations:\n\nstart a working area (see also: git help tutorial)\n   clone      Clone a repository into a new directory\n   init       Create an empty Git repository or reinitialize an existing one\n\nwork on the current change (see also: git help everyday)\n   add        Add file contents to the index\n   mv         Move or rename a file, a directory, or a symlink\n   restore    Restore working tree files\n   rm         Remove files from the working tree and from the index\n\nexamine the history and state (see also: git help revisions)\n   bisect     Use binary search to find the commit that introduced a bug\n   diff       Show changes between commits, commit and working tree, etc\n   grep       Print lines matching a pattern\n   log        Show commit logs\n   show       Show various types of objects\n   status     Show the working tree status\n\ngrow, mark and tweak your common history\n   backfill   Download missing objects in a partial clone\n   branch     List, create, or delete branches\n   commit     Record changes to the repository\n   merge      Join two or more development histories together\n   rebase     Reapply commits on top of another base tip\n   reset      Set `HEAD` or the index to a known state\n   switch     Switch branches\n   tag        Create, list, delete or verify tags\n\ncollaborate (see also: git help workflows)\n   fetch      Download objects and refs from another repository\n   pull       Fetch from and integrate with another repository or a local branch\n   push       Update remote refs along with associated objects\n\n'git help -a' and 'git help -g' list available subcommands and some\nconcept guides. See 'git help <command>' or 'git help <concept>'\nto read about a specific subcommand or concept.\nSee 'git help git' for an overview of the system.\n""
+[0m18:45:04.496250 [debug] [MainThread]: STDERR: "b''"
+[0m18:45:04.497251 [info ] [MainThread]:  - git [[32mOK found[0m]
+
+[0m18:45:04.497748 [info ] [MainThread]: Connection:
+[0m18:45:04.498269 [info ] [MainThread]:   method: service-account
+[0m18:45:04.498772 [info ] [MainThread]:   database: academic-moon-483615-t2
+[0m18:45:04.499307 [info ] [MainThread]:   execution_project: academic-moon-483615-t2
+[0m18:45:04.499548 [info ] [MainThread]:   schema: analytics_olist
+[0m18:45:04.500065 [info ] [MainThread]:   location: asia-southeast1
+[0m18:45:04.500600 [info ] [MainThread]:   priority: None
+[0m18:45:04.501126 [info ] [MainThread]:   maximum_bytes_billed: None
+[0m18:45:04.501640 [info ] [MainThread]:   impersonate_service_account: None
+[0m18:45:04.501640 [info ] [MainThread]:   job_retry_deadline_seconds: None
+[0m18:45:04.502664 [info ] [MainThread]:   job_retries: 1
+[0m18:45:04.503182 [info ] [MainThread]:   job_creation_timeout_seconds: None
+[0m18:45:04.503182 [info ] [MainThread]:   job_execution_timeout_seconds: None
+[0m18:45:04.503696 [info ] [MainThread]:   timeout_seconds: None
+[0m18:45:04.504206 [info ] [MainThread]:   client_id: None
+[0m18:45:04.504709 [info ] [MainThread]:   token_uri: None
+[0m18:45:04.504954 [info ] [MainThread]:   compute_region: None
+[0m18:45:04.505478 [info ] [MainThread]:   dataproc_cluster_name: None
+[0m18:45:04.505995 [info ] [MainThread]:   gcs_bucket: None
+[0m18:45:04.506508 [info ] [MainThread]:   dataproc_batch: None
+[0m18:45:04.507024 [info ] [MainThread]: Registered adapter: bigquery=1.11.3
+[0m18:45:05.136555 [debug] [MainThread]: Acquiring new bigquery connection 'debug'
+[0m18:45:05.137556 [debug] [MainThread]: On debug: select 1 as id
+[0m18:45:05.137556 [debug] [MainThread]: Opening a new connection, currently in state init
+[0m18:45:06.886075 [debug] [MainThread]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:e56e8bcd-45fe-472b-b88e-471744c7f363&page=queryresults
+[0m18:45:07.125741 [debug] [MainThread]: SQL status: OK in 0.239 seconds
+[0m18:45:11.813502 [info ] [MainThread]:   Connection test: [[32mOK connection ok[0m]
+
+[0m18:45:11.814214 [info ] [MainThread]: [32mAll checks passed![0m
+[0m18:45:11.815246 [debug] [MainThread]: Command `dbt debug` succeeded at 18:45:11.815246 after 22.46 seconds
+[0m18:45:11.815764 [debug] [MainThread]: Connection 'debug' was properly closed.
+[0m18:45:11.816803 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000249F441BDD0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000249E4F8C740>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000249E469FEC0>]}
+[0m18:45:11.817331 [debug] [MainThread]: Flushing usage events
+[0m18:45:13.170865 [debug] [MainThread]: An error was encountered while trying to flush usage events
+[0m18:46:20.743202 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001977FF3EAB0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001977D2B1130>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000197002D9160>]}
+
+
+============================== 18:46:20.747205 | 8af457b0-5d2d-4c7e-86c2-bdb3ec0ae170 ==============================
+[0m18:46:20.747205 [info ] [MainThread]: Running with dbt=1.11.12
+[0m18:46:20.749097 [debug] [MainThread]: running dbt with arguments {'static_parser': 'True', 'no_print': 'None', 'version_check': 'True', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'target_path': 'None', 'printer_width': '80', 'write_json': 'True', 'introspect': 'True', 'log_cache_events': 'False', 'empty': 'False', 'cache_selected_only': 'False', 'log_format': 'default', 'debug': 'False', 'fail_fast': 'False', 'profiles_dir': 'D:\\Desktop\\Churn interi Dashboard\\Smart-Dashboard-E-Commerce', 'send_anonymous_usage_stats': 'True', 'quiet': 'False', 'warn_error': 'None', 'partial_parse': 'True', 'indirect_selection': 'eager', 'use_colors': 'True', 'invocation_command': 'dbt run', 'use_experimental_parser': 'False', 'log_path': 'D:\\Desktop\\Churn interi Dashboard\\Smart-Dashboard-E-Commerce\\logs'}
+[0m18:46:22.896682 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'project_id', 'label': '8af457b0-5d2d-4c7e-86c2-bdb3ec0ae170', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001970FEEF6E0>]}
+[0m18:46:22.971041 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'adapter_info', 'label': '8af457b0-5d2d-4c7e-86c2-bdb3ec0ae170', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001970004ECF0>]}
+[0m18:46:22.972384 [info ] [MainThread]: Registered adapter: bigquery=1.11.3
+[0m18:46:23.487135 [debug] [MainThread]: checksum: f368f5348cf42803b94ef7fb8257ecf3bf9a9a16dd9c8c51fe5172f2dbeb457f, vars: {}, profile: , target: , version: 1.11.12
+[0m18:46:26.160371 [debug] [MainThread]: Partial parsing enabled: 0 files deleted, 0 files added, 0 files changed.
+[0m18:46:26.161372 [debug] [MainThread]: Nothing changed, skipping partial parsing.
+[0m18:46:26.161372 [debug] [MainThread]: Partial parsing enabled, no changes found, skipping parsing
+[0m18:46:26.207998 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'load_project', 'label': '8af457b0-5d2d-4c7e-86c2-bdb3ec0ae170', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000019711482D80>]}
+[0m18:46:26.425196 [debug] [MainThread]: Wrote artifact WritableManifest to D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce\target\manifest.json
+[0m18:46:26.428198 [debug] [MainThread]: Wrote artifact SemanticManifest to D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce\target\semantic_manifest.json
+[0m18:46:26.500263 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'resource_counts', 'label': '8af457b0-5d2d-4c7e-86c2-bdb3ec0ae170', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000019711481D00>]}
+[0m18:46:26.501264 [info ] [MainThread]: Found 7 models, 10 data tests, 9 sources, 553 macros
+[0m18:46:26.501676 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'runnable_timing', 'label': '8af457b0-5d2d-4c7e-86c2-bdb3ec0ae170', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000197117E5A90>]}
+[0m18:46:26.504462 [info ] [MainThread]: 
+[0m18:46:26.504988 [info ] [MainThread]: Concurrency: 4 threads (target='dev')
+[0m18:46:26.505505 [info ] [MainThread]: 
+[0m18:46:26.506029 [debug] [MainThread]: Acquiring new bigquery connection 'master'
+[0m18:46:26.510661 [debug] [ThreadPool]: Acquiring new bigquery connection 'list_academic-moon-483615-t2'
+[0m18:46:26.511177 [debug] [ThreadPool]: Opening a new connection, currently in state init
+[0m18:46:27.559309 [debug] [ThreadPool]: Acquiring new bigquery connection 'list_academic-moon-483615-t2_analytics_olist'
+[0m18:46:27.560310 [debug] [ThreadPool]: Opening a new connection, currently in state init
+[0m18:46:28.416745 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'runnable_timing', 'label': '8af457b0-5d2d-4c7e-86c2-bdb3ec0ae170', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000019711483170>]}
+[0m18:46:28.417746 [debug] [MainThread]: Opening a new connection, currently in state init
+[0m18:46:28.456782 [debug] [Thread-3 (]: Began running node model.dbt_churn_pipeline.stg_customers
+[0m18:46:28.457782 [debug] [Thread-4 (]: Began running node model.dbt_churn_pipeline.stg_order_items
+[0m18:46:28.457782 [debug] [Thread-5 (]: Began running node model.dbt_churn_pipeline.stg_order_payments
+[0m18:46:28.458783 [debug] [Thread-6 (]: Began running node model.dbt_churn_pipeline.stg_order_reviews
+[0m18:46:28.458783 [info ] [Thread-3 (]: 1 of 7 START sql view model analytics_olist.stg_customers ...................... [RUN]
+[0m18:46:28.459889 [info ] [Thread-4 (]: 2 of 7 START sql view model analytics_olist.stg_order_items .................... [RUN]
+[0m18:46:28.460929 [info ] [Thread-5 (]: 3 of 7 START sql view model analytics_olist.stg_order_payments ................. [RUN]
+[0m18:46:28.461503 [info ] [Thread-6 (]: 4 of 7 START sql view model analytics_olist.stg_order_reviews .................. [RUN]
+[0m18:46:28.462070 [debug] [Thread-3 (]: Acquiring new bigquery connection 'model.dbt_churn_pipeline.stg_customers'
+[0m18:46:28.462590 [debug] [Thread-4 (]: Acquiring new bigquery connection 'model.dbt_churn_pipeline.stg_order_items'
+[0m18:46:28.463618 [debug] [Thread-5 (]: Acquiring new bigquery connection 'model.dbt_churn_pipeline.stg_order_payments'
+[0m18:46:28.464135 [debug] [Thread-6 (]: Acquiring new bigquery connection 'model.dbt_churn_pipeline.stg_order_reviews'
+[0m18:46:28.464649 [debug] [Thread-3 (]: Began compiling node model.dbt_churn_pipeline.stg_customers
+[0m18:46:28.465171 [debug] [Thread-4 (]: Began compiling node model.dbt_churn_pipeline.stg_order_items
+[0m18:46:28.465684 [debug] [Thread-5 (]: Began compiling node model.dbt_churn_pipeline.stg_order_payments
+[0m18:46:28.466200 [debug] [Thread-6 (]: Began compiling node model.dbt_churn_pipeline.stg_order_reviews
+[0m18:46:28.476402 [debug] [Thread-3 (]: Writing injected SQL for node "model.dbt_churn_pipeline.stg_customers"
+[0m18:46:28.480405 [debug] [Thread-4 (]: Writing injected SQL for node "model.dbt_churn_pipeline.stg_order_items"
+[0m18:46:28.484409 [debug] [Thread-5 (]: Writing injected SQL for node "model.dbt_churn_pipeline.stg_order_payments"
+[0m18:46:28.487412 [debug] [Thread-6 (]: Writing injected SQL for node "model.dbt_churn_pipeline.stg_order_reviews"
+[0m18:46:28.488413 [debug] [Thread-3 (]: Began executing node model.dbt_churn_pipeline.stg_customers
+[0m18:46:28.489414 [debug] [Thread-4 (]: Began executing node model.dbt_churn_pipeline.stg_order_items
+[0m18:46:28.517439 [debug] [Thread-5 (]: Began executing node model.dbt_churn_pipeline.stg_order_payments
+[0m18:46:28.520442 [debug] [Thread-3 (]: Writing runtime sql for node "model.dbt_churn_pipeline.stg_customers"
+[0m18:46:28.523445 [debug] [Thread-4 (]: Writing runtime sql for node "model.dbt_churn_pipeline.stg_order_items"
+[0m18:46:28.524445 [debug] [Thread-6 (]: Began executing node model.dbt_churn_pipeline.stg_order_reviews
+[0m18:46:28.527448 [debug] [Thread-5 (]: Writing runtime sql for node "model.dbt_churn_pipeline.stg_order_payments"
+[0m18:46:28.530451 [debug] [Thread-6 (]: Writing runtime sql for node "model.dbt_churn_pipeline.stg_order_reviews"
+[0m18:46:28.531452 [debug] [Thread-3 (]: On model.dbt_churn_pipeline.stg_customers: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "model.dbt_churn_pipeline.stg_customers"} */
+
+
+  create or replace view `academic-moon-483615-t2`.`analytics_olist`.`stg_customers`
+  OPTIONS()
+  as select
+    customer_id,
+    customer_unique_id
+from `academic-moon-483615-t2`.`raw_olist`.`raw_customers`;
+
+
+[0m18:46:28.531452 [debug] [Thread-4 (]: On model.dbt_churn_pipeline.stg_order_items: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "model.dbt_churn_pipeline.stg_order_items"} */
+
+
+  create or replace view `academic-moon-483615-t2`.`analytics_olist`.`stg_order_items`
+  OPTIONS()
+  as select
+    order_id,
+    product_id,
+    cast(price as numeric) as price,
+    cast(freight_value as numeric) as freight_value
+from `academic-moon-483615-t2`.`raw_olist`.`raw_order_items`;
+
+
+[0m18:46:28.532453 [debug] [Thread-3 (]: Opening a new connection, currently in state init
+[0m18:46:28.533453 [debug] [Thread-5 (]: On model.dbt_churn_pipeline.stg_order_payments: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "model.dbt_churn_pipeline.stg_order_payments"} */
+
+
+  create or replace view `academic-moon-483615-t2`.`analytics_olist`.`stg_order_payments`
+  OPTIONS()
+  as select
+    order_id,
+    cast(payment_sequential as int64) as payment_sequential,
+    payment_type,
+    cast(payment_installments as int64) as payment_installments,
+    cast(payment_value as numeric) as payment_value
+from `academic-moon-483615-t2`.`raw_olist`.`raw_order_payments`;
+
+
+[0m18:46:28.533453 [debug] [Thread-4 (]: Opening a new connection, currently in state init
+[0m18:46:28.534454 [debug] [Thread-6 (]: On model.dbt_churn_pipeline.stg_order_reviews: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "model.dbt_churn_pipeline.stg_order_reviews"} */
+
+
+  create or replace view `academic-moon-483615-t2`.`analytics_olist`.`stg_order_reviews`
+  OPTIONS()
+  as select
+    order_id,
+    cast(review_score as int64) as review_score
+from `academic-moon-483615-t2`.`raw_olist`.`raw_order_reviews`;
+
+
+[0m18:46:28.569058 [debug] [Thread-5 (]: Opening a new connection, currently in state init
+[0m18:46:28.606091 [debug] [Thread-6 (]: Opening a new connection, currently in state init
+[0m18:46:30.799237 [debug] [Thread-3 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:8a5b15b1-9045-4b3e-b944-e8b47fd0dbaf&page=queryresults
+[0m18:46:31.136193 [debug] [Thread-3 (]: SQL status: OK in 0.337 seconds
+[0m18:46:31.217254 [debug] [Thread-3 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': '8af457b0-5d2d-4c7e-86c2-bdb3ec0ae170', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000197017469F0>]}
+[0m18:46:31.218255 [info ] [Thread-3 (]: 1 of 7 OK created sql view model analytics_olist.stg_customers ................. [[32mCREATE VIEW (0 processed)[0m in 2.75s]
+[0m18:46:31.218853 [debug] [Thread-3 (]: Finished running node model.dbt_churn_pipeline.stg_customers
+[0m18:46:31.219376 [debug] [Thread-3 (]: Began running node model.dbt_churn_pipeline.stg_orders
+[0m18:46:31.220490 [info ] [Thread-3 (]: 5 of 7 START sql view model analytics_olist.stg_orders ......................... [RUN]
+[0m18:46:31.221015 [debug] [Thread-3 (]: Re-using an available connection from the pool (formerly model.dbt_churn_pipeline.stg_customers, now model.dbt_churn_pipeline.stg_orders)
+[0m18:46:31.221547 [debug] [Thread-3 (]: Began compiling node model.dbt_churn_pipeline.stg_orders
+[0m18:46:31.224617 [debug] [Thread-3 (]: Writing injected SQL for node "model.dbt_churn_pipeline.stg_orders"
+[0m18:46:31.225638 [debug] [Thread-3 (]: Began executing node model.dbt_churn_pipeline.stg_orders
+[0m18:46:31.228998 [debug] [Thread-3 (]: Writing runtime sql for node "model.dbt_churn_pipeline.stg_orders"
+[0m18:46:31.230016 [debug] [Thread-3 (]: On model.dbt_churn_pipeline.stg_orders: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "model.dbt_churn_pipeline.stg_orders"} */
+
+
+  create or replace view `academic-moon-483615-t2`.`analytics_olist`.`stg_orders`
+  OPTIONS()
+  as select
+    order_id,
+    customer_id,
+    order_status,
+    cast(order_purchase_timestamp as timestamp) as order_purchase_timestamp,
+    cast(order_delivered_customer_date as timestamp) as order_delivered_customer_date,
+    cast(order_estimated_delivery_date as timestamp) as order_estimated_delivery_date
+from `academic-moon-483615-t2`.`raw_olist`.`raw_orders`;
+
+
+[0m18:46:31.230639 [debug] [Thread-3 (]: Opening a new connection, currently in state closed
+[0m18:46:32.084446 [debug] [Thread-5 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:a7d535bc-f0e7-4924-aea0-e35c6c064f22&page=queryresults
+[0m18:46:32.135493 [debug] [Thread-6 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:f69e4202-a127-43fb-85f4-fac63b532cd5&page=queryresults
+[0m18:46:32.194008 [debug] [Thread-4 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:6ee6391e-80b9-44c2-b71e-6cd9fc573b6a&page=queryresults
+[0m18:46:32.459207 [debug] [Thread-5 (]: SQL status: OK in 0.374 seconds
+[0m18:46:32.465213 [debug] [Thread-5 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': '8af457b0-5d2d-4c7e-86c2-bdb3ec0ae170', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000019711418A40>]}
+[0m18:46:32.466214 [debug] [Thread-6 (]: SQL status: OK in 0.330 seconds
+[0m18:46:32.466214 [info ] [Thread-5 (]: 3 of 7 OK created sql view model analytics_olist.stg_order_payments ............ [[32mCREATE VIEW (0 processed)[0m in 4.00s]
+[0m18:46:32.472324 [debug] [Thread-6 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': '8af457b0-5d2d-4c7e-86c2-bdb3ec0ae170', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000197119C8050>]}
+[0m18:46:32.473429 [debug] [Thread-5 (]: Finished running node model.dbt_churn_pipeline.stg_order_payments
+[0m18:46:32.474141 [info ] [Thread-6 (]: 4 of 7 OK created sql view model analytics_olist.stg_order_reviews ............. [[32mCREATE VIEW (0 processed)[0m in 4.01s]
+[0m18:46:32.474654 [debug] [Thread-5 (]: Began running node model.dbt_churn_pipeline.stg_products
+[0m18:46:32.475820 [debug] [Thread-6 (]: Finished running node model.dbt_churn_pipeline.stg_order_reviews
+[0m18:46:32.476324 [info ] [Thread-5 (]: 6 of 7 START sql view model analytics_olist.stg_products ....................... [RUN]
+[0m18:46:32.477250 [debug] [Thread-5 (]: Re-using an available connection from the pool (formerly model.dbt_churn_pipeline.stg_order_payments, now model.dbt_churn_pipeline.stg_products)
+[0m18:46:32.477754 [debug] [Thread-5 (]: Began compiling node model.dbt_churn_pipeline.stg_products
+[0m18:46:32.481559 [debug] [Thread-5 (]: Writing injected SQL for node "model.dbt_churn_pipeline.stg_products"
+[0m18:46:32.482917 [debug] [Thread-5 (]: Began executing node model.dbt_churn_pipeline.stg_products
+[0m18:46:32.484366 [debug] [Thread-4 (]: SQL status: OK in 0.289 seconds
+[0m18:46:32.487488 [debug] [Thread-5 (]: Writing runtime sql for node "model.dbt_churn_pipeline.stg_products"
+[0m18:46:32.493243 [debug] [Thread-4 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': '8af457b0-5d2d-4c7e-86c2-bdb3ec0ae170', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000019711977620>]}
+[0m18:46:32.494245 [info ] [Thread-4 (]: 2 of 7 OK created sql view model analytics_olist.stg_order_items ............... [[32mCREATE VIEW (0 processed)[0m in 4.03s]
+[0m18:46:32.495246 [debug] [Thread-4 (]: Finished running node model.dbt_churn_pipeline.stg_order_items
+[0m18:46:32.496248 [debug] [Thread-5 (]: On model.dbt_churn_pipeline.stg_products: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "model.dbt_churn_pipeline.stg_products"} */
+
+
+  create or replace view `academic-moon-483615-t2`.`analytics_olist`.`stg_products`
+  OPTIONS()
+  as select
+    product_id,
+    case
+        when product_category_name in (
+            'bed_bath_table', 'furniture_decor', 'housewares', 'furniture_living_room',
+            'furniture_bedroom', 'furniture_mattress_and_upholstery', 'kitchen_dining_laundry_garden_furniture',
+            'office_furniture', 'garden_tools', 'home_confort', 'home_comfort_2', 'air_conditioning', 'flowers', 'la_cuisine'
+        ) then 'Home & Furniture'
+        
+        when product_category_name in (
+            'computers_accessories', 'telephony', 'electronics', 'computers', 'tablets_printing_image',
+            'fixed_telephony', 'signaling_and_security', 'security_and_services', 'audio'
+        ) then 'Electronics & Tech'
+        
+        when product_category_name in (
+            'home_appliances', 'home_appliances_2', 'small_appliances', 'small_appliances_home_oven_and_coffee'
+        ) then 'Appliances'
+        
+        when product_category_name in (
+            'construction_tools_construction', 'construction_tools_lights', 'construction_tools_safety',
+            'costruction_tools_garden', 'costruction_tools_tools', 'home_construction'
+        ) then 'Construction & Tools'
+        
+        when product_category_name in (
+            'sports_leisure', 'fashion_sport'
+        ) then 'Sports & Leisure'
+        
+        when product_category_name in (
+            'health_beauty', 'perfumery', 'diapers_and_hygiene'
+        ) then 'Health & Beauty'
+        
+        when product_category_name in (
+            'watches_gifts', 'fashion_bags_accessories', 'fashion_shoes', 'fashion_male_clothing',
+            'fashion_underwear_beach', 'fashio_female_clothing', 'fashion_childrens_clothes', 'luggage_accessories'
+        ) then 'Fashion & Accessories'
+        
+        when product_category_name in (
+            'toys', 'baby', 'consoles_games', 'cool_stuff'
+        ) then 'Toys & Games'
+        
+        when product_category_name in (
+            'books_general_interest', 'books_technical', 'books_imported', 'stationery',
+            'dvds_blu_ray', 'musical_instruments', 'music', 'cds_dvds_musicals', 'art',
+            'arts_and_craftmanship', 'cine_photo', 'party_supplies'
+        ) then 'Books, Art & Media'
+        
+        when product_category_name = 'auto' then 'Auto'
+        
+        when product_category_name in (
+            'food', 'drinks', 'food_drink'
+        ) then 'Food & Drinks'
+        
+        when product_category_name in (
+            'industry_commerce_and_business', 'agro_industry_and_commerce', 'market_place'
+        ) then 'Industry & Business'
+        
+        else 'Others'
+    end as product_category_name
+from `academic-moon-483615-t2`.`raw_olist`.`raw_products`;
+
+
+[0m18:46:32.496248 [debug] [Thread-5 (]: Opening a new connection, currently in state closed
+[0m18:46:32.535980 [debug] [Thread-3 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:7b925a35-a147-42fd-862c-20d801efc8b4&page=queryresults
+[0m18:46:32.813632 [debug] [Thread-3 (]: SQL status: OK in 0.278 seconds
+[0m18:46:32.818638 [debug] [Thread-3 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': '8af457b0-5d2d-4c7e-86c2-bdb3ec0ae170', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000019712BD4B00>]}
+[0m18:46:32.819638 [info ] [Thread-3 (]: 5 of 7 OK created sql view model analytics_olist.stg_orders .................... [[32mCREATE VIEW (0 processed)[0m in 1.60s]
+[0m18:46:32.820968 [debug] [Thread-3 (]: Finished running node model.dbt_churn_pipeline.stg_orders
+[0m18:46:33.905502 [debug] [Thread-5 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:59635fda-cc82-429d-b774-bf858f4b9c3e&page=queryresults
+[0m18:46:34.236152 [debug] [Thread-5 (]: SQL status: OK in 0.330 seconds
+[0m18:46:34.241048 [debug] [Thread-5 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': '8af457b0-5d2d-4c7e-86c2-bdb3ec0ae170', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000019711418DD0>]}
+[0m18:46:34.242050 [info ] [Thread-5 (]: 6 of 7 OK created sql view model analytics_olist.stg_products .................. [[32mCREATE VIEW (0 processed)[0m in 1.76s]
+[0m18:46:34.243332 [debug] [Thread-5 (]: Finished running node model.dbt_churn_pipeline.stg_products
+[0m18:46:34.243906 [debug] [Thread-6 (]: Began running node model.dbt_churn_pipeline.mart_churn_features
+[0m18:46:34.244941 [info ] [Thread-6 (]: 7 of 7 START sql table model analytics_olist.mart_churn_features ............... [RUN]
+[0m18:46:34.245460 [debug] [Thread-6 (]: Re-using an available connection from the pool (formerly model.dbt_churn_pipeline.stg_order_reviews, now model.dbt_churn_pipeline.mart_churn_features)
+[0m18:46:34.245986 [debug] [Thread-6 (]: Began compiling node model.dbt_churn_pipeline.mart_churn_features
+[0m18:46:34.251116 [debug] [Thread-6 (]: Writing injected SQL for node "model.dbt_churn_pipeline.mart_churn_features"
+[0m18:46:34.252152 [debug] [Thread-6 (]: Began executing node model.dbt_churn_pipeline.mart_churn_features
+[0m18:46:34.263558 [debug] [Thread-6 (]: Opening a new connection, currently in state closed
+[0m18:46:35.296699 [debug] [Thread-6 (]: Writing runtime sql for node "model.dbt_churn_pipeline.mart_churn_features"
+[0m18:46:35.297699 [debug] [Thread-6 (]: On model.dbt_churn_pipeline.mart_churn_features: /* {"app": "dbt", "dbt_version": "1.11.12", "profile_name": "dbt_churn_pipeline", "target_name": "dev", "node_id": "model.dbt_churn_pipeline.mart_churn_features"} */
+
+  
+    
+
+    create or replace table `academic-moon-483615-t2`.`analytics_olist`.`mart_churn_features`
+      
+    
+    
+
+    
+    OPTIONS()
+    as (
+      with customers as (
+    select * from `academic-moon-483615-t2`.`analytics_olist`.`stg_customers`
+),
+orders as (
+    select * from `academic-moon-483615-t2`.`analytics_olist`.`stg_orders`
+),
+payments as (
+    -- รวมข้อมูลการชำระเงินรายคำสั่งซื้อ (บางคำสั่งซื้อจ่ายหลายรอบ/หลายประเภท)
+    select
+        order_id,
+        max(payment_sequential) as payment_sequential,
+        max(payment_installments) as payment_installments,
+        sum(payment_value) as payment_value,
+        max(case when payment_type = 'voucher' then 1 else 0 end) as uses_voucher
+    from `academic-moon-483615-t2`.`analytics_olist`.`stg_order_payments`
+    group by 1
+),
+items as (
+    -- รวมข้อมูลราคาและค่าจัดส่งสินค้าในแต่ละคำสั่งซื้อ
+    select
+        order_id,
+        sum(price) as price,
+        sum(freight_value) as freight_value,
+        max(product_id) as product_id
+    from `academic-moon-483615-t2`.`analytics_olist`.`stg_order_items`
+    group by 1
+),
+reviews as (
+    -- หาคะแนนรีวิวเฉลี่ยในแต่ละคำสั่งซื้อ
+    select
+        order_id,
+        avg(review_score) as review_score
+    from `academic-moon-483615-t2`.`analytics_olist`.`stg_order_reviews`
+    group by 1
+),
+products as (
+    select * from `academic-moon-483615-t2`.`analytics_olist`.`stg_products`
+)
+
+select
+    o.order_id,
+    c.customer_unique_id,
+    o.order_status,
+    o.order_purchase_timestamp,
+    o.order_delivered_customer_date,
+    o.order_estimated_delivery_date,
+    coalesce(i.price, 0) as price,
+    coalesce(i.freight_value, 0) as freight_value,
+    coalesce(p.payment_installments, 1) as payment_installments,
+    coalesce(p.payment_value, 0) as payment_value,
+    coalesce(p.payment_sequential, 1) as payment_sequential,
+    coalesce(p.uses_voucher, 0) as uses_voucher,
+    coalesce(r.review_score, 3) as review_score,
+    pr.product_category_name,
+    -- คำนวณวันที่ซื้อล่าสุดเทียบกับวันสุดท้ายของระบบ:
+    -- หากเกิน 180 วัน -> เป็นข้อมูลมีผลเฉลยแล้ว นำไปใช้เทรน (train)
+    -- หากยังไม่เกิน 180 วัน -> เป็นลูกค้าปัจจุบันที่ต้องทำนายผลและโชว์บน Dashboard (test)
+    case 
+        when timestamp_diff(
+            max(o.order_purchase_timestamp) over (),
+            max(o.order_purchase_timestamp) over (partition by c.customer_unique_id),
+            DAY
+        ) >= 180 then 'train'
+        else 'test'
+    end as split
+from orders o
+join customers c on o.customer_id = c.customer_id
+left join items i on o.order_id = i.order_id
+left join payments p on o.order_id = p.order_id
+left join reviews r on o.order_id = r.order_id
+left join products pr on i.product_id = pr.product_id
+    );
+  
+[0m18:46:36.323318 [debug] [Thread-6 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=academic-moon-483615-t2&j=bq:asia-southeast1:7c51e5e7-f5d2-4c1c-ac5d-c32df33b00b2&page=queryresults
+[0m18:46:39.762369 [debug] [Thread-6 (]: SQL status: OK in 3.439 seconds
+[0m18:46:39.983570 [debug] [Thread-6 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': '8af457b0-5d2d-4c7e-86c2-bdb3ec0ae170', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000019712BE2A80>]}
+[0m18:46:39.984571 [info ] [Thread-6 (]: 7 of 7 OK created sql table model analytics_olist.mart_churn_features .......... [[32mCREATE TABLE (99.4k rows, 37.7 MiB processed)[0m in 5.74s]
+[0m18:46:39.985545 [debug] [Thread-6 (]: Finished running node model.dbt_churn_pipeline.mart_churn_features
+[0m18:46:39.987123 [debug] [MainThread]: Opening a new connection, currently in state closed
+[0m18:46:40.022509 [debug] [MainThread]: Connection 'master' was properly closed.
+[0m18:46:40.022509 [debug] [MainThread]: Connection 'list_academic-moon-483615-t2' was properly closed.
+[0m18:46:40.023510 [debug] [MainThread]: Connection 'list_academic-moon-483615-t2_analytics_olist' was properly closed.
+[0m18:46:40.023510 [debug] [MainThread]: Connection 'model.dbt_churn_pipeline.stg_orders' was properly closed.
+[0m18:46:40.023510 [debug] [MainThread]: Connection 'model.dbt_churn_pipeline.stg_order_items' was properly closed.
+[0m18:46:40.024511 [debug] [MainThread]: Connection 'model.dbt_churn_pipeline.stg_products' was properly closed.
+[0m18:46:40.024511 [debug] [MainThread]: Connection 'model.dbt_churn_pipeline.mart_churn_features' was properly closed.
+[0m18:46:40.025511 [info ] [MainThread]: 
+[0m18:46:40.026104 [info ] [MainThread]: Finished running 1 table model, 6 view models in 0 hours 0 minutes and 13.52 seconds (13.52s).
+[0m18:46:40.028919 [debug] [MainThread]: Command end result
+[0m18:46:40.066688 [debug] [MainThread]: Wrote artifact WritableManifest to D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce\target\manifest.json
+[0m18:46:40.068691 [debug] [MainThread]: Wrote artifact SemanticManifest to D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce\target\semantic_manifest.json
+[0m18:46:40.075227 [debug] [MainThread]: Wrote artifact RunExecutionResult to D:\Desktop\Churn interi Dashboard\Smart-Dashboard-E-Commerce\target\run_results.json
+[0m18:46:40.075227 [info ] [MainThread]: 
+[0m18:46:40.076797 [info ] [MainThread]: [32mCompleted successfully[0m
+[0m18:46:40.077359 [info ] [MainThread]: 
+[0m18:46:40.077886 [info ] [MainThread]: Done. PASS=7 WARN=0 ERROR=0 SKIP=0 NO-OP=0 TOTAL=7
+[0m18:46:40.079439 [debug] [MainThread]: Command `dbt run` succeeded at 18:46:40.079439 after 19.46 seconds
+[0m18:46:40.079957 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000019700450830>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001977C9AD5E0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001977FEDD460>]}
+[0m18:46:40.080471 [debug] [MainThread]: Flushing usage events
+[0m18:46:41.522762 [debug] [MainThread]: An error was encountered while trying to flush usage events

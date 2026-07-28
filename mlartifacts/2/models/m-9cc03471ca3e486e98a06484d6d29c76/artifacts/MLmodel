@@ -1,0 +1,44 @@
+artifact_path: mlflow-artifacts:/2/models/m-9cc03471ca3e486e98a06484d6d29c76/artifacts
+flavors:
+  lightgbm:
+    code: null
+    data: model.skops
+    lgb_version: 4.6.0
+    model_class: lightgbm.sklearn.LGBMClassifier
+    serialization_format: skops
+    skops_trusted_types:
+    - lightgbm.sklearn.LGBMRegressor
+    - lightgbm.sklearn.LGBMClassifier
+    - collections.OrderedDict
+    - lightgbm.basic.Booster
+  python_function:
+    data: model.skops
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.lightgbm
+    python_version: 3.12.4
+is_signature_from_type_hint: false
+mlflow_version: 3.14.0
+model_id: m-9cc03471ca3e486e98a06484d6d29c76
+model_size_bytes: 53761
+model_uuid: m-9cc03471ca3e486e98a06484d6d29c76
+prompts: null
+run_id: 06a1ad9c9c634189a244e5462536f14f
+signature:
+  inputs: '[{"type": "double", "name": "price", "required": true}, {"type": "double",
+    "name": "freight_value", "required": true}, {"type": "double", "name": "payment_installments",
+    "required": true}, {"type": "double", "name": "delivery_days", "required": true},
+    {"type": "double", "name": "is_first_purchase", "required": true}, {"type": "double",
+    "name": "avg_purchase_gap", "required": true}, {"type": "double", "name": "delivery_vs_estimated",
+    "required": true}, {"type": "double", "name": "freight_ratio", "required": true},
+    {"type": "double", "name": "is_low_score", "required": true}, {"type": "double",
+    "name": "is_high_score", "required": true}, {"type": "double", "name": "gap_real",
+    "required": true}, {"type": "double", "name": "gap_vs_avg_real", "required": true},
+    {"type": "double", "name": "first_purchase_late", "required": true}, {"type":
+    "double", "name": "first_purchase_bad_review", "required": true}, {"type": "double",
+    "name": "is_extremely_late", "required": true}]'
+  outputs: '[{"type": "tensor", "tensor-spec": {"dtype": "int64", "shape": [-1]}}]'
+  params: null
+type_hint_from_example: false
+utc_time_created: '2026-07-13 09:32:44.528087'

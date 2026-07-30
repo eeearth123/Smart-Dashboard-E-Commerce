@@ -55,6 +55,12 @@ if model_error:
 
 df = process_features(df_raw)
 
+# กรองแสดงเฉพาะลูกค้าที่ซื้อล่าสุดไม่ถึง 180 วัน (กลุ่ม Active/Test เท่านั้น)
+if "split" in df.columns:
+    df = df[df["split"] == "test"]
+elif "days_since_purchase" in df.columns:
+    df = df[df["days_since_purchase"] < 180]
+
 if model is not None and feature_names:
     proba, pred = predict_churn(df, model, feature_names, BEST_THRESHOLD)
     df["churn_probability"] = proba

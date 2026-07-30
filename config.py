@@ -18,8 +18,8 @@ PROB_HIGH   = 0.75
 PROB_MEDIUM = 0.40
 
 # Model filenames (ต้องอยู่ในโฟลเดอร์เดียวกับ app.py)
-MODEL_FILE    = "olist_churn_model_final (1).pkl"
-FEATURES_FILE = "model_features_final (1).pkl"
+MODEL_FILE    = "modelV4.pkl"
+FEATURES_FILE = "model_features_V4.pkl"
 
 # Cache TTL (seconds)
 CACHE_TTL = 600

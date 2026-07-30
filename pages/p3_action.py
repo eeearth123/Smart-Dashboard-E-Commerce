@@ -94,7 +94,12 @@ def render(df: pd.DataFrame, model, feature_names: list) -> None:
         if "freight_ratio" not in df_p3.columns:
             st.error(t("p3_no_freight"))
         else:
-            target    = df_p3[df_p3["freight_ratio"] > 0.2].copy()
+            freight_threshold = st.slider(
+                "เกณฑ์สัดส่วนค่าส่งต่อราคาสินค้า (0.0 = จำลองทุกคน, 0.2 = ค่าส่ง > 20% ของราคาสินค้า):",
+                min_value=0.0, max_value=1.0, value=0.20, step=0.05,
+                key="freight_threshold_slider"
+            )
+            target    = df_p3[df_p3["freight_ratio"] >= freight_threshold].copy()
             avg_fr    = float(target["freight_value"].mean()) \
                         if not target.empty and "freight_value" in target.columns else 15.0
             _run_simulation(
@@ -207,7 +212,7 @@ def _run_simulation(target_df, feature_changes, cost_per_head,
             prob_sim = model.predict_proba(X_sim)[:, 1]
 
             uplift           = prob_orig - prob_sim
-            sim_success_rate = (uplift > 0.08).mean()
+            sim_success_rate = float(uplift.mean()) if len(uplift) > 0 else 0.0
 
             # Uplift distribution chart
             dist = {

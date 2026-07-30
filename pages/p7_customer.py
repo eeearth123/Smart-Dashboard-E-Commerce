@@ -52,16 +52,42 @@ def render(df: pd.DataFrame) -> None:
     # ── Customer list ─────────────────────────────────────────
     st.markdown("---")
     st.subheader(t("p7_list", n=f"{len(filtered):,}"))
+
+    # คำนวณวันคาดการณ์ที่จะกลับมาซื้อซ้ำแบบไดนามิก
+    if not filtered.empty and "order_purchase_timestamp" in filtered.columns and "avg_purchase_gap" in filtered.columns:
+        last_order = filtered["order_purchase_timestamp"]
+        # วันคาดการณ์กลับมาซื้อ = วันล่าสุด + รอบซื้อเฉลี่ย (ถ้าไม่มีเฉลี่ย ให้ใช้ค่าเฉลี่ยกลาง 90 วัน)
+        filtered["expected_return_date"] = last_order + pd.to_timedelta(filtered["avg_purchase_gap"].fillna(90), unit="D")
+        
+        # วันอ้างอิงปัจจุบันของระบบ (วันสูงสุดในฐานข้อมูล)
+        ref_date = df["order_purchase_timestamp"].max()
+        filtered["days_until_return"] = (filtered["expected_return_date"] - ref_date).dt.days
+        
+        filtered["expected_return_date_str"] = filtered["expected_return_date"].dt.strftime("%Y-%m-%d")
+        
+        filtered["return_status"] = np.where(
+            filtered["days_until_return"] < 0,
+            "🔴 เลทมา " + (-filtered["days_until_return"]).astype(str) + " วัน",
+            "🟢 คาดว่าจะมาอีกใน " + filtered["days_until_return"].astype(str) + " วัน"
+        )
+    else:
+        filtered["expected_return_date_str"] = "-"
+        filtered["return_status"] = "-"
+
     show_cols = [c for c in [
         "customer_unique_id", "status", "churn_probability",
-        "lateness_score", "cat_median_days", "payment_value", "product_category_name",
-    ] if c in df.columns]
+        "expected_return_date_str", "return_status", "avg_purchase_gap",
+        "payment_value", "product_category_name",
+    ] if c in filtered.columns]
 
     st.dataframe(
         filtered[show_cols].sort_values("churn_probability", ascending=False),
         column_config={
             "churn_probability": st.column_config.ProgressColumn("Risk", format="%.2f", min_value=0, max_value=1),
-            "lateness_score":    st.column_config.NumberColumn(t("p7_col_late"), format="%.1fx"),
+            "expected_return_date_str": "วันคาดการณ์กลับมาซื้อ",
+            "return_status": "สถานะรอบซื้อ",
+            "avg_purchase_gap": "รอบซื้อเฉลี่ย (วัน)",
         },
         use_container_width=True,
+        hide_index=True,
     )

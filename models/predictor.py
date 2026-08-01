@@ -38,7 +38,7 @@ def predict_churn(df: pd.DataFrame, model, feature_names: list, threshold: float
     X = X.fillna(X.median())
 
     if hasattr(model, "predict_proba"):
-        proba = model.predict_proba(X)[:, 1]
+        proba = 1 - model.predict_proba(X)[:, 1]
     else:
         proba = model.predict(X).astype(float)
 

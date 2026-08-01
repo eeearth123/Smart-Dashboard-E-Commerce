@@ -203,13 +203,13 @@ def _run_simulation(target_df, feature_changes, cost_per_head,
                 st.warning("ไม่มีข้อมูลเป้าหมาย")
                 return
 
-            # ── Model prediction only ─────────────────────────
-            X_orig    = target_df.reindex(columns=feature_names, fill_value=0).fillna(0)
-            prob_orig = model.predict_proba(X_orig)[:, 1]
+            meds      = target_df.reindex(columns=feature_names).median().fillna(0)
+            X_orig    = target_df.reindex(columns=feature_names).fillna(meds)
+            prob_orig = 1 - model.predict_proba(X_orig)[:, 1]
 
             df_sim   = _apply_changes(target_df.copy(), feature_changes)
-            X_sim    = df_sim.reindex(columns=feature_names, fill_value=0).fillna(0)
-            prob_sim = model.predict_proba(X_sim)[:, 1]
+            X_sim    = df_sim.reindex(columns=feature_names).fillna(meds)
+            prob_sim = 1 - model.predict_proba(X_sim)[:, 1]
 
             uplift           = prob_orig - prob_sim
             sim_success_rate = float(uplift.mean()) if len(uplift) > 0 else 0.0

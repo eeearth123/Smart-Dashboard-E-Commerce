@@ -1,5 +1,5 @@
 # ============================================================
-# pages/p3_action.py — Action Plan & Simulator (v2)
+# pages/p3_action.py — Action Plan & Simulator (v2.1 - 3-Class Fixed)
 # ใช้โมเดลเท่านั้น + filter กลุ่มเหมือนหน้า 2
 # ============================================================
 import time

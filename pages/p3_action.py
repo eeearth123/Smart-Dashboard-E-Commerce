@@ -25,6 +25,7 @@ FILTER_GROUPS = {
 def render(df: pd.DataFrame, model, feature_names: list) -> None:
     st.title(t("page_action"))
     st.caption(t("p3_caption"))
+    st.caption("🏷️ **App Version:** v2.1 (3-Class Fixed)")
 
     if model is None or not feature_names:
         st.error("❌ โมเดลไม่พร้อม — กรุณาตรวจสอบไฟล์ .pkl ใน repo")
@@ -243,6 +244,7 @@ def _run_simulation(target_df, feature_changes, cost_per_head,
             profit      = saved_users * avg_ltv - budget
             roi         = (profit / budget * 100) if budget > 0 else 0
 
+            st.write(f"DEBUG: prob_orig mean = {prob_orig.mean():.4%}, prob_sim mean = {prob_sim.mean():.4%}")
             st.markdown(t("p3_results"))
             st.metric(t("p3_success"), f"{sim_success_rate:.1%}",
                       delta=t("p3_be_delta", r=be_rate))

@@ -164,7 +164,7 @@ def _run_simulation(target_df, feature_changes, cost_per_head,
         st.write(rec_text)
         st.markdown("---")
         cost = st.number_input(
-            t("p3_cost_lbl"), value=float(cost_per_head),
+            "งบต่อหัว (R$) - คิดตามเงินที่เสียไปจริง", value=float(cost_per_head),
             min_value=0.0, max_value=500.0, step=0.5, key=f"cost_{tab_key}",
         )
         be_rate = cost / avg_ltv if avg_ltv > 0 else 0
@@ -240,11 +240,11 @@ def _run_simulation(target_df, feature_changes, cost_per_head,
             st.metric(t("p3_budget"),  f"R$ {budget:,.0f}")
 
             if profit > 0:
-                st.metric(t("p3_profit"), f"R$ {profit:,.0f}", f"+{roi:.1f}%")
+                st.metric("เงินที่คาดว่าจะได้รับจากคนที่ดึงกลับมา", f"R$ {profit:,.0f}", f"+{roi:.1f}%")
                 st.success(t("p3_worthit"))
             else:
                 gap = be_rate - sim_success_rate
-                st.metric(t("p3_loss"), f"R$ {profit:,.0f}", f"{roi:.1f}%")
+                st.metric("เงินที่คาดว่าจะได้รับจากคนที่ดึงกลับมา", f"R$ {profit:,.0f}", f"{roi:.1f}%")
                 st.error(t("p3_not_worth", be=be_rate, sr=sim_success_rate, gap=gap))
                 st.caption(t("p3_reduce_cost", c=avg_ltv * sim_success_rate))
 
@@ -322,16 +322,9 @@ def _run_simulation(target_df, feature_changes, cost_per_head,
         st.metric("🗓️ ซื้อล่าสุดเฉลี่ย", f"{avg_days:.0f} วันก่อน")
         st.metric("⏰ ช้ากว่ารอบปกติเฉลี่ย", f"{overdue:.0f} วัน", delta=f"+{overdue:.0f} วันช้าเกินรอบ", delta_color="inverse")
 
-    # 4. Price Range & Past Problem History
+    # 4. Past Problem History
     with ic4:
-        st.caption("💰 **ช่วงราคา & 🚨 ประวัติปัญหา**")
-        price_col = "payment_value" if "payment_value" in saved_df.columns else ("price" if "price" in saved_df.columns else None)
-        if price_col:
-            p_min = saved_df[price_col].min()
-            p_max = saved_df[price_col].max()
-            p_avg = saved_df[price_col].mean()
-            st.caption(f"💵 **ช่วงราคาสินค้า:** R$ {p_min:,.0f} – {p_max:,.0f}")
-            st.caption(f"📊 **ยอดซื้อเฉลี่ย:** R$ {p_avg:,.0f}")
+        st.caption("🚨 **ประวัติปัญหา**")
 
         if "bad_experience_score" in saved_df.columns:
             bad_cnt = (saved_df["bad_experience_score"] > 0).sum()
@@ -344,4 +337,27 @@ def _run_simulation(target_df, feature_changes, cost_per_head,
         elif "review_score" in saved_df.columns:
             avg_rev = saved_df["review_score"].mean()
             st.caption(f"⭐ **คะแนนรีวิวเฉลี่ย:** {avg_rev:.1f} / 5.0")
+
+    # 5. Box Plots for Price & Freight
+    st.markdown("---")
+    st.markdown("#### 📦 การกระจายตัวของราคาสินค้าและค่าส่ง (Saved Customers)")
+    bc1, bc2 = st.columns(2)
+    
+    with bc1:
+        if "price" in saved_df.columns:
+            box_price = alt.Chart(saved_df).mark_boxplot(color="#3498db").encode(
+                x=alt.X("price:Q", title="ราคาสินค้า (R$)")
+            ).properties(height=200)
+            st.altair_chart(box_price, use_container_width=True)
+        else:
+            st.info("ไม่มีข้อมูลราคาสินค้า")
+            
+    with bc2:
+        if "freight_value" in saved_df.columns:
+            box_freight = alt.Chart(saved_df).mark_boxplot(color="#e67e22").encode(
+                x=alt.X("freight_value:Q", title="ราคาค่าส่ง (R$)")
+            ).properties(height=200)
+            st.altair_chart(box_freight, use_container_width=True)
+        else:
+            st.info("ไม่มีข้อมูลราคาค่าส่ง")
 

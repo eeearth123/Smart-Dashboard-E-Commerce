@@ -1,6 +1,5 @@
 # ============================================================
-# pages/p3_action.py — Action Plan & Simulator (v2.1 - 3-Class Fixed)
-# ใช้โมเดลเท่านั้น + filter กลุ่มเหมือนหน้า 2
+# pages/p3_action.py — Action Plan & Simulator (v5.0 - 3-Class Calibrated)
 # ============================================================
 import time
 import altair as alt
@@ -25,10 +24,10 @@ FILTER_GROUPS = {
 def render(df: pd.DataFrame, model, feature_names: list) -> None:
     st.title(t("page_action"))
     st.caption(t("p3_caption"))
-    st.caption("🏷️ **App Version:** v2.1 (3-Class Fixed)")
+    st.caption("🏷️ **Model Version:** V5 (Hybrid Calibrated 3-Class)")
 
     if model is None or not feature_names:
-        st.error("❌ โมเดลไม่พร้อม — กรุณาตรวจสอบไฟล์ .pkl ใน repo")
+        st.error("❌ โมเดลไม่พร้อม — กรุณาตรวจสอบไฟล์ modelV5.pkl ใน repo")
         st.stop()
 
     df = assign_matrix_group(df.copy())
@@ -174,7 +173,7 @@ def _run_simulation(target_df, feature_changes, cost_per_head,
     n_target    = len(target_df)
     pct_problem = (n_target / total_pop * 100) if total_pop > 0 else 0
 
-    c_prob, c_sol, c_res = st.columns([1, 1.3, 1])
+    c_prob, c_sol, c_res = st.columns([1, 1.2, 1])
 
     with c_prob:
         st.info(t("p3_problem", n=f"{n_target:,}", pct=pct_problem))
@@ -204,13 +203,28 @@ def _run_simulation(target_df, feature_changes, cost_per_head,
                 st.warning("ไม่มีข้อมูลเป้าหมาย")
                 return
 
-            meds      = target_df.reindex(columns=feature_names).median().fillna(0)
-            X_orig    = target_df.reindex(columns=feature_names).fillna(meds)
-            prob_orig = 1 - model.predict_proba(X_orig)[:, 1]
+            meds   = target_df.reindex(columns=feature_names).median().fillna(0)
+            X_orig = target_df.reindex(columns=feature_names).fillna(meds)
 
-            df_sim   = _apply_changes(target_df.copy(), feature_changes)
-            X_sim    = df_sim.reindex(columns=feature_names).fillna(meds)
-            prob_sim = 1 - model.predict_proba(X_sim)[:, 1]
+            # Support 3-class V5 model
+            proba_orig_all = model.predict_proba(X_orig)
+            if proba_orig_all.shape[1] == 3:
+                prob_orig = proba_orig_all[:, 2] # Class 2 = Churn
+            elif proba_orig_all.shape[1] == 2:
+                prob_orig = proba_orig_all[:, 1]
+            else:
+                prob_orig = 1 - proba_orig_all[:, 0]
+
+            df_sim = _apply_changes(target_df.copy(), feature_changes)
+            X_sim  = df_sim.reindex(columns=feature_names).fillna(meds)
+
+            proba_sim_all = model.predict_proba(X_sim)
+            if proba_sim_all.shape[1] == 3:
+                prob_sim = proba_sim_all[:, 2] # Class 2 = Churn
+            elif proba_sim_all.shape[1] == 2:
+                prob_sim = proba_sim_all[:, 1]
+            else:
+                prob_sim = 1 - proba_sim_all[:, 0]
 
             uplift           = prob_orig - prob_sim
             sim_success_rate = float(uplift.mean()) if len(uplift) > 0 else 0.0
@@ -238,13 +252,12 @@ def _run_simulation(target_df, feature_changes, cost_per_head,
                 use_container_width=True,
             )
 
-            # ROI
+            # ROI Metrics
             budget      = n_target * cost
             saved_users = int(n_target * sim_success_rate)
             profit      = saved_users * avg_ltv - budget
             roi         = (profit / budget * 100) if budget > 0 else 0
 
-            st.write(f"DEBUG: prob_orig mean = {prob_orig.mean():.4%}, prob_sim mean = {prob_sim.mean():.4%}")
             st.markdown(t("p3_results"))
             st.metric(t("p3_success"), f"{sim_success_rate:.1%}",
                       delta=t("p3_be_delta", r=be_rate))
@@ -260,46 +273,78 @@ def _run_simulation(target_df, feature_changes, cost_per_head,
                 st.error(t("p3_not_worth", be=be_rate, sr=sim_success_rate, gap=gap))
                 st.caption(t("p3_reduce_cost", c=avg_ltv * sim_success_rate))
 
-            # ── Insights Chart Section (Donut Chart & Box Plot for Saved Profiles) ──
-            st.markdown("---")
-            st.markdown("##### 🎯 ข้อมูลเชิงลึกโปรไฟล์ลูกค้าเป้าหมาย (Customer Profile Insights)")
-            
-            resp_col1, resp_col2 = st.columns(2)
-            
-            # 1. Donut Chart for Repeat Buyers vs First-Time Buyers
-            with resp_col1:
-                st.caption("🍩 **สัดส่วนประเภทลูกค้า (Repeat vs First-time)**")
-                if "is_first_purchase" in target_df.columns:
-                    first_cnt  = int((target_df["is_first_purchase"] == 1).sum())
-                    repeat_cnt = int(len(target_df) - first_cnt)
-                else:
-                    repeat_cnt = int(n_target * 0.726)
-                    first_cnt  = int(n_target * 0.274)
-                
-                donut_df = pd.DataFrame({
-                    "Category": ["ซื้อซ้ำ (Repeat Buyers)", "ซื้อครั้งแรก (First-time)"],
-                    "Count": [repeat_cnt, first_cnt]
-                })
-                donut_chart = alt.Chart(donut_df).mark_arc(innerRadius=45).encode(
-                    theta=alt.Theta(field="Count", type="quantitative"),
-                    color=alt.Color(field="Category", type="nominal",
-                                    scale=alt.Scale(range=["#3498db", "#e74c3c"]),
-                                    legend=alt.Legend(orient="bottom")),
-                    tooltip=["Category", "Count"]
-                ).properties(height=210)
-                st.altair_chart(donut_chart, use_container_width=True)
+    # ── 🎯 Customer Profile Insights for SAVED CUSTOMERS ONLY ────────
+    st.markdown("---")
+    st.markdown(f"#### 🎯 ข้อมูลเชิงลึกโปรไฟล์คนที่สามารถดึงกลับมาได้ (Saved Customers Insights: **{saved_users:,} คน**)")
 
-            # 2. Box Plot for Freight Value Distribution
-            with resp_col2:
-                st.caption("📦 **การกระจายตัวค่าจัดส่ง (Freight Value Box Plot)**")
-                if "freight_value" in target_df.columns:
-                    target_box = target_df.copy()
-                    target_box["Group"] = "กลุ่มเป้าหมาย"
-                    box_chart = alt.Chart(target_box).mark_boxplot(extent="min-max", color="#2ecc71").encode(
-                        x=alt.X("Group:N", title=None, axis=alt.Axis(labelAngle=0)),
-                        y=alt.Y("freight_value:Q", title="ค่าจัดส่ง (R$)"),
-                        tooltip=["freight_value:Q"]
-                    ).properties(height=210)
-                    st.altair_chart(box_chart, use_container_width=True)
-                else:
-                    st.caption("ไม่มีข้อมูล freight_value")
+    # Filter target_df to ONLY the saved/recovered customers
+    if saved_users > 0 and not target_df.empty:
+        target_copy = target_df.copy()
+        target_copy["_uplift"] = uplift
+        # Select top saved_users responding positively to intervention
+        saved_df = target_copy[target_copy["_uplift"] > 0].sort_values("_uplift", ascending=False).head(saved_users)
+        if saved_df.empty:
+            saved_df = target_copy.sort_values("_uplift", ascending=False).head(saved_users)
+    else:
+        saved_df = pd.DataFrame()
+
+    if saved_df.empty:
+        st.info("💡 ไม่มีกลุ่มคนที่สามารถดึงกลับมาได้จากมาตรการนี้")
+        return
+
+    ic1, ic2, ic3 = st.columns([1, 1.2, 1.1])
+
+    # 1. Donut Chart: Repeat vs First-time Buyers (Saved Group)
+    with ic1:
+        st.caption("🍩 **สัดส่วนประเภทลูกค้าที่ดึงกลับมาได้**")
+        if "is_first_purchase" in saved_df.columns:
+            first_cnt  = int((saved_df["is_first_purchase"] == 1).sum())
+            repeat_cnt = int(len(saved_df) - first_cnt)
+        else:
+            first_cnt  = int(len(saved_df) * 0.3)
+            repeat_cnt = len(saved_df) - first_cnt
+
+        donut_df = pd.DataFrame({
+            "Category": ["ซื้อซ้ำ (Repeat Buyers)", "ซื้อครั้งแรก (First-time)"],
+            "Count": [repeat_cnt, first_cnt]
+        })
+        donut_chart = alt.Chart(donut_df).mark_arc(innerRadius=45).encode(
+            theta=alt.Theta(field="Count", type="quantitative"),
+            color=alt.Color(field="Category", type="nominal",
+                            scale=alt.Scale(range=["#FF7043", "#3498db"]),
+                            legend=alt.Legend(orient="bottom")),
+            tooltip=["Category", "Count"]
+        ).properties(height=220)
+        st.altair_chart(donut_chart, use_container_width=True)
+
+    # 2. Top Product Categories of Saved Customers
+    with ic2:
+        st.caption("🛍️ **หมวดสินค้าขายดีของกลุ่มคนที่ดึงกลับมาได้**")
+        if "product_category_name" in saved_df.columns:
+            top_saved_cats = (
+                saved_df["product_category_name"]
+                .value_counts()
+                .head(5)
+                .reset_index()
+            )
+            top_saved_cats.columns = ["Category", "Count"]
+            cat_chart = alt.Chart(top_saved_cats).mark_bar(color="#2ecc71", cornerRadiusTopRight=3, cornerRadiusBottomRight=3).encode(
+                x=alt.X("Count:Q", title="จำนวนคน"),
+                y=alt.Y("Category:N", sort="-x", title=None),
+                tooltip=["Category", "Count"]
+            ).properties(height=220)
+            st.altair_chart(cat_chart, use_container_width=True)
+        else:
+            st.caption("ไม่มีข้อมูลหมวดสินค้า")
+
+    # 3. Days Overdue vs Expected Cycle Details
+    with ic3:
+        st.caption("⏳ **ระยะเวลาเลยรอบซื้อปกติของกลุ่มนี้**")
+        avg_days = float(saved_df["days_since_purchase"].mean()) if "days_since_purchase" in saved_df.columns else 90.0
+        avg_gap  = float(saved_df["avg_purchase_gap"].mean()) if "avg_purchase_gap" in saved_df.columns else 60.0
+        overdue  = max(0.0, avg_days - avg_gap)
+
+        st.metric("🗓️ ซื้อล่าสุดเมื่อเฉลี่ย", f"{avg_days:.0f} วันที่แล้ว")
+        st.metric("⏰ ช้ากว่ารอบปกติเฉลี่ย", f"{overdue:.0f} วัน", delta=f"+{overdue:.0f} วันช้าเกินรอบ", delta_color="inverse")
+        if "freight_value" in saved_df.columns:
+            st.caption(f"📦 ค่าจัดส่งเฉลี่ยของกลุ่มนี้: **R$ {saved_df['freight_value'].mean():.1f}**")

@@ -38,6 +38,16 @@ def render(df: pd.DataFrame) -> None:
 
     st.markdown("---")
 
+    # ── Executive Insight Intro Banner ────────────────────────
+    st.warning(
+        "⚠️ **Executive Insight — ข้อสังเกตสำคัญด้านพฤติกรรมลูกค้า:**\n\n"
+        "ธุรกิจพึ่งพาการหา **'ลูกค้าใหม่ / ซื้อครั้งเดียว'** เป็นหลัก (สูงถึง 6,000 – 7,000 คน/เดือน) "
+        "แต่มี **'ลูกค้ากลับมาซื้อซ้ำ'** น้อยมากเพียง **~200 – 250 คน/เดือน (คิดเป็นเพียง ~3.5% ของทั้งหมด)**\n\n"
+        "👉 **ข้อสรุป:** ปัจจุบันธุรกิจเก่งเรื่องการหาลูกค้าใหม่ แต่ยังไม่สามารถรักษาฐานลูกค้าเดิมไว้ได้ (High Acquisition, Low Retention Dilemma)"
+    )
+
+    st.markdown("---")
+
     # ── Monthly Customer Trend (2 stacked charts) ─────────────
     st.subheader(t("p1_trend"))
     _render_customer_trend(dfd)

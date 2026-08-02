@@ -292,11 +292,11 @@ def _run_simulation(target_df, feature_changes, cost_per_head,
         st.info("💡 ไม่มีกลุ่มคนที่สามารถดึงกลับมาได้จากมาตรการนี้")
         return
 
-    ic1, ic2, ic3 = st.columns([1, 1.2, 1.1])
+    ic1, ic2, ic3, ic4 = st.columns([1, 1.2, 1, 1.1])
 
     # 1. Donut Chart: Repeat vs First-time Buyers (Saved Group)
     with ic1:
-        st.caption("🍩 **สัดส่วนประเภทลูกค้าที่ดึงกลับมาได้**")
+        st.caption("🍩 **สัดส่วนประเภทลูกค้าที่รอด**")
         if "is_first_purchase" in saved_df.columns:
             first_cnt  = int((saved_df["is_first_purchase"] == 1).sum())
             repeat_cnt = int(len(saved_df) - first_cnt)
@@ -314,12 +314,12 @@ def _run_simulation(target_df, feature_changes, cost_per_head,
                             scale=alt.Scale(range=["#FF7043", "#3498db"]),
                             legend=alt.Legend(orient="bottom")),
             tooltip=["Category", "Count"]
-        ).properties(height=220)
+        ).properties(height=210)
         st.altair_chart(donut_chart, use_container_width=True)
 
     # 2. Top Product Categories of Saved Customers
     with ic2:
-        st.caption("🛍️ **หมวดสินค้าขายดีของกลุ่มคนที่ดึงกลับมาได้**")
+        st.caption("🛍️ **หมวดสินค้าขายดีของกลุ่มที่รอด**")
         if "product_category_name" in saved_df.columns:
             top_saved_cats = (
                 saved_df["product_category_name"]
@@ -332,19 +332,41 @@ def _run_simulation(target_df, feature_changes, cost_per_head,
                 x=alt.X("Count:Q", title="จำนวนคน"),
                 y=alt.Y("Category:N", sort="-x", title=None),
                 tooltip=["Category", "Count"]
-            ).properties(height=220)
+            ).properties(height=210)
             st.altair_chart(cat_chart, use_container_width=True)
         else:
             st.caption("ไม่มีข้อมูลหมวดสินค้า")
 
     # 3. Days Overdue vs Expected Cycle Details
     with ic3:
-        st.caption("⏳ **ระยะเวลาเลยรอบซื้อปกติของกลุ่มนี้**")
+        st.caption("⏳ **ระยะเวลาและการเกินรอบ**")
         avg_days = float(saved_df["days_since_purchase"].mean()) if "days_since_purchase" in saved_df.columns else 90.0
         avg_gap  = float(saved_df["avg_purchase_gap"].mean()) if "avg_purchase_gap" in saved_df.columns else 60.0
         overdue  = max(0.0, avg_days - avg_gap)
 
-        st.metric("🗓️ ซื้อล่าสุดเมื่อเฉลี่ย", f"{avg_days:.0f} วันที่แล้ว")
+        st.metric("🗓️ ซื้อล่าสุดเฉลี่ย", f"{avg_days:.0f} วันก่อน")
         st.metric("⏰ ช้ากว่ารอบปกติเฉลี่ย", f"{overdue:.0f} วัน", delta=f"+{overdue:.0f} วันช้าเกินรอบ", delta_color="inverse")
-        if "freight_value" in saved_df.columns:
-            st.caption(f"📦 ค่าจัดส่งเฉลี่ยของกลุ่มนี้: **R$ {saved_df['freight_value'].mean():.1f}**")
+
+    # 4. Price Range & Past Problem History
+    with ic4:
+        st.caption("💰 **ช่วงราคา & 🚨 ประวัติปัญหา**")
+        price_col = "payment_value" if "payment_value" in saved_df.columns else ("price" if "price" in saved_df.columns else None)
+        if price_col:
+            p_min = saved_df[price_col].min()
+            p_max = saved_df[price_col].max()
+            p_avg = saved_df[price_col].mean()
+            st.caption(f"💵 **ช่วงราคาสินค้า:** R$ {p_min:,.0f} – {p_max:,.0f}")
+            st.caption(f"📊 **ยอดซื้อเฉลี่ย:** R$ {p_avg:,.0f}")
+
+        if "bad_experience_score" in saved_df.columns:
+            bad_cnt = (saved_df["bad_experience_score"] > 0).sum()
+            bad_pct = bad_cnt / len(saved_df) * 100
+            st.caption(f"⚠️ **ประวัติเคยเจอปัญหา:** {bad_pct:.1f}% ({bad_cnt:,} คน)")
+
+        if "delay_days" in saved_df.columns and (saved_df["delay_days"] > 0).sum() > 0:
+            avg_delay = saved_df[saved_df["delay_days"] > 0]["delay_days"].mean()
+            st.caption(f"🚚 **เคยส่งช้ากว่ากำหนดเฉลี่ย:** {avg_delay:.1f} วัน")
+        elif "review_score" in saved_df.columns:
+            avg_rev = saved_df["review_score"].mean()
+            st.caption(f"⭐ **คะแนนรีวิวเฉลี่ย:** {avg_rev:.1f} / 5.0")
+

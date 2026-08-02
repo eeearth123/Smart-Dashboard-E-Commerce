@@ -55,29 +55,32 @@ if bq_error:
 if model_error:
     st.warning(f"⚠️ Model: {model_error}")
 
-df = process_features(df_raw)
-
-# กรองแสดงเฉพาะลูกค้าที่ซื้อล่าสุดไม่ถึง 180 วัน (กลุ่ม Active/Test เท่านั้น)
-if "split" in df.columns:
-    df = df[df["split"] == "test"]
-elif "days_since_purchase" in df.columns:
-    df = df[df["days_since_purchase"] < 180]
+# 1. df_all: ข้อมูลประวัติศาสตร์ทั้งหมดแบบสมบูรณ์ (~99k แถว)
+df_all = process_features(df_raw)
 
 if model is not None and feature_names:
-    proba, pred = predict_churn(df, model, feature_names, BEST_THRESHOLD)
-    df["churn_probability"] = proba
-    df["churn_prediction"]  = pred
-    if "product_category_name" in df.columns:
-        cat_risk_map = df.groupby("product_category_name")["churn_probability"].mean()
-        df["cat_churn_risk"] = df["product_category_name"].map(cat_risk_map)
+    proba, pred = predict_churn(df_all, model, feature_names, BEST_THRESHOLD)
+    df_all["churn_probability"] = proba
+    df_all["churn_prediction"]  = pred
+    if "product_category_name" in df_all.columns:
+        cat_risk_map = df_all.groupby("product_category_name")["churn_probability"].mean()
+        df_all["cat_churn_risk"] = df_all["product_category_name"].map(cat_risk_map)
 else:
-    df["churn_probability"] = 0.5
-    df["churn_prediction"]  = 1
+    df_all["churn_probability"] = 0.5
+    df_all["churn_prediction"]  = 1
 
-df["is_churn"] = df["churn_prediction"]
-df["status"]   = df.apply(assign_status, axis=1)
+df_all["is_churn"] = df_all["churn_prediction"]
+df_all["status"]   = df_all.apply(assign_status, axis=1)
 
-# ── Sidebar: info + navigation (ไม่มี Business Rules แล้ว) ───
+# 2. df_test: ข้อมูลเฉพาะกลุ่ม Active / Test set (< 180 วัน) สำหรับหน้าเฝ้าระวังและทำนายความเสี่ยง (P2, P3)
+if "split" in df_all.columns:
+    df_test = df_all[df_all["split"] == "test"].copy()
+elif "days_since_purchase" in df_all.columns:
+    df_test = df_all[df_all["days_since_purchase"] < 180].copy()
+else:
+    df_test = df_all.copy()
+
+# ── Sidebar: info + navigation ───────────────────────────────
 PAGE_LABELS = [
     t("page_business"),
     t("page_churn"),
@@ -90,7 +93,7 @@ PAGE_LABELS = [
 
 with st.sidebar:
     st.title(t("app_title"))
-    st.success(t("data_loaded", n=f"{len(df):,}"))
+    st.success(t("data_loaded", n=f"{len(df_all):,}"))
     st.info(t("model_threshold", v=f"{BEST_THRESHOLD:.2f}"))
 
     page_idx = st.radio(
@@ -102,14 +105,16 @@ with st.sidebar:
     st.markdown("---")
 
 # ── Router ────────────────────────────────────────────────────
+# P1 (Business Overview) และหน้าภาพรวมประวัติศาสตร์ใช้ df_all
+# P2 (Churn Risk) และ P3 (Action Simulator) ใช้ df_test
 PAGE_RENDERS = [
-    lambda: p1.render(df),
-    lambda: p2.render(df, t, BEST_THRESHOLD),
-    lambda: p3.render(df, model, feature_names),
-    lambda: p4.render(df),
-    lambda: p5.render(df),
-    lambda: p6.render(df),
-    lambda: p7.render(df),
+    lambda: p1.render(df_all),
+    lambda: p2.render(df_test, t, BEST_THRESHOLD),
+    lambda: p3.render(df_test, model, feature_names),
+    lambda: p4.render(df_all),
+    lambda: p5.render(df_all),
+    lambda: p6.render(df_all),
+    lambda: p7.render(df_all),
 ]
 
 PAGE_RENDERS[page_idx]()

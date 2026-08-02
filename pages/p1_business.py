@@ -43,7 +43,9 @@ def render(df: pd.DataFrame) -> None:
     _render_customer_trend(dfd)
     st.markdown("---")
 
-    # ── Top categories (Original Revenue & Churn Risk) ────────
+    # ── Top categories ────────────────────────────────────────
+    # Left: Stacked bar chart (Repeat vs First-time buyers)
+    # Right: Original Table (Revenue R$, Orders, Avg Order R$, Churn Risk)
     st.subheader(t("p1_top_cat"))
     _render_top_categories(dfd)
 
@@ -94,7 +96,7 @@ def _render_customer_trend(dfd: pd.DataFrame) -> None:
     )
     trend = trend.fillna(0)
 
-    # Filter out incomplete months after 2018-08 (Sep 2018 has 16 orders, Oct 2018 has 4 orders)
+    # Filter out incomplete tail months after 2018-08
     trend = trend[trend["month"] <= "2018-08"].copy()
 
     # Convert period to timestamp for Altair
@@ -178,17 +180,56 @@ def _render_customer_trend(dfd: pd.DataFrame) -> None:
 
 
 def _render_top_categories(dfd: pd.DataFrame) -> None:
-    """Original Top Categories implementation: Revenue (R$), Orders, Avg Order, Churn Risk."""
+    """Left side: Stacked bar chart of Customer Count by Category (Repeat vs First-time).
+    Right side: Original Table (Revenue R$, Orders, Avg Order R$, Churn Risk)."""
     if "product_category_name" not in dfd.columns or dfd.empty:
         return
 
+    tmp = dfd.copy()
+
+    # 1. Left Chart Data: Customer count by category split into Repeat vs First-time
+    repeat_label  = t("p1_repeat_cust")
+    onetime_label = t("p1_onetime_cust")
+
+    if "purchase_count" in tmp.columns:
+        tmp["_buyer_type"] = np.where(
+            tmp["purchase_count"] >= 2,
+            repeat_label,
+            onetime_label,
+        )
+    else:
+        cust_counts = tmp.groupby("customer_unique_id").size()
+        repeat_ids  = set(cust_counts[cust_counts >= 2].index)
+        tmp["_buyer_type"] = np.where(
+            tmp["customer_unique_id"].isin(repeat_ids),
+            repeat_label,
+            onetime_label,
+        )
+
+    cat_cust = (
+        tmp.groupby(["product_category_name", "_buyer_type"])["customer_unique_id"]
+        .nunique()
+        .reset_index()
+        .rename(columns={"customer_unique_id": "customer_count"})
+    )
+
+    top_cats = (
+        cat_cust.groupby("product_category_name")["customer_count"]
+        .sum()
+        .nlargest(20)
+        .index
+        .tolist()
+    )
+    cat_cust_top = cat_cust[cat_cust["product_category_name"].isin(top_cats)]
+
+    # 2. Right Table Data: Original Revenue, Orders, Avg Order, Churn Risk
     cat_sales = (
         dfd.groupby("product_category_name")
         .agg(
             revenue=("payment_value", "sum"),
             orders=("payment_value", "count"),
             avg_order=("payment_value", "mean"),
-            churn_risk=("churn_probability", "mean"),
+            churn_risk=("churn_probability", "mean") if "churn_probability" in dfd.columns else ("payment_value", lambda x: 0.5),
         )
         .reset_index()
         .sort_values("revenue", ascending=False)
@@ -197,25 +238,33 @@ def _render_top_categories(dfd: pd.DataFrame) -> None:
     col_chart, col_table = st.columns([1.5, 2])
 
     with col_chart:
-        top20 = cat_sales.head(20)
         chart = (
-            alt.Chart(top20).mark_bar()
+            alt.Chart(cat_cust_top)
+            .mark_bar(cornerRadiusTopRight=3, cornerRadiusBottomRight=3)
             .encode(
-                x=alt.X("revenue:Q", title="Revenue (R$)"),
-                y=alt.Y("product_category_name:N", sort="-x", title=None),
+                x=alt.X("customer_count:Q", title="จำนวนลูกค้า (คน)"),
+                y=alt.Y(
+                    "product_category_name:N",
+                    sort=alt.EncodingSortField(
+                        field="customer_count", op="sum", order="descending"
+                    ),
+                    title=None,
+                ),
                 color=alt.Color(
-                    "churn_risk:Q",
-                    scale=alt.Scale(domain=[0.3, 0.9], range=["#2ecc71", "#e74c3c"]),
-                    title=t("p1_col_churn"),
+                    "_buyer_type:N",
+                    scale=alt.Scale(
+                        domain=[repeat_label, onetime_label],
+                        range=["#FF7043", "#78909C"],
+                    ),
+                    title="ประเภทลูกค้า",
                 ),
                 tooltip=[
-                    alt.Tooltip("product_category_name", title=t("p1_col_cat")),
-                    alt.Tooltip("revenue", format=",.0f", title="Revenue (R$)"),
-                    alt.Tooltip("orders", format=","),
-                    alt.Tooltip("churn_risk", format=".1%", title=t("p1_col_churn")),
+                    alt.Tooltip("product_category_name:N", title=t("p1_col_cat")),
+                    alt.Tooltip("_buyer_type:N", title="ประเภทลูกค้า"),
+                    alt.Tooltip("customer_count:Q", format=",", title="จำนวนลูกค้า"),
                 ],
             )
-            .properties(height=500, title=t("p1_chart_title"))
+            .properties(height=520, title="Top 20 หมวดสินค้า (แยกจำนวน Repeat vs First-time)")
         )
         st.altair_chart(chart, use_container_width=True)
 
@@ -239,5 +288,5 @@ def _render_top_categories(dfd: pd.DataFrame) -> None:
             },
             use_container_width=True,
             hide_index=True,
-            height=500,
+            height=520,
         )

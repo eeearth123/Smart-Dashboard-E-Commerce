@@ -129,12 +129,7 @@ def _render_customer_trend(dfd):
     )
 
     # ── Incomplete month annotation ──
-    if is_incomplete:
-        st.caption(
-            f"⚠️ เดือนล่าสุด ({last_month_period}) "
-            f"ข้อมูลถึงวันที่ {max_date.strftime('%d %b %Y')} "
-            f"({days_elapsed}/{total_days} วัน — ยังไม่ครบเดือน)"
-        )
+    # (silently excluded from charts)
 
     # Remove incomplete month for charting
     plot_df = trend[~trend["is_incomplete"]].copy()

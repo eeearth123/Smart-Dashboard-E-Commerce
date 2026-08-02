@@ -38,19 +38,21 @@ def render(df: pd.DataFrame) -> None:
 
     st.markdown("---")
 
-    # ── Monthly Customer Trend (2 separate charts) ────────────
+    # ── Monthly Customer Trend (2 stacked charts) ─────────────
     st.subheader(t("p1_trend"))
     _render_customer_trend(dfd)
     st.markdown("---")
 
-    # ── Top categories by customer count (repeat vs first) ────
+    # ── Top categories (Original Revenue & Churn Risk) ────────
     st.subheader(t("p1_top_cat"))
     _render_top_categories(dfd)
 
 
-def _render_customer_trend(dfd):
-    """Two separate charts: bar for one-time buyers, bar+line for repeat buyers,
-    with MoM % change in tooltip. Last incomplete month annotated."""
+def _render_customer_trend(dfd: pd.DataFrame) -> None:
+    """Two separate charts stacked vertically:
+    1. Repeat Buyers Monthly Trend
+    2. New / One-Time Buyers Monthly Trend
+    Excludes incomplete trailing months (Sep & Oct 2018)."""
     if "order_purchase_timestamp" not in dfd.columns or dfd.empty:
         st.info(t("no_data"))
         return
@@ -65,7 +67,6 @@ def _render_customer_trend(dfd):
         cust_counts = tmp.groupby("customer_unique_id")["_month"].transform("count")
         tmp["_is_repeat"] = (cust_counts >= 2).astype(int)
 
-    # Count unique customers per month per type
     monthly_repeat = (
         tmp[tmp["_is_repeat"] == 1]
         .groupby("_month")["customer_unique_id"]
@@ -93,30 +94,13 @@ def _render_customer_trend(dfd):
     )
     trend = trend.fillna(0)
 
+    # Filter out incomplete months after 2018-08 (Sep 2018 has 16 orders, Oct 2018 has 4 orders)
+    trend = trend[trend["month"] <= "2018-08"].copy()
+
     # Convert period to timestamp for Altair
     trend["month_ts"] = trend["month"].apply(lambda p: p.to_timestamp())
 
-    # ── Detect last incomplete month ──
-    last_month_period = trend["month"].iloc[-1]
-    last_month_start  = last_month_period.to_timestamp()
-    last_month_end    = last_month_period.to_timestamp(how="end")
-    max_date          = tmp["order_purchase_timestamp"].max()
-
-    # Days elapsed in the last month
-    days_elapsed = (max_date - last_month_start).days + 1
-    total_days   = (last_month_end - last_month_start).days + 1
-    is_incomplete = days_elapsed < total_days
-
-    # Mark the last month
-    trend["is_incomplete"] = False
-    if is_incomplete and len(trend) > 0:
-        trend.loc[trend.index[-1], "is_incomplete"] = True
-
-    # Separate complete vs incomplete for display
-    trend_complete   = trend[~trend["is_incomplete"]]
-    trend_incomplete = trend[trend["is_incomplete"]]
-
-    # Calculate MoM % change (on full data for tooltip)
+    # Calculate MoM % change
     trend["repeat_mom_pct"] = (
         trend["repeat_customers"]
         .pct_change()
@@ -128,196 +112,132 @@ def _render_customer_trend(dfd):
         .replace([np.inf, -np.inf], np.nan) * 100
     )
 
-    # ── Incomplete month annotation ──
-    # (silently excluded from charts)
-
-    # Remove incomplete month for charting
-    plot_df = trend[~trend["is_incomplete"]].copy()
-
-    # Re-calculate MoM on clean data
-    plot_df["repeat_mom_pct"] = (
-        plot_df["repeat_customers"]
-        .pct_change()
-        .replace([np.inf, -np.inf], np.nan) * 100
+    # ── Chart 1 (Top): Repeat Buyers Trend ──
+    st.markdown("#### " + t("p1_trend_repeat"))
+    base1 = alt.Chart(trend).encode(
+        x=alt.X("month_ts:T", axis=alt.Axis(format="%b %Y", labelAngle=-45, title=""))
     )
-    plot_df["onetime_mom_pct"] = (
-        plot_df["onetime_customers"]
-        .pct_change()
-        .replace([np.inf, -np.inf], np.nan) * 100
+    bars1 = base1.mark_bar(
+        color="#FF7043", opacity=0.7, cornerRadiusTopLeft=3, cornerRadiusTopRight=3
+    ).encode(
+        y=alt.Y("repeat_customers:Q", title=t("p1_repeat_axis")),
+        tooltip=[
+            alt.Tooltip("month_ts:T", format="%B %Y", title=t("p1_tt_month")),
+            alt.Tooltip("repeat_customers:Q", format=",.0f", title=t("p1_repeat_cust")),
+            alt.Tooltip("repeat_mom_pct:Q", format="+.1f", title=t("p1_tt_mom")),
+        ],
+    )
+    line1 = base1.mark_line(
+        color="#E53935", strokeWidth=2.5,
+        point=alt.OverlayMarkDef(color="#E53935", size=45),
+    ).encode(
+        y=alt.Y("repeat_customers:Q"),
+        tooltip=[
+            alt.Tooltip("month_ts:T", format="%B %Y", title=t("p1_tt_month")),
+            alt.Tooltip("repeat_customers:Q", format=",.0f", title=t("p1_repeat_cust")),
+            alt.Tooltip("repeat_mom_pct:Q", format="+.1f", title=t("p1_tt_mom")),
+        ],
+    )
+    st.altair_chart(
+        alt.layer(bars1, line1).properties(height=300),
+        use_container_width=True,
     )
 
-    # ── Chart 1: One-time Buyers (Bar chart) ──
-    col1, col2 = st.columns(2)
+    st.markdown("<br>", unsafe_allow_html=True)
 
-    with col1:
-        st.markdown("##### 🛒 " + t("p1_onetime_cust"))
-        base1 = alt.Chart(plot_df).encode(
-            x=alt.X("month_ts:T", axis=alt.Axis(format="%b %Y", labelAngle=-45, title=""))
-        )
-        bars1 = base1.mark_bar(
-            color="#78909C", opacity=0.85,
-            cornerRadiusTopLeft=3, cornerRadiusTopRight=3,
-        ).encode(
-            y=alt.Y("onetime_customers:Q", title=t("p1_onetime_axis")),
-            tooltip=[
-                alt.Tooltip("month_ts:T", format="%B %Y", title=t("p1_tt_month")),
-                alt.Tooltip("onetime_customers:Q", format=",.0f", title=t("p1_onetime_cust")),
-                alt.Tooltip("onetime_mom_pct:Q", format="+.1f", title=t("p1_tt_mom")),
-            ],
-        )
-        st.altair_chart(bars1.properties(height=320), use_container_width=True)
-
-    # ── Chart 2: Repeat Buyers (Bar + Line) ──
-    with col2:
-        st.markdown("##### 🔄 " + t("p1_repeat_cust"))
-        base2 = alt.Chart(plot_df).encode(
-            x=alt.X("month_ts:T", axis=alt.Axis(format="%b %Y", labelAngle=-45, title=""))
-        )
-        bars2 = base2.mark_bar(
-            color="#FF7043", opacity=0.6,
-            cornerRadiusTopLeft=3, cornerRadiusTopRight=3,
-        ).encode(
-            y=alt.Y("repeat_customers:Q", title=t("p1_repeat_axis")),
-            tooltip=[
-                alt.Tooltip("month_ts:T", format="%B %Y", title=t("p1_tt_month")),
-                alt.Tooltip("repeat_customers:Q", format=",.0f", title=t("p1_repeat_cust")),
-                alt.Tooltip("repeat_mom_pct:Q", format="+.1f", title=t("p1_tt_mom")),
-            ],
-        )
-        line2 = base2.mark_line(
-            color="#E53935", strokeWidth=2,
-            point=alt.OverlayMarkDef(color="#E53935", size=40),
-        ).encode(
-            y=alt.Y("repeat_customers:Q"),
-            tooltip=[
-                alt.Tooltip("month_ts:T", format="%B %Y", title=t("p1_tt_month")),
-                alt.Tooltip("repeat_customers:Q", format=",.0f", title=t("p1_repeat_cust")),
-                alt.Tooltip("repeat_mom_pct:Q", format="+.1f", title=t("p1_tt_mom")),
-            ],
-        )
-        st.altair_chart(
-            alt.layer(bars2, line2).properties(height=320),
-            use_container_width=True,
-        )
+    # ── Chart 2 (Bottom): New / One-Time Buyers Trend ──
+    st.markdown("#### " + t("p1_trend_onetime"))
+    base2 = alt.Chart(trend).encode(
+        x=alt.X("month_ts:T", axis=alt.Axis(format="%b %Y", labelAngle=-45, title=""))
+    )
+    bars2 = base2.mark_bar(
+        color="#1E88E5", opacity=0.75, cornerRadiusTopLeft=3, cornerRadiusTopRight=3
+    ).encode(
+        y=alt.Y("onetime_customers:Q", title=t("p1_onetime_axis")),
+        tooltip=[
+            alt.Tooltip("month_ts:T", format="%B %Y", title=t("p1_tt_month")),
+            alt.Tooltip("onetime_customers:Q", format=",.0f", title=t("p1_onetime_cust")),
+            alt.Tooltip("onetime_mom_pct:Q", format="+.1f", title=t("p1_tt_mom")),
+        ],
+    )
+    line2 = base2.mark_line(
+        color="#1565C0", strokeWidth=2.5,
+        point=alt.OverlayMarkDef(color="#1565C0", size=45),
+    ).encode(
+        y=alt.Y("onetime_customers:Q"),
+        tooltip=[
+            alt.Tooltip("month_ts:T", format="%B %Y", title=t("p1_tt_month")),
+            alt.Tooltip("onetime_customers:Q", format=",.0f", title=t("p1_onetime_cust")),
+            alt.Tooltip("onetime_mom_pct:Q", format="+.1f", title=t("p1_tt_mom")),
+        ],
+    )
+    st.altair_chart(
+        alt.layer(bars2, line2).properties(height=300),
+        use_container_width=True,
+    )
 
 
-def _render_top_categories(dfd):
-    """Horizontal stacked bar chart: customer count by category,
-    split into Repeat (color A) vs First-time (color B)."""
+def _render_top_categories(dfd: pd.DataFrame) -> None:
+    """Original Top Categories implementation: Revenue (R$), Orders, Avg Order, Churn Risk."""
     if "product_category_name" not in dfd.columns or dfd.empty:
         return
 
-    tmp = dfd.copy()
-
-    # Classify each customer-category pair as repeat or first-time
-    if "purchase_count" in tmp.columns:
-        tmp["_buyer_type"] = np.where(
-            tmp["purchase_count"] >= 2,
-            t("p1_repeat_cust"),
-            t("p1_onetime_cust"),
+    cat_sales = (
+        dfd.groupby("product_category_name")
+        .agg(
+            revenue=("payment_value", "sum"),
+            orders=("payment_value", "count"),
+            avg_order=("payment_value", "mean"),
+            churn_risk=("churn_probability", "mean"),
         )
-    else:
-        cust_counts = tmp.groupby("customer_unique_id").size()
-        repeat_ids  = set(cust_counts[cust_counts >= 2].index)
-        tmp["_buyer_type"] = np.where(
-            tmp["customer_unique_id"].isin(repeat_ids),
-            t("p1_repeat_cust"),
-            t("p1_onetime_cust"),
-        )
-
-    # Aggregate: unique customers per category per buyer type
-    cat_cust = (
-        tmp.groupby(["product_category_name", "_buyer_type"])["customer_unique_id"]
-        .nunique()
         .reset_index()
-        .rename(columns={"customer_unique_id": "customer_count"})
+        .sort_values("revenue", ascending=False)
     )
-
-    # Top 20 categories by total customer count
-    top_cats = (
-        cat_cust.groupby("product_category_name")["customer_count"]
-        .sum()
-        .nlargest(20)
-        .index
-        .tolist()
-    )
-    cat_cust = cat_cust[cat_cust["product_category_name"].isin(top_cats)]
 
     col_chart, col_table = st.columns([1.5, 2])
 
     with col_chart:
+        top20 = cat_sales.head(20)
         chart = (
-            alt.Chart(cat_cust)
-            .mark_bar(cornerRadiusTopRight=3, cornerRadiusBottomRight=3)
+            alt.Chart(top20).mark_bar()
             .encode(
-                x=alt.X("customer_count:Q", title=t("p1_cust_count_axis")),
-                y=alt.Y(
-                    "product_category_name:N",
-                    sort=alt.EncodingSortField(
-                        field="customer_count", op="sum", order="descending"
-                    ),
-                    title=None,
-                ),
+                x=alt.X("revenue:Q", title="Revenue (R$)"),
+                y=alt.Y("product_category_name:N", sort="-x", title=None),
                 color=alt.Color(
-                    "_buyer_type:N",
-                    scale=alt.Scale(
-                        domain=[t("p1_repeat_cust"), t("p1_onetime_cust")],
-                        range=["#FF7043", "#78909C"],
-                    ),
-                    title=t("p1_legend_type"),
+                    "churn_risk:Q",
+                    scale=alt.Scale(domain=[0.3, 0.9], range=["#2ecc71", "#e74c3c"]),
+                    title=t("p1_col_churn"),
                 ),
                 tooltip=[
-                    alt.Tooltip("product_category_name:N", title=t("p1_col_cat")),
-                    alt.Tooltip("_buyer_type:N", title=t("p1_legend_type")),
-                    alt.Tooltip("customer_count:Q", format=",", title=t("p1_cust_count_axis")),
+                    alt.Tooltip("product_category_name", title=t("p1_col_cat")),
+                    alt.Tooltip("revenue", format=",.0f", title="Revenue (R$)"),
+                    alt.Tooltip("orders", format=","),
+                    alt.Tooltip("churn_risk", format=".1%", title=t("p1_col_churn")),
                 ],
             )
-            .properties(height=550, title=t("p1_chart_title"))
+            .properties(height=500, title=t("p1_chart_title"))
         )
         st.altair_chart(chart, use_container_width=True)
 
     with col_table:
-        # Pivot for table display
-        pivot = cat_cust.pivot_table(
-            index="product_category_name",
-            columns="_buyer_type",
-            values="customer_count",
-            aggfunc="sum",
-            fill_value=0,
-        ).reset_index()
-
-        # Ensure both columns exist
-        repeat_label  = t("p1_repeat_cust")
-        onetime_label = t("p1_onetime_cust")
-        if repeat_label not in pivot.columns:
-            pivot[repeat_label] = 0
-        if onetime_label not in pivot.columns:
-            pivot[onetime_label] = 0
-
-        pivot["total"] = pivot[repeat_label] + pivot[onetime_label]
-        pivot["repeat_pct"] = np.where(
-            pivot["total"] > 0,
-            pivot[repeat_label] / pivot["total"] * 100,
-            0,
-        )
-        pivot = pivot.sort_values("total", ascending=False)
-        pivot = pivot.rename(columns={
-            "product_category_name": t("p1_col_cat"),
-            repeat_label:  "🔄 " + repeat_label,
-            onetime_label: "🛒 " + onetime_label,
-            "total":       "👥 " + t("p1_total_cust"),
-            "repeat_pct":  "🔄 %",
-        })
-
         st.markdown(t("p1_table_hdr"))
         st.dataframe(
-            pivot,
+            cat_sales.rename(columns={
+                "product_category_name": t("p1_col_cat"),
+                "revenue":               t("p1_col_rev"),
+                "orders":                t("p1_col_orders"),
+                "avg_order":             t("p1_col_avg"),
+                "churn_risk":            t("p1_col_churn"),
+            }),
             column_config={
-                "🔄 %": st.column_config.ProgressColumn(
-                    format="%.1f%%", min_value=0, max_value=100
+                t("p1_col_rev"):    st.column_config.NumberColumn(format="R$ %.0f"),
+                t("p1_col_orders"): st.column_config.NumberColumn(format="%,d"),
+                t("p1_col_avg"):    st.column_config.NumberColumn(format="R$ %.0f"),
+                t("p1_col_churn"):  st.column_config.ProgressColumn(
+                    format="%.2f", min_value=0, max_value=1
                 ),
             },
             use_container_width=True,
             hide_index=True,
-            height=550,
+            height=500,
         )

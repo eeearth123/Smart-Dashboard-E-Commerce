@@ -162,12 +162,26 @@ def process_features(df_raw: pd.DataFrame) -> pd.DataFrame:
 
 
 def assign_status(row: pd.Series) -> str:
-    """กำหนดสถานะลูกค้าตาม business rules"""
-    prob = row.get("churn_probability", 0)
+    """กำหนดสถานะลูกค้าตาม 3-Class probabilities และ business rules"""
+    prob_churn = row.get("prob_churn", 0)
+    prob_delay = row.get("prob_delay", 0)
+    pred_class = row.get("churn_prediction", 0)
     late = row.get("lateness_score", 0)
 
-    if late > LATE_LOST:     return "Lost (Late > 3x)"
-    if prob > PROB_HIGH:     return "High Risk"
-    if late > LATE_WARNING:  return "Warning (Late > 1.5x)"
-    if prob >= PROB_MEDIUM:  return "Medium Risk"
+    # 1. Rules based on explicit late thresholds
+    if late > LATE_LOST:
+        return "Lost (Late > 3x)"
+    
+    # 2. Model predictions for Churn
+    if pred_class == 2 or prob_churn > PROB_HIGH:
+        return "High Risk"
+    
+    # 3. Model predictions for Delay/Warning
+    if pred_class == 1 or prob_delay > PROB_HIGH or late > LATE_WARNING:
+        return "Warning (Late > 1.5x)"
+    
+    # 4. Borderline Churn
+    if prob_churn >= PROB_MEDIUM:
+        return "Medium Risk"
+    
     return "Active"

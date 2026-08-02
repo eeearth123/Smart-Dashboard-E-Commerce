@@ -59,17 +59,21 @@ if model_error:
 df_all = process_features(df_raw)
 
 if model is not None and feature_names:
-    proba, pred = predict_churn(df_all, model, feature_names, BEST_THRESHOLD)
-    df_all["churn_probability"] = proba
-    df_all["churn_prediction"]  = pred
-    if "product_category_name" in df_all.columns:
-        cat_risk_map = df_all.groupby("product_category_name")["churn_probability"].mean()
-        df_all["cat_churn_risk"] = df_all["product_category_name"].map(cat_risk_map)
+    prob_stay, prob_delay, prob_churn, pred_class = predict_churn(df_all, model, feature_names, BEST_THRESHOLD)
+    df_all["prob_stay"]         = prob_stay
+    df_all["prob_delay"]        = prob_delay
+    df_all["prob_churn"]        = prob_churn
+    df_all["churn_probability"] = prob_churn
+    df_all["churn_prediction"]  = pred_class
 else:
+    df_all["prob_stay"]         = 0.0
+    df_all["prob_delay"]        = 0.0
+    df_all["prob_churn"]        = 0.5
     df_all["churn_probability"] = 0.5
-    df_all["churn_prediction"]  = 1
+    df_all["churn_prediction"]  = 2
 
-df_all["is_churn"] = df_all["churn_prediction"]
+# is_churn boolean flag (1 if pred_class == 2 (Churn), else 0)
+df_all["is_churn"] = (df_all["churn_prediction"] == 2).astype(int)
 df_all["status"]   = df_all.apply(assign_status, axis=1)
 
 # 2. df_test: ข้อมูลเฉพาะกลุ่ม Active / Test set (< 180 วัน) สำหรับหน้าเฝ้าระวังและทำนายความเสี่ยง (P2, P3)
@@ -79,6 +83,10 @@ elif "days_since_purchase" in df_all.columns:
     df_test = df_all[df_all["days_since_purchase"] < 180].copy()
 else:
     df_test = df_all.copy()
+
+if "product_category_name" in df_test.columns:
+    cat_risk_map = df_test.groupby("product_category_name")["churn_probability"].mean()
+    df_all["cat_churn_risk"] = df_all["product_category_name"].map(cat_risk_map)
 
 # ── Sidebar: info + navigation ───────────────────────────────
 PAGE_LABELS = [

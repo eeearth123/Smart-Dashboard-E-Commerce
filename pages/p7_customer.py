@@ -3,6 +3,7 @@
 # ============================================================
 import altair as alt
 import pandas as pd
+import numpy as np
 import streamlit as st
 from i18n import t
 from utils.helpers import safe_cats, status_display_options

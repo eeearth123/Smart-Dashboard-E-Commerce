@@ -63,18 +63,18 @@ def render(df: pd.DataFrame, t, threshold: float = 0.55):
                 "กลุ่ม (ว่าง = ทั้งหมด):", list(FILTER_GROUPS.keys()), key="p2_group"
             )
         st.markdown("""
-**📖 คำอธิบายกลุ่ม:**
+**📖 คำอธิบายกลุ่ม (อิงจาก 3-Class Model):**
 
 | กลุ่ม | เงื่อนไข | ความหมาย |
 |---|---|---|
-| 🟩 Active | AI < 40% และ Late ≤ 1.5x | ลูกค้าปกติ ยังซื้ออยู่ |
-| 🟨 Medium Risk | AI 40–75% | AI เริ่มเห็นสัญญาณ ยังไม่ฉุกเฉิน |
-| 🟧 Warning | Late > 1.5x | ช้ากว่ารอบปกติ rule เริ่มเตือน |
-| 🟥 High Risk | AI > 75% | AI มั่นใจสูงว่าจะหาย |
+| 🟩 Active | AI ทายว่า Stay (ปกติ) | ลูกค้าปกติ ยังเหนียวแน่น |
+| 🟨 Medium Risk | AI ความเสี่ยง Churn > 50% | AI เริ่มเห็นสัญญาณเสี่ยง |
+| 🟧 Warning | AI ทายว่า Delay หรือ Late > 1.5x | มีปัญหาเรื่องเวลา เสี่ยงระดับกลาง |
+| 🟥 High Risk | AI ทายว่า Churn หรือ ความเสี่ยง > 75% | AI ฟันธงว่าไปแน่ เสี่ยงระดับสูง |
 | ⬛ Lost | Late > 3.0x | หายไปนานมากแล้ว rule ถือว่าสูญ |
-| 🚨 Urgent | AI > threshold **และ** Late > 1.5x | ทั้งคู่เห็นตรงกัน — ด่วนที่สุด |
-| 🔍 Early Warning | AI > threshold **แต่** Late ≤ 1.5x | AI เห็นก่อน rule — ยังมีเวลา |
-| ⚠️ Monitor | AI ≤ threshold **แต่** Late > 1.5x | rule เห็น AI ยังให้โอกาส |
+| 🚨 Urgent | AI ชี้เป้า Churn **และ** Late > 1.5x | ทั้งคู่เห็นตรงกัน — ด่วนที่สุด |
+| 🔍 Early Warning | AI ชี้เป้า Churn **แต่** Late ≤ 1.5x | AI เห็นก่อน rule — ยังมีเวลา |
+| ⚠️ Monitor | AI ไม่ชี้เป้า Churn **แต่** Late > 1.5x | rule เห็น AI ยังให้โอกาส |
         """)
 
     df_d = df.copy()

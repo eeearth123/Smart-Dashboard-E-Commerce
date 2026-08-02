@@ -37,8 +37,8 @@ def load_model() -> tuple:
 
 def predict_churn(df: pd.DataFrame, model, feature_names: list, threshold: float) -> tuple:
     """
-    ทำนาย churn probability และ binary prediction สำหรับ V5 (3-Class Model)
-    Returns: (proba_array, pred_array)
+    ทำนายความน่าจะเป็นทั้ง 3 Class สำหรับ V5 (3-Class Model)
+    Returns: (prob_stay, prob_delay, prob_churn, pred_class)
     """
     X = pd.DataFrame(index=df.index)
     for col in feature_names:
@@ -48,13 +48,25 @@ def predict_churn(df: pd.DataFrame, model, feature_names: list, threshold: float
     if hasattr(model, "predict_proba"):
         proba_all = model.predict_proba(X)
         if proba_all.shape[1] == 3:
-            # V5 3-Class Model: Class 2 = Churn, Class 0 = Stay
-            proba = proba_all[:, 2]
+            # V5 3-Class Model: Class 0 = Stay, Class 1 = Delay, Class 2 = Churn
+            prob_stay  = proba_all[:, 0]
+            prob_delay = proba_all[:, 1]
+            prob_churn = proba_all[:, 2]
+            pred_class = np.argmax(proba_all, axis=1)
         elif proba_all.shape[1] == 2:
-            proba = proba_all[:, 1]
+            prob_stay  = proba_all[:, 0]
+            prob_delay = np.zeros(len(X))
+            prob_churn = proba_all[:, 1]
+            pred_class = np.where(prob_churn >= threshold, 2, 0)
         else:
-            proba = 1 - proba_all[:, 0]
+            prob_stay  = proba_all[:, 0]
+            prob_delay = np.zeros(len(X))
+            prob_churn = 1 - proba_all[:, 0]
+            pred_class = np.where(prob_churn >= threshold, 2, 0)
     else:
-        proba = model.predict(X).astype(float)
+        prob_churn = model.predict(X).astype(float)
+        prob_stay  = 1 - prob_churn
+        prob_delay = np.zeros(len(X))
+        pred_class = np.where(prob_churn >= threshold, 2, 0)
 
-    return proba, (proba >= threshold).astype(int)
+    return prob_stay, prob_delay, prob_churn, pred_class

@@ -46,18 +46,18 @@ def render(df: pd.DataFrame, model, feature_names: list) -> None:
             sel_cats = st.multiselect(t("cat_label"), safe_cats(df), key="p3_cat")
 
         st.markdown("""
-**📖 คำอธิบายกลุ่ม:**
+**📖 คำอธิบายกลุ่ม (อิงจาก 3-Class Model):**
 
 | กลุ่ม | เงื่อนไข | ความหมาย |
 |---|---|---|
-| 🟩 Active | AI < 40% และ Late ≤ 1.5x | ลูกค้าปกติ ยังซื้ออยู่ |
-| 🟨 Medium Risk | AI 40–75% | AI เริ่มเห็นสัญญาณ ยังไม่ฉุกเฉิน |
-| 🟧 Warning | Late > 1.5x | ช้ากว่ารอบปกติ rule เริ่มเตือน |
-| 🟥 High Risk | AI > 75% | AI มั่นใจสูงว่าจะหาย |
+| 🟩 Active | AI ทายว่า Stay (ปกติ) | ลูกค้าปกติ ยังเหนียวแน่น |
+| 🟨 Medium Risk | AI ความเสี่ยง Churn > 50% | AI เริ่มเห็นสัญญาณเสี่ยง |
+| 🟧 Warning | AI ทายว่า Delay หรือ Late > 1.5x | มีปัญหาเรื่องเวลา เสี่ยงระดับกลาง |
+| 🟥 High Risk | AI ทายว่า Churn หรือ ความเสี่ยง > 75% | AI ฟันธงว่าไปแน่ เสี่ยงระดับสูง |
 | ⬛ Lost | Late > 3.0x | หายไปนานมากแล้ว rule ถือว่าสูญ |
-| 🚨 Urgent | AI > threshold **และ** Late > 1.5x | ทั้งคู่เห็นตรงกัน — ด่วนที่สุด |
-| 🔍 Early Warning | AI > threshold **แต่** Late ≤ 1.5x | AI เห็นก่อน rule — ยังมีเวลา |
-| ⚠️ Monitor | AI ≤ threshold **แต่** Late > 1.5x | rule เห็น AI ยังให้โอกาส |
+| 🚨 Urgent | AI ชี้เป้า Churn **และ** Late > 1.5x | ทั้งคู่เห็นตรงกัน — ด่วนที่สุด |
+| 🔍 Early Warning | AI ชี้เป้า Churn **แต่** Late ≤ 1.5x | AI เห็นก่อน rule — ยังมีเวลา |
+| ⚠️ Monitor | AI ไม่ชี้เป้า Churn **แต่** Late > 1.5x | rule เห็น AI ยังให้โอกาส |
         """)
 
     df_p3 = df.copy()
@@ -85,8 +85,8 @@ def render(df: pd.DataFrame, model, feature_names: list) -> None:
     with c3: st.metric(t("p3_avg_ltv"),    f"R$ {avg_ltv:,.0f}")
     st.markdown("---")
 
-    tab1, tab2, tab3, tab4 = st.tabs([
-        t("p3_tab1"), t("p3_tab2"), t("p3_tab3"), t("p3_tab4")
+    tab1, tab2 = st.tabs([
+        t("p3_tab1"), t("p3_tab2")
     ])
 
     with tab1:
@@ -125,32 +125,7 @@ def render(df: pd.DataFrame, model, feature_names: list) -> None:
                 total_pop, avg_ltv, model, feature_names,
             )
 
-    with tab3:
-        st.subheader(t("p3_t3_title"))
-        if "delay_days" not in df_p3.columns:
-            st.error(t("p3_no_delay"))
-        else:
-            target = df_p3[df_p3["delay_days"].fillna(0) > 0].copy()
-            _run_simulation(
-                target,
-                {"delay_days": ("set", 0), "delivery_vs_estimated": ("clip_upper", 0)},
-                15.0, "tab3", t("p3_t3_strategy"), t("p3_t3_rec"),
-                total_pop, avg_ltv, model, feature_names,
-            )
 
-    with tab4:
-        st.subheader(t("p3_t4_title"))
-        if "cat_churn_risk" not in df_p3.columns:
-            st.error(t("p3_no_cat_risk"))
-        else:
-            target = df_p3[df_p3["cat_churn_risk"] > 0.8].copy()
-            _run_simulation(
-                target,
-                {"cat_churn_risk": ("multiply", 0.6),
-                 "payment_installments": ("add", 2)},
-                10.0, "tab4", t("p3_t4_strategy"), t("p3_t4_rec"),
-                total_pop, avg_ltv, model, feature_names,
-            )
 
 
 def _apply_changes(df_sim, feature_changes):

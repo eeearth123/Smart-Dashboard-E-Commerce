@@ -21,7 +21,8 @@ items as (
         order_id,
         sum(price) as price,
         sum(freight_value) as freight_value,
-        max(product_id) as product_id
+        max(product_id) as product_id,
+        max(seller_id) as seller_id
     from {{ ref('stg_order_items') }}
     group by 1
 ),
@@ -40,6 +41,8 @@ products as (
 select
     o.order_id,
     c.customer_unique_id,
+    c.customer_city,
+    c.customer_state,
     o.order_status,
     o.order_purchase_timestamp,
     o.order_delivered_customer_date,
@@ -52,6 +55,7 @@ select
     coalesce(p.uses_voucher, 0) as uses_voucher,
     coalesce(r.review_score, 3) as review_score,
     pr.product_category_name,
+    i.seller_id,
     -- คำนวณวันที่ซื้อล่าสุดเทียบกับวันสุดท้ายของระบบ:
     -- หากเกิน 180 วัน -> เป็นข้อมูลมีผลเฉลยแล้ว นำไปใช้เทรน (train)
     -- หากยังไม่เกิน 180 วัน -> เป็นลูกค้าปัจจุบันที่ต้องทำนายผลและโชว์บน Dashboard (test)

@@ -19,7 +19,7 @@ def render(df: pd.DataFrame) -> None:
     dfd = df[df["product_category_name"].isin(sel_cats)].copy() if sel_cats else df.copy()
     st.markdown("---")
 
-    # ── KPI row: Customer counts only ─────────────────────────
+    # ── KPI row: Customer counts + AOV ────────────────────────
     n_total  = dfd["customer_unique_id"].nunique() if "customer_unique_id" in dfd.columns else 0
     n_repeat = 0
     if "customer_unique_id" in dfd.columns and "purchase_count" in dfd.columns:
@@ -28,14 +28,17 @@ def render(df: pd.DataFrame) -> None:
         counts   = dfd.groupby("customer_unique_id").size()
         n_repeat = (counts >= 2).sum()
 
-    c1, c2, c3 = st.columns(3)
-    c1.metric("👥 " + t("p1_total_cust"),  f"{n_total:,} " + t("p1_unit_ppl"))
-    c2.metric("🔄 " + t("p1_repeat_cust"), f"{n_repeat:,} " + t("p1_unit_ppl"))
+    avg_order = dfd["payment_value"].mean() if "payment_value" in dfd.columns else 0
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("👥 " + t("p1_total_cust"),   f"{n_total:,} " + t("p1_unit_ppl"))
+    c2.metric("🔄 " + t("p1_repeat_cust"),  f"{n_repeat:,} " + t("p1_unit_ppl"))
     c3.metric("🛒 " + t("p1_onetime_cust"), f"{n_total - n_repeat:,} " + t("p1_unit_ppl"))
+    c4.metric("💰 Avg Order Value",          f"R$ {avg_order:,.0f}")
 
     st.markdown("---")
 
-    # ── Monthly Repeat vs One-time Customer Trend ─────────────
+    # ── Monthly Customer Trend (2 separate charts) ────────────
     st.subheader(t("p1_trend"))
     _render_customer_trend(dfd)
     st.markdown("---")
@@ -46,8 +49,8 @@ def render(df: pd.DataFrame) -> None:
 
 
 def _render_customer_trend(dfd):
-    """Bar chart for one-time buyers + line chart for repeat buyers,
-    with MoM % change in tooltip, dual Y-axis."""
+    """Two separate charts: bar for one-time buyers, bar+line for repeat buyers,
+    with MoM % change in tooltip. Last incomplete month annotated."""
     if "order_purchase_timestamp" not in dfd.columns or dfd.empty:
         st.info(t("no_data"))
         return
@@ -55,7 +58,7 @@ def _render_customer_trend(dfd):
     tmp = dfd.copy()
     tmp["_month"] = tmp["order_purchase_timestamp"].dt.to_period("M")
 
-    # Identify repeat buyers: customers with purchase_count >= 2
+    # Identify repeat buyers
     if "purchase_count" in tmp.columns:
         tmp["_is_repeat"] = (tmp["purchase_count"] >= 2).astype(int)
     else:
@@ -93,11 +96,27 @@ def _render_customer_trend(dfd):
     # Convert period to timestamp for Altair
     trend["month_ts"] = trend["month"].apply(lambda p: p.to_timestamp())
 
-    # Remove last month if incomplete
-    if len(trend) > 1:
-        trend = trend.iloc[:-1]
+    # ── Detect last incomplete month ──
+    last_month_period = trend["month"].iloc[-1]
+    last_month_start  = last_month_period.to_timestamp()
+    last_month_end    = last_month_period.to_timestamp(how="end")
+    max_date          = tmp["order_purchase_timestamp"].max()
 
-    # Calculate MoM % change
+    # Days elapsed in the last month
+    days_elapsed = (max_date - last_month_start).days + 1
+    total_days   = (last_month_end - last_month_start).days + 1
+    is_incomplete = days_elapsed < total_days
+
+    # Mark the last month
+    trend["is_incomplete"] = False
+    if is_incomplete and len(trend) > 0:
+        trend.loc[trend.index[-1], "is_incomplete"] = True
+
+    # Separate complete vs incomplete for display
+    trend_complete   = trend[~trend["is_incomplete"]]
+    trend_incomplete = trend[trend["is_incomplete"]]
+
+    # Calculate MoM % change (on full data for tooltip)
     trend["repeat_mom_pct"] = (
         trend["repeat_customers"]
         .pct_change()
@@ -109,56 +128,82 @@ def _render_customer_trend(dfd):
         .replace([np.inf, -np.inf], np.nan) * 100
     )
 
-    # ── Build dual-axis chart ──
-    base = alt.Chart(trend).encode(
-        x=alt.X("month_ts:T", axis=alt.Axis(format="%b %Y", labelAngle=-45, title=""))
+    # ── Incomplete month annotation ──
+    if is_incomplete:
+        st.caption(
+            f"⚠️ เดือนล่าสุด ({last_month_period}) "
+            f"ข้อมูลถึงวันที่ {max_date.strftime('%d %b %Y')} "
+            f"({days_elapsed}/{total_days} วัน — ยังไม่ครบเดือน)"
+        )
+
+    # Remove incomplete month for charting
+    plot_df = trend[~trend["is_incomplete"]].copy()
+
+    # Re-calculate MoM on clean data
+    plot_df["repeat_mom_pct"] = (
+        plot_df["repeat_customers"]
+        .pct_change()
+        .replace([np.inf, -np.inf], np.nan) * 100
+    )
+    plot_df["onetime_mom_pct"] = (
+        plot_df["onetime_customers"]
+        .pct_change()
+        .replace([np.inf, -np.inf], np.nan) * 100
     )
 
-    # Bars: One-time buyers (left axis)
-    bars = base.mark_bar(
-        color="#B0BEC5", opacity=0.7, cornerRadiusTopLeft=3, cornerRadiusTopRight=3
-    ).encode(
-        y=alt.Y(
-            "onetime_customers:Q",
-            title=t("p1_onetime_axis"),
-            axis=alt.Axis(grid=False),
-        ),
-        tooltip=[
-            alt.Tooltip("month_ts:T", format="%B %Y", title=t("p1_tt_month")),
-            alt.Tooltip("onetime_customers:Q", format=",.0f", title=t("p1_onetime_cust")),
-            alt.Tooltip("onetime_mom_pct:Q", format="+.1f", title=t("p1_tt_mom")),
-        ],
-    )
+    # ── Chart 1: One-time Buyers (Bar chart) ──
+    col1, col2 = st.columns(2)
 
-    # Line: Repeat buyers (right axis)
-    line = base.mark_line(
-        color="#FF7043", strokeWidth=3,
-        point=alt.OverlayMarkDef(color="#FF7043", size=60),
-    ).encode(
-        y=alt.Y(
-            "repeat_customers:Q",
-            title=t("p1_repeat_axis"),
-            axis=alt.Axis(titleColor="#FF7043", orient="right"),
-        ),
-        tooltip=[
-            alt.Tooltip("month_ts:T", format="%B %Y", title=t("p1_tt_month")),
-            alt.Tooltip("repeat_customers:Q", format=",.0f", title=t("p1_repeat_cust")),
-            alt.Tooltip("repeat_mom_pct:Q", format="+.1f", title=t("p1_tt_mom")),
-        ],
-    )
+    with col1:
+        st.markdown("##### 🛒 " + t("p1_onetime_cust"))
+        base1 = alt.Chart(plot_df).encode(
+            x=alt.X("month_ts:T", axis=alt.Axis(format="%b %Y", labelAngle=-45, title=""))
+        )
+        bars1 = base1.mark_bar(
+            color="#78909C", opacity=0.85,
+            cornerRadiusTopLeft=3, cornerRadiusTopRight=3,
+        ).encode(
+            y=alt.Y("onetime_customers:Q", title=t("p1_onetime_axis")),
+            tooltip=[
+                alt.Tooltip("month_ts:T", format="%B %Y", title=t("p1_tt_month")),
+                alt.Tooltip("onetime_customers:Q", format=",.0f", title=t("p1_onetime_cust")),
+                alt.Tooltip("onetime_mom_pct:Q", format="+.1f", title=t("p1_tt_mom")),
+            ],
+        )
+        st.altair_chart(bars1.properties(height=320), use_container_width=True)
 
-    chart = (
-        alt.layer(bars, line)
-        .resolve_scale(y="independent")
-        .properties(height=380)
-    )
-    st.altair_chart(chart, use_container_width=True)
-
-    # ── Legend caption ──
-    st.caption(
-        "🟧 " + t("p1_legend_bar") + "　　"
-        "🟠 " + t("p1_legend_line")
-    )
+    # ── Chart 2: Repeat Buyers (Bar + Line) ──
+    with col2:
+        st.markdown("##### 🔄 " + t("p1_repeat_cust"))
+        base2 = alt.Chart(plot_df).encode(
+            x=alt.X("month_ts:T", axis=alt.Axis(format="%b %Y", labelAngle=-45, title=""))
+        )
+        bars2 = base2.mark_bar(
+            color="#FF7043", opacity=0.6,
+            cornerRadiusTopLeft=3, cornerRadiusTopRight=3,
+        ).encode(
+            y=alt.Y("repeat_customers:Q", title=t("p1_repeat_axis")),
+            tooltip=[
+                alt.Tooltip("month_ts:T", format="%B %Y", title=t("p1_tt_month")),
+                alt.Tooltip("repeat_customers:Q", format=",.0f", title=t("p1_repeat_cust")),
+                alt.Tooltip("repeat_mom_pct:Q", format="+.1f", title=t("p1_tt_mom")),
+            ],
+        )
+        line2 = base2.mark_line(
+            color="#E53935", strokeWidth=2,
+            point=alt.OverlayMarkDef(color="#E53935", size=40),
+        ).encode(
+            y=alt.Y("repeat_customers:Q"),
+            tooltip=[
+                alt.Tooltip("month_ts:T", format="%B %Y", title=t("p1_tt_month")),
+                alt.Tooltip("repeat_customers:Q", format=",.0f", title=t("p1_repeat_cust")),
+                alt.Tooltip("repeat_mom_pct:Q", format="+.1f", title=t("p1_tt_mom")),
+            ],
+        )
+        st.altair_chart(
+            alt.layer(bars2, line2).properties(height=320),
+            use_container_width=True,
+        )
 
 
 def _render_top_categories(dfd):

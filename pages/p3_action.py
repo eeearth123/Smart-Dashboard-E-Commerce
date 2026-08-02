@@ -102,11 +102,12 @@ def render(df: pd.DataFrame, model, feature_names: list) -> None:
             target    = df_p3[df_p3["freight_ratio"] >= freight_threshold].copy()
             avg_fr    = float(target["freight_value"].mean()) \
                         if not target.empty and "freight_value" in target.columns else 15.0
+            actual_cost = float(target["freight_value"].sum()) if not target.empty and "freight_value" in target.columns else 0.0
             _run_simulation(
                 target,
                 {"freight_value": ("set", 0), "freight_ratio": ("set", 0)},
                 avg_fr, "tab1", t("p3_t1_strategy"), t("p3_t1_rec", avg=avg_fr),
-                total_pop, avg_ltv, model, feature_names,
+                total_pop, avg_ltv, model, feature_names, actual_total_cost=actual_cost,
             )
 
     with tab2:
@@ -116,13 +117,14 @@ def render(df: pd.DataFrame, model, feature_names: list) -> None:
             st.error(t("p3_no_price"))
         else:
             target = df_p3[df_p3["churn_probability"] > 0.5].copy()
+            actual_cost = float((target["price"] * (disc_pct / 100)).sum()) if not target.empty and "price" in target.columns else 0.0
             _run_simulation(
                 target,
                 {"price": ("multiply", 1 - disc_pct/100),
                  "payment_value": ("multiply", 1 - disc_pct/100)},
                 float(avg_ltv * disc_pct / 100), "tab2",
                 t("p3_t2_strategy", d=disc_pct), t("p3_t2_rec", d=disc_pct),
-                total_pop, avg_ltv, model, feature_names,
+                total_pop, avg_ltv, model, feature_names, actual_total_cost=actual_cost,
             )
 
 
@@ -144,7 +146,7 @@ def _apply_changes(df_sim, feature_changes):
 
 def _run_simulation(target_df, feature_changes, cost_per_head,
                     tab_key, strategy_name, rec_text,
-                    total_pop, avg_ltv, model, feature_names):
+                    total_pop, avg_ltv, model, feature_names, actual_total_cost=None):
     n_target    = len(target_df)
     pct_problem = (n_target / total_pop * 100) if total_pop > 0 else 0
 
@@ -163,11 +165,25 @@ def _run_simulation(target_df, feature_changes, cost_per_head,
         st.markdown(t("p3_strategy", name=strategy_name))
         st.write(rec_text)
         st.markdown("---")
-        cost = st.number_input(
-            "งบต่อหัว (R$) - คิดตามเงินที่เสียไปจริง", value=float(cost_per_head),
-            min_value=0.0, max_value=500.0, step=0.5, key=f"cost_{tab_key}",
+        budget_type = st.radio(
+            "วิธีคิดงบประมาณ:",
+            ["ระบุงบต่อหัวเอง", "คิดตามเงินที่เสียไปจริง (ลดค่าส่ง/ส่วนลด)"],
+            horizontal=True,
+            key=f"btype_{tab_key}"
         )
-        be_rate = cost / avg_ltv if avg_ltv > 0 else 0
+        
+        if budget_type == "ระบุงบต่อหัวเอง":
+            cost = st.number_input(
+                "งบต่อหัว (R$)", value=float(cost_per_head),
+                min_value=0.0, max_value=500.0, step=0.5, key=f"cost_{tab_key}",
+            )
+            budget = n_target * cost
+            be_rate = cost / avg_ltv if avg_ltv > 0 else 0
+        else:
+            budget = actual_total_cost if actual_total_cost is not None else (n_target * cost_per_head)
+            be_rate = (budget / n_target) / avg_ltv if (n_target > 0 and avg_ltv > 0) else 0
+            st.metric("งบรวมที่ใช้จริง", f"R$ {budget:,.0f}", f"เฉลี่ย R$ {budget/n_target if n_target > 0 else 0:,.1f} / คน", delta_color="off")
+            
         st.caption(t("p3_breakeven", r=be_rate))
 
     with c_res:
@@ -228,7 +244,6 @@ def _run_simulation(target_df, feature_changes, cost_per_head,
             )
 
             # ROI Metrics
-            budget      = n_target * cost
             saved_users = int(n_target * sim_success_rate)
             profit      = saved_users * avg_ltv - budget
             roi         = (profit / budget * 100) if budget > 0 else 0
@@ -240,11 +255,11 @@ def _run_simulation(target_df, feature_changes, cost_per_head,
             st.metric(t("p3_budget"),  f"R$ {budget:,.0f}")
 
             if profit > 0:
-                st.metric("เงินที่คาดว่าจะได้รับจากคนที่ดึงกลับมา", f"R$ {profit:,.0f}", f"+{roi:.1f}%")
+                st.metric("เงินที่คาดว่าจะได้รับจากคนที่ดึงกลับมาลบกับงบประมาณ", f"R$ {profit:,.0f}", f"+{roi:.1f}%")
                 st.success(t("p3_worthit"))
             else:
                 gap = be_rate - sim_success_rate
-                st.metric("เงินที่คาดว่าจะได้รับจากคนที่ดึงกลับมา", f"R$ {profit:,.0f}", f"{roi:.1f}%")
+                st.metric("เงินที่คาดว่าจะได้รับจากคนที่ดึงกลับมาลบกับงบประมาณ", f"R$ {profit:,.0f}", f"{roi:.1f}%")
                 st.error(t("p3_not_worth", be=be_rate, sr=sim_success_rate, gap=gap))
                 st.caption(t("p3_reduce_cost", c=avg_ltv * sim_success_rate))
 

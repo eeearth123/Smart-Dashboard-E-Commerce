@@ -3,7 +3,7 @@
 # ============================================================
 
 # Model
-BEST_THRESHOLD = 0.55
+BEST_THRESHOLD = 0.12
 
 # BigQuery
 BQ_TABLE   = "academic-moon-483615-t2.analytics_olist.mart_churn_features"
@@ -14,8 +14,8 @@ LATE_LOST    = 3.0
 LATE_WARNING = 1.5
 
 # Churn probability thresholds
-PROB_HIGH   = 0.75
-PROB_MEDIUM = 0.40
+PROB_HIGH   = 0.15
+PROB_MEDIUM = 0.10
 
 # Model filenames (ต้องอยู่ในโฟลเดอร์เดียวกับ app.py)
 MODEL_FILE    = "modelV5.pkl"

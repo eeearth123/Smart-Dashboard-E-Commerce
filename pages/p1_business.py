@@ -229,7 +229,7 @@ def _render_top_categories(dfd: pd.DataFrame) -> None:
             revenue=("payment_value", "sum"),
             orders=("payment_value", "count"),
             avg_order=("payment_value", "mean"),
-            churn_risk=("churn_probability", "mean") if "churn_probability" in dfd.columns else ("payment_value", lambda x: 0.5),
+            churn_risk=("churn_probability", lambda x: x.mean() * 100) if "churn_probability" in dfd.columns else ("payment_value", lambda x: 50.0),
         )
         .reset_index()
         .sort_values("revenue", ascending=False)
@@ -283,7 +283,7 @@ def _render_top_categories(dfd: pd.DataFrame) -> None:
                 t("p1_col_orders"): st.column_config.NumberColumn(format="%,d"),
                 t("p1_col_avg"):    st.column_config.NumberColumn(format="R$ %.0f"),
                 t("p1_col_churn"):  st.column_config.ProgressColumn(
-                    format="%.2f", min_value=0, max_value=1
+                    format="%.1f%%", min_value=0, max_value=25
                 ),
             },
             use_container_width=True,

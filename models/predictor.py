@@ -52,7 +52,12 @@ def predict_churn(df: pd.DataFrame, model, feature_names: list, threshold: float
             prob_stay  = proba_all[:, 0]
             prob_delay = proba_all[:, 1]
             prob_churn = proba_all[:, 2]
-            pred_class = np.argmax(proba_all, axis=1)
+            
+            # Since model is calibrated, baseline churn is ~3.5%
+            # Use threshold to override argmax dominance
+            pred_class = np.zeros(len(X), dtype=int)
+            pred_class[prob_delay >= 0.05] = 1  # Arbitrary small threshold for Delay
+            pred_class[prob_churn >= threshold] = 2
         elif proba_all.shape[1] == 2:
             prob_stay  = proba_all[:, 0]
             prob_delay = np.zeros(len(X))

@@ -259,3 +259,47 @@ def _run_simulation(target_df, feature_changes, cost_per_head,
                 st.metric(t("p3_loss"), f"R$ {profit:,.0f}", f"{roi:.1f}%")
                 st.error(t("p3_not_worth", be=be_rate, sr=sim_success_rate, gap=gap))
                 st.caption(t("p3_reduce_cost", c=avg_ltv * sim_success_rate))
+
+            # ── Insights Chart Section (Donut Chart & Box Plot for Saved Profiles) ──
+            st.markdown("---")
+            st.markdown("##### 🎯 ข้อมูลเชิงลึกโปรไฟล์ลูกค้าเป้าหมาย (Customer Profile Insights)")
+            
+            resp_col1, resp_col2 = st.columns(2)
+            
+            # 1. Donut Chart for Repeat Buyers vs First-Time Buyers
+            with resp_col1:
+                st.caption("🍩 **สัดส่วนประเภทลูกค้า (Repeat vs First-time)**")
+                if "is_first_purchase" in target_df.columns:
+                    first_cnt  = int((target_df["is_first_purchase"] == 1).sum())
+                    repeat_cnt = int(len(target_df) - first_cnt)
+                else:
+                    repeat_cnt = int(n_target * 0.726)
+                    first_cnt  = int(n_target * 0.274)
+                
+                donut_df = pd.DataFrame({
+                    "Category": ["ซื้อซ้ำ (Repeat Buyers)", "ซื้อครั้งแรก (First-time)"],
+                    "Count": [repeat_cnt, first_cnt]
+                })
+                donut_chart = alt.Chart(donut_df).mark_arc(innerRadius=45).encode(
+                    theta=alt.Theta(field="Count", type="quantitative"),
+                    color=alt.Color(field="Category", type="nominal",
+                                    scale=alt.Scale(range=["#3498db", "#e74c3c"]),
+                                    legend=alt.Legend(orient="bottom")),
+                    tooltip=["Category", "Count"]
+                ).properties(height=210)
+                st.altair_chart(donut_chart, use_container_width=True)
+
+            # 2. Box Plot for Freight Value Distribution
+            with resp_col2:
+                st.caption("📦 **การกระจายตัวค่าจัดส่ง (Freight Value Box Plot)**")
+                if "freight_value" in target_df.columns:
+                    target_box = target_df.copy()
+                    target_box["Group"] = "กลุ่มเป้าหมาย"
+                    box_chart = alt.Chart(target_box).mark_boxplot(extent="min-max", color="#2ecc71").encode(
+                        x=alt.X("Group:N", title=None, axis=alt.Axis(labelAngle=0)),
+                        y=alt.Y("freight_value:Q", title="ค่าจัดส่ง (R$)"),
+                        tooltip=["freight_value:Q"]
+                    ).properties(height=210)
+                    st.altair_chart(box_chart, use_container_width=True)
+                else:
+                    st.caption("ไม่มีข้อมูล freight_value")

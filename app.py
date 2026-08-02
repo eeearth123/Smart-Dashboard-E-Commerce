@@ -14,6 +14,8 @@ st.set_page_config(
 )
 st.markdown("""
 <style>
+    /* Hide the auto-generated multipage navigation */
+    [data-testid="stSidebarNav"] {display: none;}
     .metric-card {
         background-color: #f0f2f6;
         border-radius: 10px;
